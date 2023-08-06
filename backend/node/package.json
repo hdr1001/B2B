@@ -1,0 +1,18 @@
+{
+  "name": "node",
+  "version": "1.0.0",
+  "description": "B2B node backend app and scripts",
+  "main": "index.js",
+  "scripts": {
+    "thumbsUp": "node ./src/script/test/thumbsUp",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "B2B",
+    "node",
+    "backend",
+    "scripts"
+  ],
+  "author": "Hans de Rooij",
+  "license": "Apache-2.0"
+}
