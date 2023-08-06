@@ -17,5 +17,5 @@ Next, using Visual Studio Code (VSC) functionality, I cloned the repository to m
 
 ![Clone the GitHub repo][def00002]
 
-[def00001]: https://1drv.ms/i/s!AoB95U3PbXtz0yHuwdNlLqBZtofa?e=nOyVFf
-[def00002]: https://1drv.ms/i/s!AoB95U3PbXtz0yIP9QgDLTORdGgi?e=enHYSf
+[def00001]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110659&authkey=%21ANInHYJzHrgtSIY&width=999999&height=660
+[def00002]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110658&authkey=%21AOiUWHnoJaWzcLc&width=999999&height=448
