@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "thumbsUp": "node ./src/script/test/thumbsUp",
+    "fetch": "node ./src/script/test/fetch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
