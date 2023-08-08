@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "B2B node backend app and scripts",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "thumbsUp": "node ./src/script/test/thumbsUp",
     "fetch": "node ./src/script/test/fetch",

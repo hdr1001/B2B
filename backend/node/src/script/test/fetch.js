@@ -1,61 +1,79 @@
-const baseURL = url => `${url.scheme}://${url.domainSub}.${url.domain}.${url.domainTop}${url.port ? ':' + url.port : ''}/`;
+// *********************************************************************
+//
+// B2B test code, fetch data from multiple REST APIs 
+// JavaScript code file: fetch.js
+//
+// Copyright 2023 Hans de Rooij
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//       http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+// either express or implied. See the License for the specific
+// language governing permissions and limitations under the
+// License.
+//
+// *********************************************************************
 
-const sharedHeaders = { 'Content-Type': 'application/json' };
+//Import the API definitions
+import { apiEndpoint } from "../../share/apiDefs.js";
 
-const api = {
-    gleif: {
-        url: {
-            scheme: 'https',
-            domainSub: 'api',
-            domain: 'gleif',
-            domainTop: 'org',
-            port: '',
-        },
-        headers: sharedHeaders
+//Example LEI request parameters
+let apiKey = 'gleif', apiEndpointKey = 'leiRecs';
+
+const leiReqs = [];
+
+leiReqs.push({ resource: '529900W18LQJJN6SJ336' });
+
+leiReqs.push({ qryParameters: {
+        'filter[entity.registeredAs]': '33302453',
+        'filter[entity.legalAddress.country]': 'NL'
     }
-};
+});
 
-const apiEndpoint = {
-    gleif: {
-        leiPageSizePageNum: { 'page[size]': 10, 'page[number]': 1 },
-        leiRecs: { //LEI records
-            path: baseURL(api.gleif.url) + 'api/v1/lei-records/',
-            getReq: function(lei) {
-                return new Request(
-                    `${this.path}${lei}`,
-                    {
-                        headers: api.gleif.headers
-                    }    
-                )
-            }
-        },
+leiReqs.push({ qryParameters: {
+        'filter[entity.legalName]': 'Feyenoord',
+        'filter[entity.legalAddress.country]': 'NL'
+    }
+});
 
-        leiRecRegAs: {
-            path: baseURL(api.gleif.url) + 'api/v1/lei-records/',
-            getReq: function(regNum, isoCtry) { //Registration number exchanged for LEI
-                const qryParameters = {
-                    ...apiEndpoint.gleif.leiPageSizePageNum,
-                    'filter[entity.registeredAs]': regNum,
-                    'filter[entity.legalAddress.country]': isoCtry,
-                };
+//Evaluate if the API return matches the expectation
+function evaluateLeiRec(leiReq, leiRec) {
+    //Just echo the name associated with the LEI requested
+    if(leiReq.resource && leiRec?.data?.attributes?.entity?.legalName?.name) {
+        console.log(`✅ LEI request, retrieved ➡️ ${leiRec.data.attributes.entity.legalName.name}`);
+        return;
+    }
 
-                return new Request(
-                    `${this.path}?${new URLSearchParams(qryParameters)}`,
-                    {
-                        headers: api.gleif.headers
-                    }    
-                )
+    if(leiReq.qryParameters) {
+        //Check id the registration number in matches the one out
+        if(leiReq.qryParameters['filter[entity.registeredAs]'] === leiRec?.data?.[0]?.attributes?.entity?.registeredAs) {
+            console.log(`✅ LEI request, filtered ➡️ ${leiRec?.data?.[0]?.attributes?.entity?.legalName?.name}`);
+            return;
+        }
+
+        //Check if the name submitted is part of the name returned
+        if(leiReq.qryParameters['filter[entity.legalName]']) {
+            if(leiRec?.data?.[0]?.attributes?.entity?.legalName?.name) {
+                if(leiRec.data[0]?.attributes.entity.legalName.name.toLowerCase().indexOf(leiReq.qryParameters['filter[entity.legalName]'].toLowerCase()) > -1) {
+                    console.log(`✅ LEI request, filtered ➡️ ${leiRec.data[0].attributes.entity.legalName.name}`);
+                    return;
+                }
             }
         }
     }
-};
 
-let apiKey = 'gleif'; 
-let apiEndpointKey = 'leiRecs';
+    //🤔
+    console.log('❌ LEI request');
+}
 
-const lei = '529900W18LQJJN6SJ336';
-
-fetch(apiEndpoint[apiKey][apiEndpointKey].getReq(lei))
+//The actual fetch call (please note, node 18 required!)
+fetch(apiEndpoint[apiKey][apiEndpointKey].getReq(leiReqs[2]))
     .then(resp => {
         if (resp.ok) {
             return resp.json();
@@ -64,35 +82,5 @@ fetch(apiEndpoint[apiKey][apiEndpointKey].getReq(lei))
             throw new Error(`Fetch response not okay, HTTP status: ${resp.statusText}`);
         }
     })
-    .then(leiRec => {
-        if(lei === leiRec?.data?.attributes?.lei) {
-            console.log('✅ LEI request')
-        }
-        else {
-            console.log('❌ LEI request')
-        }
-    })
-    .catch(err => console.error("Unable to fetch -", err));
-
-
-apiEndpointKey = 'leiRecRegAs';
-
-fetch(apiEndpoint[apiKey][apiEndpointKey].getReq('33302453', 'NL'))
-    .then(resp => {
-        if (resp.ok) {
-            return resp.json();
-        }
-        else {
-            throw new Error(`Fetch response not okay, HTTP status: ${resp.statusText}`);
-        }
-    })
-    .then(leiRec => {
-        if(leiRec?.data?.[0]?.attributes?.lei === '724500QLFWTRHA3K0440') {
-            console.log('✅ Registration number exchange for LEI')
-        }
-        else {
-            console.log('❌ Registration number exchange for LEI')
-        }
-    })
-    .catch(err => console.error("Unable to fetch -", err));
-    
+    .then(leiRec => evaluateLeiRec(leiReqs[2], leiRec))
+    .catch(err => console.error("Fetch error: ", err));
