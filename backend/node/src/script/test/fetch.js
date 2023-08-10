@@ -23,9 +23,13 @@
 //Import the API definitions
 import { apiEndpoint } from "../../share/apiDefs.js";
 
+//Import rate limiters
+import { gleifLimiter } from "../../share/limiters.js";
+
 //Example LEI request parameters
 let apiKey = 'gleif', apiEndpointKey = 'leiRecs';
 
+//Specify test requests against the GLEIF API
 const leiReqs = [];
 
 leiReqs.push({ resource: '529900W18LQJJN6SJ336' });
@@ -72,15 +76,18 @@ function evaluateLeiRec(leiReq, leiRec) {
     console.log('❌ LEI request');
 }
 
-//The actual fetch call (please note, node 18 required!)
-fetch(apiEndpoint[apiKey][apiEndpointKey].getReq(leiReqs[2]))
-    .then(resp => {
-        if (resp.ok) {
-            return resp.json();
-        }
-        else {
-            throw new Error(`Fetch response not okay, HTTP status: ${resp.statusText}`);
-        }
-    })
-    .then(leiRec => evaluateLeiRec(leiReqs[2], leiRec))
-    .catch(err => console.error("Fetch error: ", err));
+//Execute the GLEIF test requests
+leiReqs.forEach(element => 
+    gleifLimiter.removeTokens(1) //Respect the API rate limits
+        .then(() => fetch(apiEndpoint[apiKey][apiEndpointKey].getReq(element)))
+        .then(resp => {
+            if (resp.ok) {
+                return resp.json();
+            }
+            else {
+                throw new Error(`Fetch response not okay, HTTP status: ${resp.statusText}`);
+            }
+        })
+        .then(leiRec => evaluateLeiRec(element, leiRec))
+        .catch(err => console.error("GLEIF API data fetch error: ", err))
+)

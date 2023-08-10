@@ -16,5 +16,8 @@
     "scripts"
   ],
   "author": "Hans de Rooij",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "dependencies": {
+    "limiter": "^2.0.1"
+  }
 }
