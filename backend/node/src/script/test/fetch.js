@@ -77,7 +77,7 @@ function evaluateLeiRec(leiReq, leiRec) {
 }
 
 //Execute the GLEIF test requests
-leiReqs.forEach(element => 
+/* leiReqs.forEach(element => 
     gleifLimiter.removeTokens(1) //Respect the API rate limits
         .then(() => fetch(apiEndpoint[apiKey][apiEndpointKey].getReq(element)))
         .then(resp => {
@@ -90,4 +90,30 @@ leiReqs.forEach(element =>
         })
         .then(leiRec => evaluateLeiRec(element, leiRec))
         .catch(err => console.error("GLEIF API data fetch error: ", err))
-)
+);
+*/
+//Example LEI request parameters
+apiKey = 'dnbDpl';
+apiEndpointKey = 'auth';
+
+fetch(apiEndpoint[apiKey][apiEndpointKey].getReq())
+    .then(resp => {
+        if (resp.ok) {
+            return resp.json();
+        }
+        else {
+            throw new Error(`Fetch response not okay, HTTP status: ${resp.statusText}`);
+        }
+    })
+    .then(dplAuth => {
+        if(86400 === dplAuth?.expiresIn) {
+            console.log('✅ D&B Direct+ authorization request');
+
+            apiEndpoint.dnbDpl.auth.updToken(dplAuth.access_token);
+        }
+        else {
+            console.log('❌ D&B Direct+ authorization request')
+        }
+    })
+    .catch(err => console.error("D&B Direct+ API data fetch error: ", err));
+

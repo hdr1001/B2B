@@ -5,6 +5,8 @@ Repo containing the code I developed as it relates to B2B API's, UI's, data proc
 1. [Introduction](#introduction)
 2. [GitHub repo](#github-repo)
 3. [1st Node.js script](#first-nodejs-script)
+4. [Testing fetch to consume GLEIF data](#testing-fetch-to-consume-gleif-data)
+5. [Added rate limiter](#added-rate-limiter)
 
 ## Introduction
 In this repository I want to bring together all the B2B (D&B, GLEIF, ...) code I have developed over time and expand from there. Initially the most important sources will be the following GitHub repositories: [API Hub - Request, Persist & Respond (v4)](https://github.com/hdr1001/api_hub_rpr_v4) and [D&B Direct+ utilities (v3)](https://github.com/hdr1001/dnbDplUtilities_v3).

@@ -20,6 +20,10 @@
 //
 // *********************************************************************
 
+//.env configuration
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 //Construct the base URL for an API
 const baseURL = url => `${url.scheme}://${url.domainSub}.${url.domain}.${url.domainTop}${url.port ? ':' + url.port : ''}/`;
 
@@ -38,7 +42,21 @@ const api = {
         },
         headers: sharedHeaders,
         leiPageSizeNum: { 'page[size]': 10, 'page[number]': 1 }
-    }
+    },
+
+    dnbDpl: ({
+        url: ({
+            scheme: 'https',
+            domainSub: 'plus',
+            domain: 'dnb',
+            domainTop: 'com',
+            port: '',
+        }),
+        headers: {
+            ...sharedHeaders,
+            Authorization: `Bearer ${process.env.DNB_DPL_TOKEN}`
+        }
+    })
 };
 
 //Supported endpoints for APIs listed above
@@ -57,6 +75,30 @@ const apiEndpoint = {
                         headers: api.gleif.headers
                     }
                 );
+            }
+        }
+    },
+
+    dnbDpl: {
+        auth: { //D&B Direct+ generate auth token
+            path: baseURL(api.dnbDpl.url) + 'v2/token',
+            getReq: function() {
+                return new Request (
+                    this.path,
+                    {
+                        method: 'POST',
+                        headers: {
+                            ...api.dnbDpl.headers,
+                            Authorization: `Basic ${Buffer.from(`${process.env.DNB_DPL_KEY}:${process.env.DNB_DPL_SECRET}`).toString('Base64')}`
+                        },
+                        body: JSON.stringify({ 'grant_type': 'client_credentials' })
+                    }
+                )
+            },
+            updToken: function(accessToken) {
+                process.env.DNB_DPL_TOKEN = accessToken;
+
+                api.dnbDpl.headers.Authorization = `Bearer ${process.env.DNB_DPL_TOKEN}`;
             }
         }
     }
