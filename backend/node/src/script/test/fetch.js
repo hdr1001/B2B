@@ -92,7 +92,7 @@ function evaluateLeiRec(leiReq, leiRec) {
         .catch(err => console.error("GLEIF API data fetch error: ", err))
 );
 */
-//Example LEI request parameters
+//Example D&B D+ request parameters
 apiKey = 'dnbDpl';
 apiEndpointKey = 'auth';
 
