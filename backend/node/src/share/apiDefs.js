@@ -62,15 +62,16 @@ const api = {
 //Supported endpoints for APIs listed above
 const apiEndpoint = {
     gleif: {
+        baseURL: baseURL(api.gleif.url),
+
         leiRecs: { //LEI records (https://bit.ly/45mRwbt)
-            path: baseURL(api.gleif.url) + 'api/v1/lei-records',
             getReq: function(leiReq) {
                 const qryString = leiReq.qryParameters
                     ? new URLSearchParams({ ...leiReq.qryParameters, ...api.gleif.leiPageSizeNum })
                     : '';
 
                 return new Request(
-                    `${this.path}${leiReq.resource ? `/${leiReq.resource}` : '?'}${qryString}`,
+                    `${apiEndpoint.gleif.baseURL}${this.path}${leiReq.resource ? `/${leiReq.resource}` : '?'}${qryString}`,
                     {
                         headers: api.gleif.headers
                     }
@@ -80,11 +81,12 @@ const apiEndpoint = {
     },
 
     dnbDpl: {
+        baseURL: baseURL(api.dnbDpl.url),
+
         auth: { //D&B Direct+ generate auth token
-            path: baseURL(api.dnbDpl.url) + 'v2/token',
             getReq: function() {
                 return new Request (
-                    this.path,
+                    `${apiEndpoint.dnbDpl.baseURL}${this.path}`,
                     {
                         method: 'POST',
                         headers: {
@@ -94,14 +96,73 @@ const apiEndpoint = {
                         body: JSON.stringify({ 'grant_type': 'client_credentials' })
                     }
                 )
-            },
-            updToken: function(accessToken) {
-                process.env.DNB_DPL_TOKEN = accessToken;
+            }
+        },
 
-                api.dnbDpl.headers.Authorization = `Bearer ${process.env.DNB_DPL_TOKEN}`;
+        dbs: { //D&B Direct+ data blocks
+            getReq: function() {
+                return new Request(
+                    `${apiEndpoint.dnbDpl.baseURL}${this.path}${this.resource}?${new URLSearchParams({ ...this.qryParameters })}`,
+                    {
+                        headers: api.dnbDpl.headers,
+                    }
+                )
             }
         }
     }
 };
 
-export { apiEndpoint };
+class LeiReq { //Get LEI record by ID 
+    constructor(resource) {
+        this.def = { api: 'gleif', endpoint: 'leiRecs'};
+
+        this.resource = resource;        
+    }
+
+    path = 'api/v1/lei-records';
+
+    getReq = apiEndpoint.gleif.leiRecs.getReq;
+}
+
+class LeiFilter { //Get LEI record using filters
+    constructor(qryParameters) {
+        this.def = { api: 'gleif', endpoint: 'leiRecs'};
+
+        this.qryParameters = qryParameters;
+    }
+
+    path = 'api/v1/lei-records';
+
+    getReq = apiEndpoint.gleif.leiRecs.getReq;
+}
+
+class DnbDplAuth { //Get D&B D+ access token
+    constructor() {
+        this.def = { api: 'dnbDpl', endpoint: 'auth'};
+    }
+
+    path = 'v2/token';
+
+    getReq = apiEndpoint.dnbDpl.auth.getReq;
+
+    updToken = accessToken => {
+        process.env.DNB_DPL_TOKEN = accessToken;
+
+        api.dnbDpl.headers.Authorization = `Bearer ${process.env.DNB_DPL_TOKEN}`;
+    }
+}
+
+class DnbDplDBs { //Get D&B D+ data blocks
+    constructor(resource, qryParameters) {
+        this.def = { api: 'dnbDpl', endpoint: 'dbs'};
+
+        this.resource = resource;        
+        this.qryParameters = qryParameters;
+    }
+
+    path = 'v1/data/duns/';
+
+    getReq = apiEndpoint.dnbDpl.dbs.getReq;
+}
+
+export { LeiReq, LeiFilter, DnbDplAuth, DnbDplDBs };

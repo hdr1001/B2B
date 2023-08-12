@@ -21,30 +21,84 @@
 // *********************************************************************
 
 //Import the API definitions
-import { apiEndpoint } from "../../share/apiDefs.js";
+import { LeiFilter, LeiReq, DnbDplAuth, DnbDplDBs } from "../../share/apiDefs.js";
 
 //Import rate limiters
 import { gleifLimiter } from "../../share/limiters.js";
 
-//Example LEI request parameters
-let apiKey = 'gleif', apiEndpointKey = 'leiRecs';
-
 //Specify test requests against the GLEIF API
 const leiReqs = [];
 
-leiReqs.push({ resource: '529900W18LQJJN6SJ336' });
+leiReqs.push(new LeiReq('529900W18LQJJN6SJ336'));
 
-leiReqs.push({ qryParameters: {
-        'filter[entity.registeredAs]': '33302453',
-        'filter[entity.legalAddress.country]': 'NL'
-    }
-});
+leiReqs.push(new LeiFilter({
+    'filter[entity.registeredAs]': '33302453',
+    'filter[entity.legalAddress.country]': 'NL'
+}));
 
-leiReqs.push({ qryParameters: {
-        'filter[entity.legalName]': 'Feyenoord',
-        'filter[entity.legalAddress.country]': 'NL'
-    }
-});
+leiReqs.push(new LeiFilter({
+    'filter[entity.legalName]': 'Feyenoord',
+    'filter[entity.legalAddress.country]': 'NL'
+}));
+
+//Execute the GLEIF test requests
+leiReqs.forEach(req => 
+    gleifLimiter.removeTokens(1) //Respect the API rate limits
+        .then(() => fetch(req.getReq(req)))
+        .then(resp => {
+            if (resp.ok) {
+                return resp.json();
+            }
+            else {
+                throw new Error(`Fetch response not okay, HTTP status: ${resp.statusText}`);
+            }
+        })
+        .then(leiRec => evaluateLeiRec(req, leiRec))
+        .catch(err => console.error("GLEIF API data fetch error: ", err))
+);
+
+//Instantiate a D&B Direct+ authentication object
+const dnbDplAuth = new DnbDplAuth; //Credentials in .env file
+
+//Get a Direct+ access token
+fetch(dnbDplAuth.getReq())
+    .then(resp => {
+        if (resp.ok) {
+            return resp.json();
+        }
+        else {
+            throw new Error(`Fetch response not okay, HTTP status: ${resp.statusText}`);
+        }
+    })
+    .then(dplAuth => {
+        if(86400 === dplAuth?.expiresIn) {
+            console.log('✅ D&B Direct+ authorization request');
+
+            dnbDplAuth.updToken(dplAuth.access_token); //Propagate the new token
+
+            const dplReqs = [
+                new DnbDplDBs('407809623', { blockIDs: 'companyinfo_L2_v1' })
+            ];
+
+            dplReqs.forEach(dplReq => 
+                fetch(dplReq.getReq())
+                    .then(resp => {
+                        if (resp.ok) {
+                            return resp.json();
+                        }
+                        else {
+                            throw new Error(`Fetch response not okay, HTTP status: ${resp.statusText}`);
+                        }
+                    })
+                    .then(dnbRec => console.log(JSON.stringify(dnbRec, null, 3)))
+                    .catch(err => console.error("D&B Direct+ API data fetch error: ", err))
+            )
+        }
+        else {
+            console.log('❌ D&B Direct+ authorization request')
+        }
+    })
+    .catch(err => console.error("D&B Direct+ API data fetch error: ", err));
 
 //Evaluate if the API return matches the expectation
 function evaluateLeiRec(leiReq, leiRec) {
@@ -75,45 +129,3 @@ function evaluateLeiRec(leiReq, leiRec) {
     //🤔
     console.log('❌ LEI request');
 }
-
-//Execute the GLEIF test requests
-/* leiReqs.forEach(element => 
-    gleifLimiter.removeTokens(1) //Respect the API rate limits
-        .then(() => fetch(apiEndpoint[apiKey][apiEndpointKey].getReq(element)))
-        .then(resp => {
-            if (resp.ok) {
-                return resp.json();
-            }
-            else {
-                throw new Error(`Fetch response not okay, HTTP status: ${resp.statusText}`);
-            }
-        })
-        .then(leiRec => evaluateLeiRec(element, leiRec))
-        .catch(err => console.error("GLEIF API data fetch error: ", err))
-);
-*/
-//Example D&B D+ request parameters
-apiKey = 'dnbDpl';
-apiEndpointKey = 'auth';
-
-fetch(apiEndpoint[apiKey][apiEndpointKey].getReq())
-    .then(resp => {
-        if (resp.ok) {
-            return resp.json();
-        }
-        else {
-            throw new Error(`Fetch response not okay, HTTP status: ${resp.statusText}`);
-        }
-    })
-    .then(dplAuth => {
-        if(86400 === dplAuth?.expiresIn) {
-            console.log('✅ D&B Direct+ authorization request');
-
-            apiEndpoint.dnbDpl.auth.updToken(dplAuth.access_token);
-        }
-        else {
-            console.log('❌ D&B Direct+ authorization request')
-        }
-    })
-    .catch(err => console.error("D&B Direct+ API data fetch error: ", err));
-
