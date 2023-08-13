@@ -8,6 +8,7 @@ Repo containing the code I developed as it relates to B2B API's, UI's, data proc
 4. [Testing fetch to consume GLEIF data](#testing-fetch-to-consume-gleif-data)
 5. [Added rate limiter](#added-rate-limiter)
 6. [Fetch a D&B Direct+ token](#using-fetch-to-retrieve-a-db-direct-token)
+7. [D&B Direct+ data blocks](#project-now-supports-db-data-blocks)
 
 ## Introduction
 In this repository I want to bring together all the B2B (D&B, GLEIF, ...) code I have developed over time and expand from there. Initially the most important sources will be the following GitHub repositories: [API Hub - Request, Persist & Respond (v4)](https://github.com/hdr1001/api_hub_rpr_v4) and [D&B Direct+ utilities (v3)](https://github.com/hdr1001/dnbDplUtilities_v3).
@@ -50,6 +51,15 @@ Moving on with code to retrieve a D&B Direct+ [token](https://directplus.documen
 
 ![Fetch D+ token][def00008]
 
+## Project now supports D&B data blocks
+Added a new [class and definition](https://bit.ly/3QyfhsV) to support D&B Direct+ data blocks. Also added [test code](https://bit.ly/3DSoZ1t) to the project as well. Shortest way to run the code is in GitHub Codespaces.
+
+![GitHub Codespaces][def00009]
+
+After creating the needed [environment variables](https://github.com/hdr1001/B2B/blob/0dbe961ae68b10fc2d3a4632e3c59a40a472b282/backend/node/dotEnv) as [secrets](https://docs.github.com/en/codespaces/managing-your-codespaces/managing-encrypted-secrets-for-your-codespaces) running the code is basically a three step process.
+
+![npm run fetch][def00010]
+
 [def00001]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110659&authkey=%21ANInHYJzHrgtSIY&width=999999&height=660
 [def00002]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110658&authkey=%21AOiUWHnoJaWzcLc&width=999999&height=448
 [def00003]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110660&authkey=%21ABbXt4yOUaQh_eA&width=384&height=999999
@@ -58,3 +68,5 @@ Moving on with code to retrieve a D&B Direct+ [token](https://directplus.documen
 [def00006]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110691&authkey=%21AJA-z08rLyNIi9o&width=660
 [def00007]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110692&authkey=%21ALlSZUvkVr-cye8&width=660
 [def00008]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110714&authkey=%21ADFrizxoQpFV-9U&width=660
+[def00009]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110721&authkey=%21AJxu4j37hZQe3tQ&width=660
+[def00010]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110722&authkey=%21AOAJJYpzd1MS2-U&width=660
