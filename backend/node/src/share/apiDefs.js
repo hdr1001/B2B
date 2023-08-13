@@ -114,10 +114,10 @@ const apiEndpoint = {
 
 class LeiReq { //Get LEI record by ID 
     constructor(resource) {
-        this.def = { api: 'gleif', endpoint: 'leiRecs'};
-
         this.resource = resource;        
     }
+
+    def = { api: 'gleif', endpoint: 'leiRecs'};
 
     path = 'api/v1/lei-records';
 
@@ -126,10 +126,10 @@ class LeiReq { //Get LEI record by ID
 
 class LeiFilter { //Get LEI record using filters
     constructor(qryParameters) {
-        this.def = { api: 'gleif', endpoint: 'leiRecs'};
-
         this.qryParameters = qryParameters;
     }
+
+    def = { api: 'gleif', endpoint: 'leiRecs'};
 
     path = 'api/v1/lei-records';
 
@@ -138,13 +138,16 @@ class LeiFilter { //Get LEI record using filters
 
 class DnbDplAuth { //Get D&B D+ access token
     constructor() {
-        this.def = { api: 'dnbDpl', endpoint: 'auth'};
+        //Really not for creating multiple instances
     }
+
+    def = { api: 'dnbDpl', endpoint: 'auth'};
 
     path = 'v2/token';
 
     getReq = apiEndpoint.dnbDpl.auth.getReq;
 
+    //Propagate the token acquired
     updToken = accessToken => {
         process.env.DNB_DPL_TOKEN = accessToken;
 
@@ -154,11 +157,11 @@ class DnbDplAuth { //Get D&B D+ access token
 
 class DnbDplDBs { //Get D&B D+ data blocks
     constructor(resource, qryParameters) {
-        this.def = { api: 'dnbDpl', endpoint: 'dbs'};
-
         this.resource = resource;        
         this.qryParameters = qryParameters;
     }
+
+    def = { api: 'dnbDpl', endpoint: 'dbs'};
 
     path = 'v1/data/duns/';
 

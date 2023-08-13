@@ -48,7 +48,7 @@ With the rate limiter in place it is possible to launch multiple requests while,
 
 Moving on with code to retrieve a D&B Direct+ [token](https://directplus.documentation.dnb.com/openAPI.html?apiID=authentication) using fetch. Had to install module [dotenv](https://www.npmjs.com/package/dotenv?ref=hackernoon.com) to savely store the API credentials.
 
-![Fetch D+ token](def00008)
+![Fetch D+ token][def00008]
 
 [def00001]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110659&authkey=%21ANInHYJzHrgtSIY&width=999999&height=660
 [def00002]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110658&authkey=%21AOiUWHnoJaWzcLc&width=999999&height=448

@@ -29,7 +29,7 @@ import { gleifLimiter } from "../../share/limiters.js";
 //Specify test requests against the GLEIF API
 const leiReqs = [];
 
-leiReqs.push(new LeiReq('529900W18LQJJN6SJ336'));
+leiReqs.push(new LeiReq('529900F4SNCR9BEWFZ60'));
 
 leiReqs.push(new LeiFilter({
     'filter[entity.registeredAs]': '33302453',
@@ -90,7 +90,7 @@ fetch(dnbDplAuth.getReq())
                             throw new Error(`Fetch response not okay, HTTP status: ${resp.statusText}`);
                         }
                     })
-                    .then(dnbRec => console.log(JSON.stringify(dnbRec, null, 3)))
+                    .then(dnbRec => evaluateDplRec(dplReq, dnbRec))
                     .catch(err => console.error("D&B Direct+ API data fetch error: ", err))
             )
         }
@@ -128,4 +128,18 @@ function evaluateLeiRec(leiReq, leiRec) {
 
     //🤔
     console.log('❌ LEI request');
+}
+
+//Evaluate if the D&B Direct+ return matches the expectation
+function evaluateDplRec(dnbReq, dnbRec) {
+    if(dnbReq.def.endpoint === 'dbs' && dnbRec?.organization?.duns) {
+        if(dnbReq.resource === dnbRec?.organization?.duns) {
+            console.log(`✅ D+ data blocks request, retrieved ➡️ ${dnbRec?.organization?.primaryName}`);
+            return;
+        }
+
+    }
+
+    //🤔
+    console.log('❌ Direct+ request');
 }
