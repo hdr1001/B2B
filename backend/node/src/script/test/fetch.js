@@ -21,10 +21,10 @@
 // *********************************************************************
 
 //Import the API definitions
-import { LeiFilter, LeiReq, DnbDplAuth, DnbDplDBs } from "../../share/apiDefs.js";
+import { LeiFilter, LeiReq, DnbDplAuth, DnbDplDBs } from '../../share/apiDefs.js';
 
 //Import rate limiters
-import { gleifLimiter } from "../../share/limiters.js";
+import { gleifLimiter } from '../../share/limiters.js';
 
 //Specify test requests against the GLEIF API
 const leiReqs = [];
@@ -54,7 +54,7 @@ leiReqs.forEach(req =>
             }
         })
         .then(leiRec => evaluateLeiRec(req, leiRec))
-        .catch(err => console.error("GLEIF API data fetch error: ", err))
+        .catch(err => console.error('GLEIF API data fetch error: ', err))
 );
 
 //Instantiate a D&B Direct+ authentication object
@@ -91,14 +91,14 @@ fetch(dnbDplAuth.getReq())
                         }
                     })
                     .then(dnbRec => evaluateDplRec(dplReq, dnbRec))
-                    .catch(err => console.error("D&B Direct+ API data fetch error: ", err))
+                    .catch(err => console.error('D&B Direct+ API data fetch error: ', err))
             )
         }
         else {
             console.log('❌ D&B Direct+ authorization request')
         }
     })
-    .catch(err => console.error("D&B Direct+ API data fetch error: ", err));
+    .catch(err => console.error('D&B Direct+ API data fetch error: ', err));
 
 //Evaluate if the API return matches the expectation
 function evaluateLeiRec(leiReq, leiRec) {
