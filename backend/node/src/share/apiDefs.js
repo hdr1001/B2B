@@ -117,7 +117,7 @@ class LeiReq { //Get LEI record by ID
         this.resource = resource;        
     }
 
-    def = { api: 'gleif', endpoint: 'leiRecs'};
+    def = { api: 'gleif', endpoint: 'leiRecs' };
 
     path = 'api/v1/lei-records';
 
@@ -129,7 +129,7 @@ class LeiFilter { //Get LEI record using filters
         this.qryParameters = qryParameters;
     }
 
-    def = { api: 'gleif', endpoint: 'leiRecs'};
+    def = { api: 'gleif', endpoint: 'leiRecs' };
 
     path = 'api/v1/lei-records';
 
@@ -141,7 +141,7 @@ class DnbDplAuth { //Get D&B D+ access token
         //Really not for creating multiple instances
     }
 
-    def = { api: 'dnbDpl', endpoint: 'auth'};
+    def = { api: 'dnbDpl', endpoint: 'auth' };
 
     path = 'v2/token';
 
@@ -161,7 +161,7 @@ class DnbDplDBs { //Get D&B D+ data blocks
         this.qryParameters = qryParameters;
     }
 
-    def = { api: 'dnbDpl', endpoint: 'dbs'};
+    def = { api: 'dnbDpl', endpoint: 'dbs' };
 
     path = 'v1/data/duns/';
 
