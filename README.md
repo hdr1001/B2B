@@ -68,5 +68,3 @@ After creating the needed [environment variables](https://github.com/hdr1001/B2B
 [def00006]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110691&authkey=%21AJA-z08rLyNIi9o&width=660
 [def00007]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110692&authkey=%21ALlSZUvkVr-cye8&width=660
 [def00008]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110714&authkey=%21ADFrizxoQpFV-9U&width=660
-[def00009]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110721&authkey=%21AJxu4j37hZQe3tQ&width=660
-[def00010]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110722&authkey=%21AOAJJYpzd1MS2-U&width=660
