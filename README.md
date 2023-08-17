@@ -52,7 +52,7 @@ Moving on with code to retrieve a D&B Direct+ [token](https://directplus.documen
 ![Fetch D+ token][def00008]
 
 ## Project now supports D&B data blocks
-Added a new [class and definition](https://bit.ly/3QyfhsV) to support D&B Direct+ data blocks. Also added [test code](https://bit.ly/3DSoZ1t) to the project as well. Shortest way to run the code is in GitHub Codespaces.
+Added a new [definition and class](https://bit.ly/3QyfhsV) to support D&B Direct+ data blocks. Also added [test code](https://bit.ly/3DSoZ1t) to the project as well. Shortest way to run the code is in GitHub Codespaces.
 
 ![GitHub Codespaces][def00009]
 

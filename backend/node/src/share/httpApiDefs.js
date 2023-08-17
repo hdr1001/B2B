@@ -106,18 +106,16 @@ class DnbDplAuth { //Get D&B D+ access token
     method = 'POST';
 
     execReq = function() {
-        const http = new Https({
+        const httpsParameters = {
             ...httpAttrDpl,
             method: this.method,
             path: this.path,
-            headers: {
-                ...sharedHeaders,
-                Authorization: `Basic ${Buffer.from(`${process.env.DNB_DPL_KEY}:${process.env.DNB_DPL_SECRET}`).toString('Base64')}`
-            },
             body: JSON.stringify({ 'grant_type': 'client_credentials' })
-        });
+        };
 
-        return http.execReq();
+        httpsParameters.headers.Authorization = `Basic ${Buffer.from(`${process.env.DNB_DPL_KEY}:${process.env.DNB_DPL_SECRET}`).toString('Base64')}`;
+
+        return (new Https(httpsParameters)).execReq();
     };
 
     //Propagate the token acquired
@@ -136,9 +134,16 @@ class DnbDplDBs { //Get D&B D+ data blocks
 
     def = { api: 'dnbDpl', endpoint: 'dbs' };
 
-    path = 'v1/data/duns/';
+    path = '/v1/data/duns/';
 
-    getReq = apiEndpoint.dnbDpl.dbs.getReq;
+    execReq = function() {
+        const httpsParameters = {
+            ...httpAttrDpl,
+            path: `${this.path}${this.resource}?${new URLSearchParams({ ...this.qryParameters })}`,
+        };
+
+        return ((new Https(httpsParameters)).execReq());
+    }
 }
 
 const leiReq = new LeiReq('529900F4SNCR9BEWFZ60');
@@ -154,6 +159,14 @@ leiFilter.execReq().then(ret => console.log(ret.buffBody.toString()));
 
 const dnbDplAuth = new DnbDplAuth;
 
-dnbDplAuth.execReq().then(ret => console.log(ret.buffBody.toString()));
+dnbDplAuth.execReq().then(ret => {
+    const auth = JSON.parse(ret.buffBody.toString());
+
+    dnbDplAuth.updToken(auth.access_token);
+
+    const dnbDplDBs = new DnbDplDBs('407809623', { blockIDs: 'companyinfo_L2_v1' });
+
+    dnbDplDBs.execReq().then(ret => console.log(ret.buffBody.toString()));
+});
 
 export { LeiReq, LeiFilter, DnbDplAuth, DnbDplDBs };
