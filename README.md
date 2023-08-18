@@ -9,6 +9,7 @@ Repo containing the code I developed as it relates to B2B API's, UI's, data proc
 5. [Added rate limiter](#added-rate-limiter)
 6. [Fetch a D&B Direct+ token](#using-fetch-to-retrieve-a-db-direct-token)
 7. [D&B Direct+ data blocks](#project-now-supports-db-data-blocks)
+8. [Module https](#module-https)
 
 ## Introduction
 In this repository I want to bring together all the B2B (D&B, GLEIF, ...) code I have developed over time and expand from there. Initially the most important sources will be the following GitHub repositories: [API Hub - Request, Persist & Respond (v4)](https://github.com/hdr1001/api_hub_rpr_v4) and [D&B Direct+ utilities (v3)](https://github.com/hdr1001/dnbDplUtilities_v3).
@@ -60,6 +61,12 @@ After creating the needed [environment variables](https://github.com/hdr1001/B2B
 
 ![npm run fetch][def00010]
 
+## Module https
+
+I have a lot of experience using [module https](https://nodejs.org/api/https.html#https) for executing API requests. In this repo I decided to use [Fetch](https://nodejs.org/dist/latest-v18.x/docs/api/globals.html#fetch) instead. Just to be able to compare my [Fetch code](https://github.com/hdr1001/B2B/blob/main/backend/node/src/share/apiDefs.js) with my [https code](https://github.com/hdr1001/B2B/blob/main/backend/node/src/share/httpApiDefs.js) I developed a shared library and test code. Everthing works as expected. I might use module https in the future for implementing a [SOAP API](https://stoplight.io/api-types/soap-api).
+
+![Fetch v. https][def00011]
+
 [def00001]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110659&authkey=%21ANInHYJzHrgtSIY&width=999999&height=660
 [def00002]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110658&authkey=%21AOiUWHnoJaWzcLc&width=999999&height=448
 [def00003]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110660&authkey=%21ABbXt4yOUaQh_eA&width=384&height=999999
@@ -69,4 +76,5 @@ After creating the needed [environment variables](https://github.com/hdr1001/B2B
 [def00007]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110692&authkey=%21ALlSZUvkVr-cye8&width=660
 [def00008]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110714&authkey=%21ADFrizxoQpFV-9U&width=660
 [def00009]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110721&authkey=%21AJxu4j37hZQe3tQ&width=660
-[def00010]: https://am4pap001files.storage.live.com/y4mR1Ci_6jc9-wl3GxREg3tFX6DmFYLez9qTpZYdmZlMTOJksjBouozRdWV6v6ib8erKpdgvnEqAk9fhTPioEGQSgblLOi0Q9Y4iyI9Wsa4Bmwok9Gh7c8gyC5133l7sFtjXd9ETDcoVg1tqeiNg3i2PHB31nTDAlHY__M43YIIB4c0cAueCPKyGD0lfmfvyoGf?width=660&height=478&cropmode=none
+[def00010]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110722&authkey=%21AOAJJYpzd1MS2-U&width=660
+[def00011]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110747&authkey=%21ALayNCh1R8vhMrc&width=597&height=351

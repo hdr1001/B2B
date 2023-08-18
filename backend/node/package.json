@@ -5,9 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "temp": "node ./src/share/httpApiDefs",
-    "thumbsUp": "node ./src/script/test/thumbsUp",
     "fetch": "node ./src/script/test/fetch",
+    "https": "node ./src/script/test/https",
+    "thumbsUp": "node ./src/script/test/thumbsUp",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
