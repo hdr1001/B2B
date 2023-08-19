@@ -5,6 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "dnbDplAuthToken": "node ./src/script/dnbDplAuthToken",
     "fetch": "node ./src/script/test/fetch",
     "https": "node ./src/script/test/https",
     "thumbsUp": "node ./src/script/test/thumbsUp",
