@@ -20,12 +20,14 @@
 //
 // *********************************************************************
 
+//Import the fs module for interacting with the file system
+import { promises as fs } from 'fs';
+
 //Secrets are stored in the environment
 import 'dotenv/config';
 
-import { promises as fs } from 'fs';
-
-import { dcdr } from '../share/utils.js';
+//Decoder object for decoding utf-8 data in a binary format
+import { dcdrUtf8 } from '../share/utils.js';
 
 //Import the API definitions
 import { DnbDplAuth } from '../share/apiDefs.js';
@@ -33,8 +35,12 @@ import { DnbDplAuth } from '../share/apiDefs.js';
 //Instantiate a D&B Direct+ authentication object
 const dnbDplAuth = new DnbDplAuth; //Credentials in .env file
 
-//Fetch a Direct+ access token
-fetch(dnbDplAuth.getReq()) //No limiter, should be executed once every 24 hours 
+//Function to log, persist or propagate a Direct+ access token
+function dplAuthToken(
+        doLog = false,
+        doPersist = 'token.json',
+        doPropagate = false) {
+    fetch(dnbDplAuth.getReq()) //No limiter, should be executed once every 24 hours 
     .then(resp => {
         if(resp.ok) {
             return resp.arrayBuffer();
@@ -44,8 +50,17 @@ fetch(dnbDplAuth.getReq()) //No limiter, should be executed once every 24 hours
         }
     })
     .then(arrBuff => {
-        //fs.writeFile('./io/out/token.json', Buffer.from(arrBuff));
+        if(doLog) { console.log(dcdrUtf8.decode(arrBuff)) }
 
-        console.log(dcdr.decode(arrBuff));
+        if(doPersist) {
+            fs.writeFile(
+                `./io/out/${doPersist}`,
+                dcdrUtf8.decode(arrBuff),
+                err => console.error(err)
+            )
+        }
     })
     .catch(err => console.error('D&B Direct+ API data fetch error: ', err));
+}
+
+export { dplAuthToken }

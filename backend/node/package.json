@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dnbDplAuthToken": "node ./src/script/dnbDplAuthToken",
+    "dplAuthToken": "run-func ./src/script/dnbDplAuthToken.js dplAuthToken true \"accessToken.json\" false",
     "fetch": "node ./src/script/test/fetch",
     "https": "node ./src/script/test/https",
     "thumbsUp": "node ./src/script/test/thumbsUp",
@@ -21,6 +21,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "dotenv": "^16.3.1",
-    "limiter": "^2.0.1"
+    "limiter": "^2.0.1",
+    "run-func": "^3.0.0"
   }
 }
