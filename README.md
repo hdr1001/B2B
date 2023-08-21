@@ -10,6 +10,7 @@ Repo containing the code I developed as it relates to B2B API's, UI's, data proc
 6. [Fetch a D&B Direct+ token](#using-fetch-to-retrieve-a-db-direct-token)
 7. [D&B Direct+ data blocks](#project-now-supports-db-data-blocks)
 8. [Module https](#module-https)
+9. [Module run-func](#module-run-func)
 
 ## Introduction
 In this repository I want to bring together all the B2B (D&B, GLEIF, ...) code I have developed over time and expand from there. Initially the most important sources will be the following GitHub repositories: [API Hub - Request, Persist & Respond (v4)](https://github.com/hdr1001/api_hub_rpr_v4) and [D&B Direct+ utilities (v3)](https://github.com/hdr1001/dnbDplUtilities_v3).
@@ -67,6 +68,20 @@ I have a lot of experience using [module https](https://nodejs.org/api/https.htm
 
 ![Fetch v. https][def00011]
 
+## Module run-func
+
+Module run-func lets you execute an exported JavaScript function directly from command line. This module must be installed:
+
+![npm i -S run-func][def00012]
+
+With this functionality in place it is possible to create scripts like the dplAuthToken script below:
+
+![script run-func][def00013]
+
+Works like a charm:
+
+![script executed 👍🏻][def00014]
+
 [def00001]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110659&authkey=%21ANInHYJzHrgtSIY&width=999999&height=660
 [def00002]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110658&authkey=%21AOiUWHnoJaWzcLc&width=999999&height=448
 [def00003]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110660&authkey=%21ABbXt4yOUaQh_eA&width=384&height=999999
@@ -78,3 +93,6 @@ I have a lot of experience using [module https](https://nodejs.org/api/https.htm
 [def00009]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110721&authkey=%21AJxu4j37hZQe3tQ&width=660
 [def00010]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110748&authkey=%21ALTkV37WSf8HK0g&width=660
 [def00011]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110747&authkey=%21ALayNCh1R8vhMrc&width=597&height=351
+[def00012]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110761&authkey=%21AC0rp8VsASN3D_Y&width=578&height=131
+[def00013]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110762&authkey=%21AJ3FL0VIASGGKDk&width=660
+[def00014]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110763&authkey=%21ABl4jQgE87lULvE&width=660

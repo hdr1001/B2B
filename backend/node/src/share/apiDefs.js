@@ -21,8 +21,10 @@
 // *********************************************************************
 
 //.env configuration
-import * as dotenv from 'dotenv';
-dotenv.config();
+import 'dotenv/config';
+
+//Persist updated key values in the .env file
+import { setEnvValue } from './utils.js';
 
 //Construct the base URL for an API
 const baseURL = url => `${url.scheme}://${url.domainSub}.${url.domain}.${url.domainTop}${url.port ? ':' + url.port : ''}/`;
@@ -149,9 +151,13 @@ class DnbDplAuth { //Get D&B D+ access token
 
     //Propagate the token acquired
     updToken = accessToken => {
-        process.env.DNB_DPL_TOKEN = accessToken;
+        process.env.DNB_DPL_TOKEN = accessToken; //Propagate to the environment
 
+        //Update the HTTP authorization header
         api.dnbDpl.headers.Authorization = `Bearer ${process.env.DNB_DPL_TOKEN}`;
+
+        //Write the new token to the .env file
+        setEnvValue('DNB_DPL_TOKEN', '\"' + accessToken + '\"');
     }
 }
 
