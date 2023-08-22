@@ -91,7 +91,7 @@ Works like a charm:
 [def00007]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110692&authkey=%21ALlSZUvkVr-cye8&width=660
 [def00008]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110714&authkey=%21ADFrizxoQpFV-9U&width=660
 [def00009]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110721&authkey=%21AJxu4j37hZQe3tQ&width=660
-[def00010]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110748&authkey=%21ALTkV37WSf8HK0g&width=660
+[def00010]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110764&authkey=%21ABu7vEp4jxqeG-E&width=780&height=565
 [def00011]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110747&authkey=%21ALayNCh1R8vhMrc&width=597&height=351
 [def00012]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110761&authkey=%21AC0rp8VsASN3D_Y&width=578&height=131
 [def00013]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110762&authkey=%21AJ3FL0VIASGGKDk&width=660
