@@ -59,6 +59,9 @@ leiReqs.forEach(req =>
 
 //Instantiate a D&B Direct+ authentication object
 const dnbDplAuth = new DnbDplAuth; //Credentials in .env file
+//const dnbDplAuth = new DnbDplAuth('v2');
+//const dnbDplAuth = new DnbDplAuth('v3');
+//const dnbDplAuth = new DnbDplAuth('vx'); //Will generate an error
 
 //Get a Direct+ access token
 fetch(dnbDplAuth.getReq())
@@ -71,7 +74,7 @@ fetch(dnbDplAuth.getReq())
         }
     })
     .then(dplAuth => {
-        if(86400 === dplAuth?.expiresIn) {
+        if(dplAuth?.access_token) {
             console.log('✅ D&B Direct+ authorization request');
 
             dnbDplAuth.updToken(dplAuth.access_token); //Propagate the new token

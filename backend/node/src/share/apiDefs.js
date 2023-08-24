@@ -87,15 +87,31 @@ const apiEndpoint = {
 
         auth: { //D&B Direct+ generate auth token
             getReq: function() {
+                let sBody = '', httpHeaders;
+
+                if(this.path.slice(0, 2) === 'v2') {
+                    sBody = JSON.stringify({ 'grant_type': 'client_credentials' });
+
+                    httpHeaders = sharedHeaders;
+                }
+
+                if(this.path.slice(0, 2) === 'v3') {
+                    sBody = (new URLSearchParams({ grant_type: 'client_credentials' })).toString();
+
+                    httpHeaders = { 'Content-Type': 'application/x-www-form-urlencoded' }
+                }
+
+                if(!sBody) { throw new Error(`Invalid version specified (${this.path.slice(0, 2)}) for D&B Direct+ authentication token`)}
+
                 return new Request (
                     `${apiEndpoint.dnbDpl.baseURL}${this.path}`,
                     {
                         method: 'POST',
                         headers: {
-                            ...api.dnbDpl.headers,
+                            ...httpHeaders,
                             Authorization: `Basic ${Buffer.from(`${process.env.DNB_DPL_KEY}:${process.env.DNB_DPL_SECRET}`).toString('Base64')}`
                         },
-                        body: JSON.stringify({ 'grant_type': 'client_credentials' })
+                        body: sBody
                     }
                 )
             }
@@ -139,13 +155,11 @@ class LeiFilter { //Get LEI record using filters
 }
 
 class DnbDplAuth { //Get D&B D+ access token
-    constructor() {
-        //Really not for creating multiple instances
+    constructor(version = 'v2') {
+        this.path = `${version}/token`;
     }
 
     def = { api: 'dnbDpl', endpoint: 'auth' };
-
-    path = 'v2/token';
 
     getReq = apiEndpoint.dnbDpl.auth.getReq;
 
