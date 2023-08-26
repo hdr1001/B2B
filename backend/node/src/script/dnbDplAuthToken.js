@@ -29,14 +29,13 @@ import { dcdrUtf8 } from '../share/utils.js';
 //Import the API definitions
 import { DnbDplAuth } from '../share/apiDefs.js';
 
-//Instantiate a D&B Direct+ authentication object
-const dnbDplAuth = new DnbDplAuth; //Credentials in .env file
-
 //Function to log, persist or propagate a Direct+ access token
 function dplAuthToken(
-        doLog = false,
-        doPersist = 'token.json',
-        doPropagate = false) {
+        doLog = false,       //Log the response to the console
+        doPersist,           //Write the response to a file
+        doPropagate = false, //Update the environment, auth header & .env file
+        version = 'v2'       //Endpoint version
+    ) {
 
     //Token can only be generated if credentials are available
     if(!process.env.DNB_DPL_KEY || !process.env.DNB_DPL_SECRET) {
@@ -49,6 +48,9 @@ function dplAuthToken(
         
         return -1;
     }
+
+    //Instantiate a D&B Direct+ authentication object
+    const dnbDplAuth = new DnbDplAuth(version); //Credentials in .env file
 
     //All systems go
     fetch(dnbDplAuth.getReq()) //No limiter, should be executed once every 24 hours 
