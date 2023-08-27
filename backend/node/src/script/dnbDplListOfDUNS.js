@@ -20,32 +20,21 @@
 //
 // *********************************************************************
 
-import lineByLine from 'n-readlines';
+import { readInputFile } from "../share/readInputFile.js";
 
-const liner = new lineByLine('./io/in/DUNS.txt');
+const arrInp = readInputFile();
 
-const numRowChunks = 50;
+async function process(arr) {
+    const retArr = [];
 
-function processFilePart(arr) {
-    arr.forEach(element => {
-        console.log(element)
-    });
+    arr.forEach(element => retArr.push(new Promise(resolve => setTimeout(() => resolve(element), Math.floor(Math.random() * 1000)))));
 
-    return new Promise(r => setTimeout(r, 2000));
+    return Promise.all(retArr);
 }
 
-let line, lineTrimmed, arr = [];
+for(const arrChunk of arrInp) {
+    const arrResolved = await process(arrChunk);
 
-while (line = liner.next()) {
-    lineTrimmed = line.toString('utf8').trim();
-
-    if(lineTrimmed) { arr.push(lineTrimmed) }
-
-    if(arr.length >= numRowChunks) {
-        await processFilePart(arr);
-
-        arr = [];
-    }
+    console.log(`Chunk ${arrResolved.length}`);
+    arrResolved.forEach(elem => console.log(elem));
 }
-
-await processFilePart(arr);
