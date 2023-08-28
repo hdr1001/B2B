@@ -1,7 +1,7 @@
 // *********************************************************************
 //
-// D&B Direct+ utilities, enrich a list of DUNS
-// JavaScript code file: dnbDplListOfDUNS.js
+// Enrich a list of keys (DUNS/LEI/...) using an API
+// JavaScript code file: getListOfKeys.js
 //
 // Copyright 2023 Hans de Rooij
 //
@@ -20,7 +20,7 @@
 //
 // *********************************************************************
 
-import { readInputFile } from "../share/readInputFile.js";
+import { readInputFile } from "../share/readInputFileKeys.js";
 
 const arrInp = readInputFile();
 

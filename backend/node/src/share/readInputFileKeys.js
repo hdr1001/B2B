@@ -1,7 +1,7 @@
 // *********************************************************************
 //
-// Read an input file into a two dimensional array
-// JavaScript code file: readInputFile.js
+// Read an input file into a two dimensional array of keys
+// JavaScript code file: readInputFileKeys.js
 //
 // Copyright 2023 Hans de Rooij
 //
@@ -20,27 +20,44 @@
 //
 // *********************************************************************
 
+//Read a file line by line (synchronously!)
 import lineByLine from 'n-readlines';
 
+//Key cleanup code
 function transform(buff) {
     return buff.toString('utf8').trim();    
 }
 
 function readInputFile(
         file = 'DUNS.txt', //Name of the input file
+        dedup = true,      //Deduplicate the keys on the input file
         arrChunkSize = 50  //Size of the second dimension of the array
     ) {
+        const setKeys = new Set; //Set is used for checking for duplicates
+
+        //Read the input file line-by-line
         const liner = new lineByLine(`./io/in/${file}`);
 
         const retArr = [];
 
         let line, lineTransformed, arr = [];
 
-        while(line = liner.next()) {
-            lineTransformed = transform(line);
+        while(line = liner.next()) { //Loop over all the lines in the file
+            lineTransformed = transform(line); //Cleanup done here
 
-            if(lineTransformed) { arr.push(lineTransformed) }
+            if(dedup && setKeys.has(lineTransformed)) { //Duplicate check
+                //console.log(`Duplicate key ${lineTransformed}`)
+            }
+            else {
+                if(lineTransformed) { //New key with length > 0
+                    arr.push(lineTransformed); //Add to the return array
 
+                    //Add the key to the deduplication set
+                    if(dedup) { setKeys.add(lineTransformed) }
+                }
+            }
+
+            //Build the two dimensional array
             if(arr.length >= arrChunkSize) {
                 retArr.push(arr);
         
@@ -48,6 +65,7 @@ function readInputFile(
             }    
         }
 
+        //Add the remainder to the two dimensional array
         if(arr.length) { retArr.push(arr) }
 
         return retArr;

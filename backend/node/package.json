@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dplAuthToken": "run-func ./src/script/dnbDplAuthToken.js dplAuthToken false \"\" true",
-    "dplListOfDUNS": "run-func ./src/script/dnbDplListOfDUNS.js dplListOfDUNS",
+    "getListOfKeys": "node ./src/script/getListOfKeys",
     "fetch": "node ./src/script/test/fetch",
     "https": "node ./src/script/test/https",
     "thumbsUp": "node ./src/script/test/thumbsUp",
