@@ -67,13 +67,15 @@ const apiEndpoint = {
         baseURL: baseURL(api.gleif.url),
 
         leiRecs: { //LEI records (https://bit.ly/45mRwbt)
-            getReq: function(leiReq) {
-                const qryString = leiReq.qryParameters
-                    ? new URLSearchParams({ ...leiReq.qryParameters, ...api.gleif.leiPageSizeNum })
-                    : '';
+            getReq: function() {
+                let qryString = '';
+
+                if(this.qryParameters) {
+                    qryString = new URLSearchParams({ ...this.qryParameters, ...api.gleif.leiPageSizeNum })
+                }
 
                 return new Request(
-                    `${apiEndpoint.gleif.baseURL}${this.path}${leiReq.resource ? `/${leiReq.resource}` : '?'}${qryString}`,
+                    `${apiEndpoint.gleif.baseURL}${this.path}${this.resource ? `/${this.resource}` : '?'}${qryString}`,
                     {
                         headers: api.gleif.headers
                     }

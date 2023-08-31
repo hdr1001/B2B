@@ -23,7 +23,7 @@
 //Import the API definitions
 import { LeiFilter, LeiReq, DnbDplAuth, DnbDplDBs } from '../../share/apiDefs.js';
 
-//Import rate limiters
+//Import rate limiter
 import { gleifLimiter } from '../../share/limiters.js';
 
 //Specify test requests against the GLEIF API
@@ -44,7 +44,7 @@ leiReqs.push(new LeiFilter({
 //Execute the GLEIF test requests
 leiReqs.forEach(req => 
     gleifLimiter.removeTokens(1) //Respect the API rate limits
-        .then(() => fetch(req.getReq(req)))
+        .then(() => fetch(req.getReq()))
         .then(resp => {
             if (resp.ok) {
                 return resp.json();
