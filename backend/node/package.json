@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dplAuthToken": "run-func ./src/script/dnbDplAuthToken.js dplAuthToken false \"\" true",
+    "dplAuthToken": "run-func ./src/script/dnbDplAuthToken.js dplAuthToken \"\" \"\" true",
     "getListOfKeys": "node ./src/script/getListOfKeys",
     "fetch": "node ./src/script/test/fetch",
     "https": "node ./src/script/test/https",

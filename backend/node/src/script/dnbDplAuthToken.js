@@ -64,12 +64,12 @@ function dplAuthToken(
         })
         .then(arrBuff => {
             //Log to console
-            if(doLog) { console.log(dcdrUtf8.decode(arrBuff)) }
+            if(doLog) { console.log(`Response to authentication request ${dcdrUtf8.decode(arrBuff)}`) }
 
             //Write to file
             if(doPersist) {
                 fs.writeFile(
-                    `./io/out/${doPersist}`,
+                    `../io/out/${doPersist}`,
                     dcdrUtf8.decode(arrBuff),
                     err => console.error(err)
                 )

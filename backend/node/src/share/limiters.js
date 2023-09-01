@@ -27,4 +27,7 @@ import { RateLimiter } from 'limiter';
 //Max bandwidth on the GLEIF API
 const gleifLimiter = new RateLimiter({ tokensPerInterval: 2, interval: 'second' });
 
-export { gleifLimiter };
+//Max bandwidth on the GLEIF API
+const dnbDplLimiter = new RateLimiter({ tokensPerInterval: 4, interval: 'second' });
+
+export { gleifLimiter, dnbDplLimiter };

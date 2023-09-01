@@ -24,7 +24,7 @@
 import { readInputFile } from "../share/readInputFileKeys.js";
 
 //Import the GLEIF API and D&B Direct+ rate limiters
-import { gleifLimiter } from '../share/limiters.js';
+import { gleifLimiter, dnbDplLimiter } from '../share/limiters.js';
 
 //Emply the respective API definitions
 import { LeiReq } from "../share/apiDefs.js"
@@ -32,17 +32,41 @@ import { LeiReq } from "../share/apiDefs.js"
 //Decoder object for decoding utf-8 data in a binary format
 import { dcdrUtf8 } from '../share/utils.js';
 
+//Script variables
+let limiter; //Rate limiter (see imports)
+let inpFile; //Input file containing the keys
+
+//Application configuration settings
+const api = 'gleif'; //gleif, dnbDpl
+
+if(api === 'gleif') { //Enrich LEI numbers
+    limiter = gleifLimiter;
+
+    inpFile = 'LEI.txt';
+}
+
+if(api === 'dnbDpl') { //Enrich DUNS numbers
+    limiter = dnbDplLimiter;
+
+    inpFile = 'DUNS.txt';
+}
+
 //Read key data from a file into a two-dimensional array
-const arrInp = readInputFile('LEI.txt');
+const arrInp = readInputFile(inpFile);
 
 //Asynchronous function for processing the API requests
 async function process(arr) {
     return Promise.allSettled(arr.map(key => {
+        let apiReq;
+
+        //Instantiate a new LEI API request
+        if(api === 'gleif') { apiReq = new LeiReq(key) }
+
         const ret = { key }; //Start building the return object
 
         return new Promise((resolve, reject) => {
-            gleifLimiter.removeTokens(1) //Respect the API rate limits
-                .then(() => fetch(new LeiReq(key).getReq())) //The actual API call
+            limiter.removeTokens(1) //Respect the API rate limits
+                .then(() => fetch(apiReq.getReq())) //The actual API call
                 .then(resp => {
                     if (resp.ok) {
                         ret.httpStatus = resp.status; //Return the HTTP status code

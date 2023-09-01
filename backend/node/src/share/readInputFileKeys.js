@@ -36,7 +36,7 @@ function readInputFile(
         const setKeys = new Set; //Set is used for checking for duplicates
 
         //Read the input file line-by-line
-        const liner = new lineByLine(`./io/in/${file}`);
+        const liner = new lineByLine(`../io/in/${file}`);
 
         const retArr = [];
 
