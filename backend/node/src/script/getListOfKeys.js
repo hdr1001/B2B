@@ -27,7 +27,7 @@ import { readInputFile } from "../share/readInputFileKeys.js";
 import { gleifLimiter, dnbDplLimiter } from '../share/limiters.js';
 
 //Emply the respective API definitions
-import { LeiReq } from "../share/apiDefs.js"
+import { LeiReq, DnbDplDBs } from "../share/apiDefs.js"
 
 //Decoder object for decoding utf-8 data in a binary format
 import { dcdrUtf8 } from '../share/utils.js';
@@ -37,7 +37,7 @@ let limiter; //Rate limiter (see imports)
 let inpFile; //Input file containing the keys
 
 //Application configuration settings
-const api = 'gleif'; //gleif, dnbDpl
+const api = 'dnbDpl'; //gleif, dnbDpl
 
 if(api === 'gleif') { //Enrich LEI numbers
     limiter = gleifLimiter;
@@ -61,6 +61,11 @@ async function process(arr) {
 
         //Instantiate a new LEI API request
         if(api === 'gleif') { apiReq = new LeiReq(key) }
+
+        //Instantiate a new LEI API request
+        if(api === 'dnbDpl') {
+            apiReq = new DnbDplDBs(key, { blockIDs: 'companyinfo_L2_v1' })
+        }
 
         const ret = { key }; //Start building the return object
 
