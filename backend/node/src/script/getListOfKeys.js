@@ -32,19 +32,52 @@ import { LeiReq, DnbDplDBs } from "../share/apiDefs.js"
 //Decoder object for decoding utf-8 data in a binary format
 import { dcdrUtf8 } from '../share/utils.js';
 
+//Data Blocks, specify which blocks (@ which levels) to request
+const dnbDplDBs = { //Set level to 0 ⬇️ to not include the block
+    dbs: [
+        {db: 'companyinfo',               level: 2, dbShort: 'ci', version: '1'},
+        {db: 'principalscontacts',        level: 2, dbShort: 'pc', version: '2'},
+        {db: 'hierarchyconnections',      level: 1, dbShort: 'hc', version: '1'},
+        {db: 'financialstrengthinsight',  level: 0, dbShort: 'fs', version: '1'},
+        {db: 'paymentinsight',            level: 0, dbShort: 'pi', version: '1'},
+        {db: 'eventfilings',              level: 0, dbShort: 'ef', version: '1'},
+        {db: 'companyfinancials',         level: 0, dbShort: 'cf', version: '2'},
+        {db: 'globalfinancials',          level: 0, dbShort: 'gf', version: '1'},
+        {db: 'esginsight',                level: 0, dbShort: 'ei', version: '1'},
+        {db: 'ownershipinsight',          level: 0, dbShort: 'oi', version: '1'},
+        {db: 'globalbusinessranking',     level: 0, dbShort: 'br', version: '1'},
+        {db: 'businessactivityinsight',   level: 0, dbShort: 'ba', version: '1'},
+        {db: 'diversityinsight',          level: 0, dbShort: 'di', version: '1'},
+        {db: 'dtri',                      level: 0, dbShort: 'dt', version: '1'},
+        {db: 'externaldisruptioninsight', level: 0, dbShort: 'ed', version: '1'},
+        {db: 'inquiryinsight',            level: 0, dbShort: 'ii', version: '1'},
+        {db: 'salesmarketinginsight',     level: 0, dbShort: 'sm', version: '2'},
+        {db: 'shippinginsight',           level: 0, dbShort: 'si', version: '1'}
+    ],
+
+    getBlockIDs: function() {
+        return this.dbs
+            .filter(elem => elem.level > 0)
+            .map(oDB => `${oDB.db}_L${oDB.level}_v${oDB.version}`)
+            .join(',')
+    }
+};
+
 //Script variables
 let limiter; //Rate limiter (see imports)
 let inpFile; //Input file containing the keys
 
-//Application configuration settings
+// ➡️ Main application configuration setting
 const api = 'dnbDpl'; //gleif, dnbDpl
 
+// ➡️ Application configuration for GLEIF download
 if(api === 'gleif') { //Enrich LEI numbers
     limiter = gleifLimiter;
 
     inpFile = 'LEI.txt';
 }
 
+// ➡️ Application configuration for D&B Direct+ download
 if(api === 'dnbDpl') { //Enrich DUNS numbers
     limiter = dnbDplLimiter;
 
@@ -64,7 +97,7 @@ async function process(arr) {
 
         //Instantiate a new LEI API request
         if(api === 'dnbDpl') {
-            apiReq = new DnbDplDBs(key, { blockIDs: 'companyinfo_L2_v1' })
+            apiReq = new DnbDplDBs(key, { blockIDs: dnbDplDBs.getBlockIDs() })
         }
 
         const ret = { key }; //Start building the return object
