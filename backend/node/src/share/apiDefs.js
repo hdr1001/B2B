@@ -128,6 +128,17 @@ const apiEndpoint = {
                     }
                 )
             }
+        },
+
+        famTree: { //D&B Direct+ family tree
+            getReq: function() {
+                return new Request(
+                    `${apiEndpoint.dnbDpl.baseURL}${this.path}${this.resource}?${new URLSearchParams({ ...this.qryParameters })}`,
+                    {
+                        headers: api.dnbDpl.headers,
+                    }
+                )
+            }
         }
     }
 };
@@ -190,4 +201,23 @@ class DnbDplDBs { //Get D&B D+ data blocks
     getReq = apiEndpoint.dnbDpl.dbs.getReq;
 }
 
-export { LeiReq, LeiFilter, DnbDplAuth, DnbDplDBs };
+class DnbDplFamTree { //Get a D&B D+ corporate structure
+    constructor(resource, qryParameters) {
+        this.resource = resource;        
+        this.qryParameters = qryParameters;
+    }
+
+    def = { api: 'dnbDpl', endpoint: 'famTree' };
+
+    path = 'v1/familyTree/';
+
+    getReq = apiEndpoint.dnbDpl.famTree.getReq;
+}
+
+export {
+    LeiReq,
+    LeiFilter,
+    DnbDplAuth,
+    DnbDplDBs,
+    DnbDplFamTree
+};
