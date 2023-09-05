@@ -139,6 +139,17 @@ const apiEndpoint = {
                     }
                 )
             }
+        },
+
+        benOwner: { //D&B Direct+ beneficial owner
+            getReq: function() {
+                return new Request(
+                    `${apiEndpoint.dnbDpl.baseURL}${this.path}?${new URLSearchParams({ duns: this.duns, ...this.qryParameters })}`,
+                    {
+                        headers: api.dnbDpl.headers,
+                    }
+                )
+            }
         }
     }
 };
@@ -214,10 +225,24 @@ class DnbDplFamTree { //Get a D&B D+ corporate structure
     getReq = apiEndpoint.dnbDpl.famTree.getReq;
 }
 
+class DnbDplBenOwner { //Get a D&B D+ beneficial owner
+    constructor(duns, qryParameters) {
+        this.duns = duns;        
+        this.qryParameters = qryParameters;
+    }
+
+    def = { api: 'dnbDpl', endpoint: 'benOwner' };
+
+    path = 'v1/beneficialowner';
+
+    getReq = apiEndpoint.dnbDpl.benOwner.getReq;
+}
+
 export {
     LeiReq,
     LeiFilter,
     DnbDplAuth,
     DnbDplDBs,
-    DnbDplFamTree
+    DnbDplFamTree,
+    DnbDplBenOwner
 };
