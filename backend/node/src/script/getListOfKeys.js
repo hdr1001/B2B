@@ -38,10 +38,10 @@ import { promises as fs } from 'fs';
 //Data Blocks, specify which blocks (@ which levels) to request
 const dnbDplDBs = { //Set level to 0 ⬇️ to not include the block
     dbs: [
-        {db: 'companyinfo',               level: 1, dbShort: 'ci', version: '1'},
-        {db: 'principalscontacts',        level: 0, dbShort: 'pc', version: '2'},
-        {db: 'hierarchyconnections',      level: 0, dbShort: 'hc', version: '1'},
-        {db: 'financialstrengthinsight',  level: 2, dbShort: 'fs', version: '1'},
+        {db: 'companyinfo',               level: 2, dbShort: 'ci', version: '1'},
+        {db: 'principalscontacts',        level: 2, dbShort: 'pc', version: '2'},
+        {db: 'hierarchyconnections',      level: 1, dbShort: 'hc', version: '1'},
+        {db: 'financialstrengthinsight',  level: 0, dbShort: 'fs', version: '1'},
         {db: 'paymentinsight',            level: 0, dbShort: 'pi', version: '1'},
         {db: 'eventfilings',              level: 0, dbShort: 'ef', version: '1'},
         {db: 'companyfinancials',         level: 0, dbShort: 'cf', version: '2'},
@@ -82,9 +82,19 @@ let fileName;  //Filename for persistence to file
 //Current month day is made part of the file name
 const monthDay = new Date().toISOString().split('T')[0].slice(5, 10);
 
-// ➡️ Main application configuration setting
-const api = 'dnbDpl';     //gleif, dnbDpl
-const endpoint = 'dbs';   //dnbDpl options: dbs, famTree, benOwner
+// ➡️ Main application configuration settings
+
+// First specify the API to call
+const api = 'dnbDpl';     //Available options are gleif & dnbDpl
+
+// Choose an endpoint in case the API selected is D&B Direct+
+// If Data Blocks (i.e. dbs) configure object dnbDplDBs above
+const endpoint = 'benOwner';   //dnbDpl options: dbs, famTree, benOwner
+
+// Configure a product if endpoint is beneficial owner (i.e. benOwner)
+const boProduct = 'cmpbol'; //Possible values 'cmpbol', 'cmpbos', 'cmpcol' or 'cmpcos'
+
+// Specify persistence options
 const persistFile = true; //Persist the response json as a file
 
 // ➡️ Application configuration for GLEIF download
@@ -125,8 +135,6 @@ if(api === 'dnbDpl') { //Enrich DUNS numbers
     }
 
     if(endpoint === 'benOwner') {
-        const boProduct = 'cmpbol'; //Possible values 'cmpbol', 'cmpbos', 'cmpcol' or 'cmpcos'
-
         qryParams = {
             productId: boProduct,
             versionId: 'v1',
