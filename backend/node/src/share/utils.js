@@ -62,5 +62,19 @@ function setEnvValue(key, value) {
         .then(() => console.log(`Succesfully updated file ${dotEnv}`))
         .catch(err => console.error(err));
 }
-  
-export { dcdrUtf8, setEnvValue };
+
+//Convert a DUNS to a string of 9 digits
+function cleanDUNS(inDUNS) {
+    //Correct the old school XX-XXX-XXXX DUNS format
+    let outDUNS = inDUNS.length === 11 && inDUNS.slice(2, 3) === '-' && inDUNS.slice(6, 7) === '-'
+        ? inDUNS.slice(0, 2) + inDUNS.slice(3, 6) + inDUNS.slice(7)
+        : inDUNS;
+
+    //Return an empty sting if more than nine or any non-numeric characters
+    if(outDUNS.length > 9 || !/^\d*$/.test(outDUNS)) { return '' }
+
+    //Return the DUNS with, if needed, 0s prepended
+    return '000000000'.slice(0, 9 - outDUNS.length) + outDUNS;
+}
+
+export { dcdrUtf8, setEnvValue, cleanDUNS };

@@ -20,16 +20,31 @@
 //
 // *********************************************************************
 
+//funtion to clean a DUNS is defined in utils.js
+import { cleanDUNS } from './utils.js';
+
 //Read a file line by line (synchronously!)
 import lineByLine from 'n-readlines';
 
 //Key cleanup code
-function transform(buff) {
-    return buff.toString('utf8').trim();    
+function transform(buff, keyType) {
+    let ret = buff.toString('utf8').trim();
+
+    switch(keyType) {
+        case 'duns':
+            ret = cleanDUNS(ret);
+            break;
+
+        default:
+            console.log('No cleanup specified')
+    }
+
+    return ret;    
 }
 
 function readInputFile(
         file = 'DUNS.txt', //Name of the input file
+        keyType = 'duns',
         dedup = true,      //Deduplicate the keys on the input file
         arrChunkSize = 50  //Size of the second dimension of the array
     ) {
@@ -43,7 +58,7 @@ function readInputFile(
         let line, lineTransformed, arr = [];
 
         while(line = liner.next()) { //Loop over all the lines in the file
-            lineTransformed = transform(line); //Cleanup done here
+            lineTransformed = transform(line, keyType); //Cleanup done here
 
             if(dedup && setKeys.has(lineTransformed)) { //Duplicate check
                 //console.log(`Duplicate key ${lineTransformed}`)

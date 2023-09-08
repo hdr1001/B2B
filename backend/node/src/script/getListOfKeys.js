@@ -78,6 +78,7 @@ let limiter;   //Rate limiter (see imports)
 let inpFile;   //Input file containing the keys
 let qryParams; //Request query parameters
 let fileName;  //Filename for persistence to file
+let keyType;   //Type of key (duns, lei)
 
 //Current month day is made part of the file name
 const monthDay = new Date().toISOString().split('T')[0].slice(5, 10);
@@ -89,7 +90,7 @@ const api = 'dnbDpl';     //Available options are gleif & dnbDpl
 
 // Choose an endpoint in case the API selected is D&B Direct+
 // If Data Blocks (i.e. dbs) configure object dnbDplDBs above
-const endpoint = 'benOwner';   //dnbDpl options: dbs, famTree, benOwner
+const endpoint = 'dbs';   //dnbDpl options: dbs, famTree, benOwner
 
 // Configure a product if endpoint is beneficial owner (i.e. benOwner)
 const boProduct = 'cmpbol'; //Possible values 'cmpbol', 'cmpbos', 'cmpcol' or 'cmpcos'
@@ -99,6 +100,8 @@ const persistFile = true; //Persist the response json as a file
 
 // ➡️ Application configuration for GLEIF download
 if(api === 'gleif') { //Enrich LEI numbers
+    keyType = 'lei';
+
     limiter = gleifLimiter;
 
     inpFile = 'LEI.txt';
@@ -108,6 +111,8 @@ if(api === 'gleif') { //Enrich LEI numbers
 
 // ➡️ Application configuration for D&B Direct+ download
 if(api === 'dnbDpl') { //Enrich DUNS numbers
+    keyType = 'duns';
+
     limiter = dnbDplLimiter;
 
     inpFile = 'DUNS.txt';
@@ -148,7 +153,7 @@ if(api === 'dnbDpl') { //Enrich DUNS numbers
 }
 
 //Read key data from a file into a two-dimensional array
-const arrInp = readInputFile(inpFile);
+const arrInp = readInputFile(inpFile, keyType);
 
 //Asynchronous function for processing the API requests
 async function process(arr) {
