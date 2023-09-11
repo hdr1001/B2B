@@ -35,6 +35,9 @@ import { dcdrUtf8 } from '../share/utils.js';
 //Import the file system for persisting API responses
 import { promises as fs } from 'fs';
 
+//Import a Postgres connection pool
+import { pgPool } from "../share/postgres.js";
+
 //Data Blocks, specify which blocks (@ which levels) to request
 const dnbDplDBs = { //Set level to 0 ⬇️ to not include the block
     dbs: [
@@ -97,6 +100,7 @@ const boProduct = 'cmpbol'; //Possible values 'cmpbol', 'cmpbos', 'cmpcol' or 'c
 
 // Specify persistence options
 const persistFile = true; //Persist the response json as a file
+const persistDB = true; //Persist the reponse json to a Postgres database
 
 // ➡️ Application configuration for GLEIF download
 if(api === 'gleif') { //Enrich LEI numbers
@@ -219,6 +223,27 @@ for(const [idx0, arrChunk] of arrInp.entries()) {
                 fs.writeFile( fn, dcdrUtf8.decode(elem.value.arrBuff) )
                     .then( /* console.log(`Wrote file ${fn} successfully`) */ )
                     .catch(err => console.error(err.message));
+            }
+
+            if(persistDB) {
+                let sSQL = 'INSERT INTO products_dnb (duns, dbs, dbs_obtained_at, dbs_http_status) VALUES ';
+                sSQL    += '($1, $2, $3, $4) ';
+                sSQL    += 'ON CONFLICT (duns) DO ';
+                sSQL    += 'UPDATE SET dbs = $2, dbs_obtained_at = $3, dbs_http_status = $4';
+
+                pgPool.query(
+                    sSQL,
+                    [elem.value.key, dcdrUtf8.decode(elem.value.arrBuff), Date.now(), elem.value.httpStatus]
+                )
+                .then(rslt => {
+                    if(rslt.rowCount=== 1) {
+                        console.log(`Success writing DUNS ${elem.value.key} to the database`)
+                    }
+                    else {
+                        console.log(`Writing DUNS ${elem.value.key} to the database affected ${rslt.rowCount} rows 🤔`)
+                    }
+                })
+                .catch(err => console.error(err.message));
             }
         }
         else { //status === 'rejected'
