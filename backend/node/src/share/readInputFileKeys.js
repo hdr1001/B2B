@@ -36,7 +36,7 @@ function transform(buff, keyType) {
             break;
 
         default:
-            console.log('No cleanup specified')
+            //console.log('No cleanup specified')
     }
 
     return ret;    

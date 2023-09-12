@@ -226,17 +226,27 @@ for(const [idx0, arrChunk] of arrInp.entries()) {
             }
 
             if(persistDB) {
-                let sSQL = 'INSERT INTO products_dnb (duns, dbs, dbs_obtained_at, dbs_http_status) VALUES ';
+                const provider = {
+                    name: 'gleif',
+                    key: 'lei'
+                };
+
+                if(api === 'dnbDpl') {
+                    provider.name = 'dnb';
+                    provider.key = 'duns';
+                }
+
+                let sSQL = `INSERT INTO products_${provider.name} (${provider.key}, product, obtained_at, http_status) VALUES `;
                 sSQL    += '($1, $2, $3, $4) ';
-                sSQL    += 'ON CONFLICT (duns) DO ';
-                sSQL    += 'UPDATE SET dbs = $2, dbs_obtained_at = $3, dbs_http_status = $4';
+                sSQL    += `ON CONFLICT (${provider.key}) DO `;
+                sSQL    += 'UPDATE SET product = $2, obtained_at = $3, http_status = $4';
 
                 pgPool.query(
                     sSQL,
                     [elem.value.key, dcdrUtf8.decode(elem.value.arrBuff), Date.now(), elem.value.httpStatus]
                 )
                 .then(rslt => {
-                    if(rslt.rowCount=== 1) {
+                    if(rslt.rowCount === 1) {
                         console.log(`Success writing DUNS ${elem.value.key} to the database`)
                     }
                     else {
