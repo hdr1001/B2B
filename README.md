@@ -11,6 +11,7 @@ Repo containing the code I developed as it relates to B2B API's, UI's, data proc
 7. [D&B Direct+ data blocks](#project-now-supports-db-data-blocks)
 8. [Module https](#module-https)
 9. [Module run-func](#module-run-func)
+10. [Script generate D&B Direct+ token](#script-for-generating-a-db-direct-token)
 
 ## Introduction
 In this repository I want to bring together all the B2B (D&B, GLEIF, ...) code I have developed over time and expand from there. Initially the most important sources will be the following GitHub repositories: [API Hub - Request, Persist & Respond (v4)](https://github.com/hdr1001/api_hub_rpr_v4) and [D&B Direct+ utilities (v3)](https://github.com/hdr1001/dnbDplUtilities_v3).
@@ -82,6 +83,25 @@ Works like a charm:
 
 ![script executed 👍🏻][def00014]
 
+## Script for generating a D&B Direct+ token
+
+A valid authentication token is required in order to request D&B Direct+ data. The script [dnbDplAuthToken.js](https://bit.ly/3PAR8AO) is an implementation of the relevant [Direct+ endpoint](https://bit.ly/3s1wApw). It can be invoked as follows:
+
+![npm run dplAuthToken][def00015]
+
+The script fetches a new token and, depending on the invocation, can:
+
+1. echo the API response to the terminal (set the 1st parameter to true),
+2. write the API reponse to a file (set the 2nd parameter to true),
+3. propagate the new token throughout the application (set the 3rd parameter to true),
+4. use either v2 or v3 of the endpoint.
+
+The run script in [package.json](https://bit.ly/3RlrYYu) makes sure that a valid token is available for scripts which will be run after this script.
+
+![npm run script dplAuthToken][def00016]
+
+A D&B Direct+ token is valid for 24 hours.
+
 [def00001]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110659&authkey=%21ANInHYJzHrgtSIY&width=999999&height=660
 [def00002]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110658&authkey=%21AOiUWHnoJaWzcLc&width=999999&height=448
 [def00003]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110660&authkey=%21ABbXt4yOUaQh_eA&width=384&height=999999
@@ -96,3 +116,5 @@ Works like a charm:
 [def00012]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110761&authkey=%21AC0rp8VsASN3D_Y&width=578&height=131
 [def00013]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110762&authkey=%21AJ3FL0VIASGGKDk&width=660
 [def00014]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110763&authkey=%21ABl4jQgE87lULvE&width=660
+[def00015]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110850&authkey=%21AJdOzhczKn34nWk&width=660
+[def00016]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110851&authkey=%21ABVY-Fbx_S9DHp8&width=660
