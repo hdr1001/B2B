@@ -11,7 +11,7 @@ Repo containing the code I developed as it relates to B2B API's, UI's, data proc
 7. [D&B Direct+ data blocks](#project-now-supports-db-data-blocks)
 8. [Module https](#module-https)
 9. [Module run-func](#module-run-func)
-10. [Script generate D&B Direct+ token](#script-for-generating-a-db-direct-token)
+10. [Script to generate a D&B Direct+ token](#script-for-generating-a-db-direct-token)
 
 ## Introduction
 In this repository I want to bring together all the B2B (D&B, GLEIF, ...) code I have developed over time and expand from there. Initially the most important sources will be the following GitHub repositories: [API Hub - Request, Persist & Respond (v4)](https://github.com/hdr1001/api_hub_rpr_v4) and [D&B Direct+ utilities (v3)](https://github.com/hdr1001/dnbDplUtilities_v3).
@@ -92,11 +92,11 @@ A valid authentication token is required in order to request D&B Direct+ data. T
 The script fetches a new token and, depending on the invocation, can:
 
 1. echo the API response to the terminal (set the 1st parameter to true),
-2. write the API reponse to a file (set the 2nd parameter to true),
+2. write the API response to a file (set the 2nd parameter to true),
 3. propagate the new token throughout the application (set the 3rd parameter to true),
 4. use either v2 or v3 of the endpoint.
 
-The run script in [package.json](https://bit.ly/3RlrYYu) makes sure that a valid token is available for scripts which will be run after this script.
+The run script in [package.json](https://bit.ly/3RlrYYu) makes sure that a valid token is available for any scripts which will be run after this script.
 
 ![npm run script dplAuthToken][def00016]
 

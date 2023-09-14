@@ -89,18 +89,21 @@ const monthDay = new Date().toISOString().split('T')[0].slice(5, 10);
 // ➡️ Main application configuration settings
 
 // First specify the API to call
-const api = 'dnbDpl';     //Available options are gleif & dnbDpl
+const api = 'dnbDpl';       //Available options are gleif & dnbDpl
 
 // Choose an endpoint in case the API selected is D&B Direct+
 // If Data Blocks (i.e. dbs) configure object dnbDplDBs above
-const endpoint = 'dbs';   //dnbDpl options: dbs, famTree, benOwner
+const endpoint = 'dbs';    //dnbDpl options: dbs, famTree, benOwner
 
 // Configure a product if endpoint is beneficial owner (i.e. benOwner)
 const boProduct = 'cmpbol'; //Possible values 'cmpbol', 'cmpbos', 'cmpcol' or 'cmpcos'
 
 // Specify persistence options
-const persistFile = true; //Persist the response json as a file
-const persistDB = true; //Persist the reponse json to a Postgres database
+const persistFile = true;   //Persist the response json as a file
+const persistDB = true;     //Persist the reponse json to a Postgres database
+
+// Project ID (please keep it short)
+const projectID = ''
 
 // ➡️ Application configuration for GLEIF download
 if(api === 'gleif') { //Enrich LEI numbers
@@ -110,7 +113,7 @@ if(api === 'gleif') { //Enrich LEI numbers
 
     inpFile = 'LEI.txt';
 
-    fileName = `lei_${monthDay}`;
+    fileName = `lei_${monthDay}${projectID ? '_' + projectID : ''}`;
 }
 
 // ➡️ Application configuration for D&B Direct+ download
@@ -121,7 +124,7 @@ if(api === 'dnbDpl') { //Enrich DUNS numbers
 
     inpFile = 'DUNS.txt';
 
-    fileName = `dnb_dpl_${monthDay}_`;
+    fileName = `dnb_dpl_${monthDay}_${projectID ? projectID + '_' : ''}`;
 
     if(endpoint === 'dbs') {
         qryParams = {
