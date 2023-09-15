@@ -20,6 +20,8 @@
 --
 -- *********************************************************************
 
+-- DROP TABLE public.project_keys;
+-- DROP TABLE public.projects;
 -- DROP TABLE public.products_dnb;
 -- DROP TABLE public.products_gleif;
 
@@ -43,6 +45,32 @@ CREATE TABLE public.products_dnb (
    obtained_at bigint,
    http_status smallint,
    CONSTRAINT products_dnb_pkey PRIMARY KEY (duns)
+)
+WITH (
+   OIDS = false
+)
+TABLESPACE pg_default;
+
+-- Create table for storing projects 
+CREATE TABLE public.projects (
+   id character(8) COLLATE pg_catalog."default",
+   descr character varying(128) COLLATE pg_catalog."default",
+   CONSTRAINT projects_pkey PRIMARY KEY (id)
+)
+WITH (
+   OIDS = false
+)
+TABLESPACE pg_default;
+
+-- Create table for keeping track of keys associated wih projects 
+CREATE TABLE public.project_keys (
+   id character(8) COLLATE pg_catalog."default",
+   rec_key character varying(32) COLLATE pg_catalog."default",
+   http_status smallint,
+   note character varying(256) COLLATE pg_catalog."default",
+   tsz timestamptz DEFAULT 'NOW'::timestamptz,
+   CONSTRAINT project_keys_pkey PRIMARY KEY (id, rec_key),
+   CONSTRAINT project_keys_fkey FOREIGN KEY(id) REFERENCES projects(id)
 )
 WITH (
    OIDS = false

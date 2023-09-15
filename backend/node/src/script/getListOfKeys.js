@@ -229,19 +229,9 @@ for(const [idx0, arrChunk] of arrInp.entries()) {
             }
 
             if(persistDB) {
-                const provider = {
-                    name: 'gleif',
-                    key: 'lei'
-                };
-
-                if(api === 'dnbDpl') {
-                    provider.name = 'dnb';
-                    provider.key = 'duns';
-                }
-
-                let sSQL = `INSERT INTO products_${provider.name} (${provider.key}, product, obtained_at, http_status) VALUES `;
-                sSQL    += '($1, $2, $3, $4) ';
-                sSQL    += `ON CONFLICT (${provider.key}) DO `;
+                let sSQL = `INSERT INTO products_${api === 'dnbDpl' ? 'dnb' : api} (${keyType}, product, obtained_at, http_status) `;
+                sSQL    += 'VALUES ($1, $2, $3, $4) ';
+                sSQL    += `ON CONFLICT (${keyType}) DO `;
                 sSQL    += 'UPDATE SET product = $2, obtained_at = $3, http_status = $4';
 
                 pgPool.query(
@@ -250,13 +240,34 @@ for(const [idx0, arrChunk] of arrInp.entries()) {
                 )
                 .then(rslt => {
                     if(rslt.rowCount === 1) {
-                        console.log(`Success writing DUNS ${elem.value.key} to the database`)
+                        console.log(`Success writing ${keyType} ${elem.value.key} to the database`)
                     }
                     else {
-                        console.log(`Writing DUNS ${elem.value.key} to the database affected ${rslt.rowCount} rows 🤔`)
+                        console.log(`Writing ${keyType} ${elem.value.key} to the database affected ${rslt.rowCount} rows 🤔`)
                     }
                 })
                 .catch(err => console.error(err.message));
+
+                if(projectID) {
+                    sSQL  = `INSERT INTO project_keys (id, rec_key, http_status) `;
+                    sSQL += 'VALUES ($1, $2, $3) ';
+                    sSQL += `ON CONFLICT (id, rec_key) DO `;
+                    sSQL += 'UPDATE SET http_status = $3';
+    
+                    pgPool.query(
+                        sSQL,
+                        [projectID, elem.value.key, elem.value.httpStatus]
+                    )
+                    .then(rslt => {
+                        if(rslt.rowCount === 1) {
+                            console.log(`Success updating the database project file for ${keyType} ${elem.value.key}`)
+                        }
+                        else {
+                            console.log(`Writing ${elem.value.key} to the database project file affected ${rslt.rowCount} rows 🤔`)
+                        }
+                    })
+                    .catch(err => console.error(err.message));
+                }
             }
         }
         else { //status === 'rejected'
