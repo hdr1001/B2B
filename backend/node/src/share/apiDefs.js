@@ -42,7 +42,10 @@ const api = {
             domainTop: 'org',
             port: '',
         },
-        headers: sharedHeaders,
+        headers: {
+            ...sharedHeaders,
+            Accept: 'application/vnd.api+json'
+        },
         leiPageSizeNum: { 'page[size]': 10, 'page[number]': 1 }
     },
 
