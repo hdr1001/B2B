@@ -27,7 +27,7 @@ import { readInputFile } from "../share/readInputFileKeys.js";
 import { gleifLimiter, dnbDplLimiter } from '../share/limiters.js';
 
 //Emply the respective API definitions
-import { LeiReq, DnbDplDBs, DnbDplFamTree, DnbDplBenOwner } from "../share/apiDefs.js"
+import { LeiReq, DnbDplDBs, DnbDplFamTree, DnbDplBenOwner } from "../share/apiDefs.js";
 
 //Decoder object for decoding utf-8 data in a binary format
 import { dcdrUtf8 } from '../share/utils.js';
@@ -41,8 +41,8 @@ import { pgPool } from "../share/postgres.js";
 //Data Blocks, specify which blocks (@ which levels) to request
 const dnbDplDBs = { //Set level to 0 ⬇️ to not include the block
     dbs: [
-        {db: 'companyinfo',               level: 2, dbShort: 'ci', version: '1'},
-        {db: 'principalscontacts',        level: 2, dbShort: 'pc', version: '2'},
+        {db: 'companyinfo',               level: 1, dbShort: 'ci', version: '1'},
+        {db: 'principalscontacts',        level: 0, dbShort: 'pc', version: '2'},
         {db: 'hierarchyconnections',      level: 1, dbShort: 'hc', version: '1'},
         {db: 'financialstrengthinsight',  level: 0, dbShort: 'fs', version: '1'},
         {db: 'paymentinsight',            level: 0, dbShort: 'pi', version: '1'},
@@ -90,11 +90,25 @@ const persistence = {
     },
 
     db: {
-        sqlProduct: '',
+        sqlProduct: function(api, keyType) {
+            let ret  = `INSERT INTO products_${api === 'dnbDpl' ? 'dnb' : api} (${keyType}, product, obtained_at, http_status) `;
+            ret     += 'VALUES ($1, $2, $3, $4) ';
+            ret     += `ON CONFLICT (${keyType}) DO `;
+            ret     += 'UPDATE SET product = $2, obtained_at = $3, http_status = $4';
+        
+            return ret;
+        },
 
-        sqlProjectKey: ''
+        sqlProjectKey: function() {
+            let ret  = `INSERT INTO project_keys (id, rec_key, http_status, note) `;
+            ret     += `VALUES ($1, $2, $3, $4) `;
+            ret     += `ON CONFLICT (id, rec_key) DO `;
+            ret     += `UPDATE SET http_status = $3, note = $4`;
+
+            return ret;
+        }
     }
-}
+};
 
 //Script variables
 let limiter;   //Rate limiter (see imports)
@@ -122,7 +136,7 @@ const persistFile = true;   //Persist the response json as a file
 const persistDB = true;     //Persist the reponse json to a Postgres database
 
 // Project ID (please keep it short)
-const projectID = ''
+const projectID = '';
 
 // ➡️ Application configuration for GLEIF download
 if(api === 'gleif') { //Enrich LEI numbers
@@ -175,20 +189,6 @@ if(api === 'dnbDpl') { //Enrich DUNS numbers
         }
 
         persistence.file.name += boProduct;
-    }
-}
-
-if(persistDB) {
-    persistence.db.sqlProduct  = `INSERT INTO products_${api === 'dnbDpl' ? 'dnb' : api} (${keyType}, product, obtained_at, http_status) `;
-    persistence.db.sqlProduct += 'VALUES ($1, $2, $3, $4) ';
-    persistence.db.sqlProduct += `ON CONFLICT (${keyType}) DO `;
-    persistence.db.sqlProduct += 'UPDATE SET product = $2, obtained_at = $3, http_status = $4';
-
-    if(projectID) {
-        persistence.db.sqlProjectKey  = `INSERT INTO project_keys (id, rec_key, http_status, note) `;
-        persistence.db.sqlProjectKey += 'VALUES ($1, $2, $3, $4) ';
-        persistence.db.sqlProjectKey += `ON CONFLICT (id, rec_key) DO `;
-        persistence.db.sqlProjectKey += 'UPDATE SET http_status = $3, note = $4';
     }
 }
 
@@ -271,49 +271,61 @@ for(const [idx0, arrChunk] of arrInp.entries()) {
 
     //console.log(`Iteration ${idx0}\n`);
 
-    arrSettled.forEach((elem, idx1) => { //Implement synchronous post-processing below
-        if(elem.status === 'fulfilled') {
-            //console.log(`Element ${idx1}, representing key ${elem.value.key}, fulfilled with status ${elem.value.httpStatus}`);
+    //Logging errors on the rejected keys
+    arrSettled
+        .filter(elem => elem.status === 'rejected')
+        .map(elem => console.error(`Error retrieving ${elem.reason.key} from API ➡️  ${elem.reason.note}`));
 
-            if(persistFile) { persistence.file.writeFile( elem.value.key, elem.value.httpStatus, elem.value.arrBuff ) }
+    //Write, for each key, the API response body to a file
+    if(persistFile) {
+        arrSettled.forEach(elem => {
+            ({ key, httpStatus, arrBuff } = elem.status === 'fulfilled' ? elem.value : elem.reason);
 
-            if(persistDB) {
-                pgPool.query(
-                    persistence.db.sqlProduct,
-                    [elem.value.key, dcdrUtf8.decode(elem.value.arrBuff), Date.now(), elem.value.httpStatus]
-                )
-                .then(rslt => {
-                    if(rslt.rowCount === 1) {
-                        console.log(`Success writing ${keyType} ${elem.value.key} to the database`)
-                    }
-                    else {
-                        console.error(`Writing ${keyType} ${elem.value.key} to the database affected ${rslt.rowCount} rows 🤔`)
-                    }
-                })
-                .catch(err => console.error(err.message));
+            persistence.file.writeFile( key, httpStatus, arrBuff )
+        })
+    }
 
-                if(projectID) {
-                    pgPool.query(
-                        persistence.db.sqlProjectKey,
-                        [projectID, elem.value.key, elem.value.httpStatus, elem.value.note]
-                    )
-                    .then(rslt => {
-                        if(rslt.rowCount === 1) {
-                            console.log(`Success updating the database project file for ${keyType} ${elem.value.key}`)
-                        }
-                        else {
-                            console.error(`Writing ${elem.value.key} to the database project file affected ${rslt.rowCount} rows 🤔`)
-                        }
+    //Write the results of the API calls to the database
+    if(persistDB) {
+        //Update table products_gleif/dnb with the fulfilled data
+        pgPool.connect()
+            .then(pgClient => {
+                const qry = {
+                    name: 'ins-upd-product',
+                    text: persistence.db.sqlProduct(api, keyType)
+                };
+
+                Promise.allSettled(arrSettled
+                    .filter(elem => elem.status === 'fulfilled')
+                    .map(elem => {
+                        const { key, arrBuff, httpStatus } = elem.value;
+
+                        return pgClient.query({ ...qry, values: [key, dcdrUtf8.decode(arrBuff), Date.now(), httpStatus] })
                     })
-                    .catch(err => console.error(err.message));
-                }
-            }
-        }
-        else { //elem.status === 'rejected'
-            console.error(`Error retrieving ${elem.reason.key} from API`);
-            if(elem.reason.note) { console.error(elem.reason.note) }
+                ).then(() => pgClient.end());
+            })
+            .catch(err => console.error(err.message))
 
-            if(persistFile) { persistence.file.writeFile( elem.reason.key, elem.reason.httpStatus, elem.reason.arrBuff ) }
+        //If variable projectID is specified, update table project_keys with the fulfilled data
+        if(projectID) {
+            pgPool.connect()
+                .then(pgClient => {
+                    const qry = {
+                        name: 'ins-upd-project-key',
+                        text: persistence.db.sqlProjectKey()
+                    };
+
+                    Promise.allSettled(arrSettled
+                        .map(elem => {
+                            let key, httpStatus, note;
+
+                            ({ key, httpStatus, note } = elem.status === 'fulfilled' ? elem.value : elem.reason);
+
+                            return pgClient.query({ ...qry, values: [projectID, key, httpStatus, note] });
+                        })
+                    ).then(() => pgClient.end());
+                })
+                .catch(err => console.error(err.message))
         }
-    });
+    }
 }
