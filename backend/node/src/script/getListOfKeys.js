@@ -91,19 +91,19 @@ const persistence = {
 
     db: {
         sqlProduct: function(api, keyType) {
-            let ret  = `INSERT INTO products_${api === 'dnbDpl' ? 'dnb' : api} (${keyType}, product, obtained_at, http_status) `;
-            ret     += 'VALUES ($1, $2, $3, $4) ';
+            let ret  = `INSERT INTO products_${api === 'dnbDpl' ? 'dnb' : api} (${keyType}, product, http_status, tsz) `;
+            ret     += 'VALUES ($1, $2, $3, \'NOW\'::timestamptz) ';
             ret     += `ON CONFLICT (${keyType}) DO `;
-            ret     += 'UPDATE SET product = $2, obtained_at = $3, http_status = $4';
+            ret     += 'UPDATE SET product = $2, http_status = $3, tsz = \'NOW\'::timestamptz';
         
             return ret;
         },
 
         sqlProjectKey: function() {
-            let ret  = `INSERT INTO project_keys (id, rec_key, http_status, note) `;
-            ret     += `VALUES ($1, $2, $3, $4) `;
-            ret     += `ON CONFLICT (id, rec_key) DO `;
-            ret     += `UPDATE SET http_status = $3, note = $4`;
+            let ret  = 'INSERT INTO project_keys (id, rec_key, http_status, note, tsz) ';
+            ret     += 'VALUES ($1, $2, $3, $4, \'NOW\'::timestamptz) ';
+            ret     += 'ON CONFLICT (id, rec_key) DO ';
+            ret     += 'UPDATE SET http_status = $3, note = $4, tsz = \'NOW\'::timestamptz';
 
             return ret;
         }
@@ -136,7 +136,7 @@ const persistFile = true;   //Persist the response json as a file
 const persistDB = true;     //Persist the reponse json to a Postgres database
 
 // Project ID (please keep it short)
-const projectID = '';
+const projectID = 'dunstest';
 
 // ➡️ Application configuration for GLEIF download
 if(api === 'gleif') { //Enrich LEI numbers
@@ -279,7 +279,7 @@ for(const [idx0, arrChunk] of arrInp.entries()) {
     //Write, for each key, the API response body to a file
     if(persistFile) {
         arrSettled.forEach(elem => {
-            ({ key, httpStatus, arrBuff } = elem.status === 'fulfilled' ? elem.value : elem.reason);
+            const { key, httpStatus, arrBuff } = elem.status === 'fulfilled' ? elem.value : elem.reason;
 
             persistence.file.writeFile( key, httpStatus, arrBuff )
         })
@@ -300,7 +300,7 @@ for(const [idx0, arrChunk] of arrInp.entries()) {
                     .map(elem => {
                         const { key, arrBuff, httpStatus } = elem.value;
 
-                        return pgClient.query({ ...qry, values: [key, dcdrUtf8.decode(arrBuff), Date.now(), httpStatus] })
+                        return pgClient.query({ ...qry, values: [key, dcdrUtf8.decode(arrBuff), httpStatus] })
                     })
                 ).then(() => pgClient.end());
             })
