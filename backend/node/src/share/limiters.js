@@ -30,4 +30,7 @@ const gleifLimiter = new RateLimiter({ tokensPerInterval: 2, interval: 'second' 
 //Max bandwidth on the GLEIF API
 const dnbDplLimiter = new RateLimiter({ tokensPerInterval: 4, interval: 'second' });
 
-export { gleifLimiter, dnbDplLimiter };
+//Max bandwidth for reading files
+const readFileLimiter = new RateLimiter({ tokensPerInterval: 50, interval: 'second' });
+
+export { gleifLimiter, dnbDplLimiter, readFileLimiter };

@@ -136,7 +136,7 @@ const persistFile = true;   //Persist the response json as a file
 const persistDB = true;     //Persist the reponse json to a Postgres database
 
 // Project ID (please keep it short)
-const projectID = 'dunstest';
+const projectID = '';
 
 // ➡️ Application configuration for GLEIF download
 if(api === 'gleif') { //Enrich LEI numbers
