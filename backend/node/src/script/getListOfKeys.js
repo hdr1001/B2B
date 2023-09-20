@@ -42,8 +42,8 @@ import { pgPool } from "../share/postgres.js";
 const dnbDplDBs = { //Set level to 0 ⬇️ to not include the block
     dbs: [
         {db: 'companyinfo',               level: 1, dbShort: 'ci', version: '1'},
-        {db: 'principalscontacts',        level: 0, dbShort: 'pc', version: '2'},
-        {db: 'hierarchyconnections',      level: 1, dbShort: 'hc', version: '1'},
+        {db: 'principalscontacts',        level: 3, dbShort: 'pc', version: '2'},
+        {db: 'hierarchyconnections',      level: 0, dbShort: 'hc', version: '1'},
         {db: 'financialstrengthinsight',  level: 0, dbShort: 'fs', version: '1'},
         {db: 'paymentinsight',            level: 0, dbShort: 'pi', version: '1'},
         {db: 'eventfilings',              level: 0, dbShort: 'ef', version: '1'},
@@ -133,7 +133,7 @@ const boProduct = 'cmpbol'; //Possible values 'cmpbol', 'cmpbos', 'cmpcol' or 'c
 
 // Specify persistence options
 const persistFile = true;   //Persist the response json as a file
-const persistDB = true;     //Persist the reponse json to a Postgres database
+const persistDB = false;     //Persist the reponse json to a Postgres database
 
 // Project ID (please keep it short)
 const projectID = '';

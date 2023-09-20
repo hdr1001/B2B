@@ -24,6 +24,8 @@ import { promises as fs } from 'fs';
 
 import { readFileLimiter } from '../share/limiters.js';
 
+import { dplDBs } from '../share/dnbDplDBs.js';
+
 const nullUndefToEmptyStr = elem => elem === null || elem === undefined ? '' : elem;
 
 //Read the D&B Direct+ JSON data
@@ -39,14 +41,14 @@ fs.readdir('../io/out')
                                 let oDpl;
 
                                 try {
-                                    oDpl = JSON.parse(jsonIn)
+                                    oDpl = new dplDBs(jsonIn)
                                 }
                                 catch(err) {
                                     console.error(err.message);
                                     return;
                                 }
 
-                                const org = oDpl.organization;
+                                const org = oDpl.org;
 
                                 console.log(org.duns);
                             })
