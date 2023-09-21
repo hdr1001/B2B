@@ -28,6 +28,27 @@ import { dplDBs } from '../share/dnbDplDBs.js';
 
 const nullUndefToEmptyStr = elem => elem === null || elem === undefined ? '' : elem;
 
+//Process a collection of D&B Direct+ Data Blocks
+function processDnbDplDB(jsonIn) {
+        let oDpl;
+
+        try {
+            oDpl = new dplDBs(jsonIn)
+        }
+        catch(err) {
+            console.error(err.message);
+            return;
+        }
+
+        const org = oDpl.org;
+
+        const arrValues = [];
+
+        arrValues.push(org.duns)
+
+        console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
+}
+
 //Read the D&B Direct+ JSON data
 fs.readdir('../io/out')
     .then(arrFiles =>
@@ -35,24 +56,8 @@ fs.readdir('../io/out')
             .filter(fn => fn.endsWith('.json'))
             .forEach(fn => 
                 readFileLimiter.removeTokens(1)
-                    .then(() => {
-                        fs.readFile(`../io/out/${fn}`)
-                            .then(jsonIn => {
-                                let oDpl;
-
-                                try {
-                                    oDpl = new dplDBs(jsonIn)
-                                }
-                                catch(err) {
-                                    console.error(err.message);
-                                    return;
-                                }
-
-                                const org = oDpl.org;
-
-                                console.log(org.duns);
-                            })
-                    })
+                    .then(() => fs.readFile(`../io/out/${fn}`))
+                    .then(processDnbDplDB)
                     .catch(err => console.error(err.message))
             )
     )
