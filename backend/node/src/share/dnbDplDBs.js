@@ -20,6 +20,8 @@
 //
 // *********************************************************************
 
+import { sDateIsoToYYYYMMDD } from "./utils.js";
+
 class dplDBs {
     constructor(inp) {
         try {
@@ -106,6 +108,15 @@ class dplDBs {
         });
 
         return ret;
+    }
+
+    //Method transactionTimestamp will get the transaction timestamp in the format YYYYMMDD
+    transactionTimestamp() {
+        const tts = this.dplDB?.transactionDetail?.transactionTimestamp;
+
+        if(tts) { return sDateIsoToYYYYMMDD(tts) }
+
+        return '';
     }
 }
 

@@ -44,7 +44,7 @@ function processDnbDplDB(jsonIn) {
 
         const arrValues = [];
 
-        arrValues.push(org.duns)
+        arrValues.push(org.duns);
 
         console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
 }

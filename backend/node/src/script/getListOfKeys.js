@@ -30,7 +30,7 @@ import { gleifLimiter, dnbDplLimiter } from '../share/limiters.js';
 import { LeiReq, DnbDplDBs, DnbDplFamTree, DnbDplBenOwner } from "../share/apiDefs.js";
 
 //Decoder object for decoding utf-8 data in a binary format
-import { dcdrUtf8 } from '../share/utils.js';
+import { dcdrUtf8, sDateIsoToYYYYMMDD } from '../share/utils.js';
 
 //Import the file system for persisting API responses
 import { promises as fs } from 'fs';
@@ -117,7 +117,7 @@ let qryParams; //Request query parameters
 let keyType;   //Type of key (duns, lei)
 
 //Current month day is made part of the file name
-const monthDay = new Date().toISOString().split('T')[0].slice(5, 10);
+const monthDay = sDateIsoToYYYYMMDD(new Date().toISOString(), 4);
 
 // ➡️ Main application configuration settings
 

@@ -77,4 +77,9 @@ function cleanDUNS(inDUNS) {
     return '000000000'.slice(0, 9 - outDUNS.length) + outDUNS;
 }
 
-export { dcdrUtf8, setEnvValue, cleanDUNS };
+//ISO 8601 UTC Z date/time string to YYYYMMDD or YYMMDD
+function sDateIsoToYYYYMMDD (sDateIso, length = 8) {
+    return sDateIso.split('T')[0].replace(/-/g,"").slice(length * -1)
+}
+
+export { dcdrUtf8, setEnvValue, cleanDUNS, sDateIsoToYYYYMMDD };
