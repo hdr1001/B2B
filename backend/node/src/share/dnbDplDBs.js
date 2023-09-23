@@ -20,7 +20,7 @@
 //
 // *********************************************************************
 
-import { sDateIsoToYYYYMMDD } from "./utils.js";
+import { sDateIsoToYYYYMMDD, objEmpty } from "./utils.js";
 
 class dplDBs {
     constructor(inp) {
@@ -117,6 +117,25 @@ class dplDBs {
         if(tts) { return sDateIsoToYYYYMMDD(tts) }
 
         return '';
+    }
+
+    //This function will return true if the duns requested is the global ultimate duns, false if it
+    //is not the global ultimate and undefined if no linkage information is available
+    isGlobalUlt() {
+        if(objEmpty(this.org?.corporateLinkage)) { return undefined }
+
+        if(this.org.corporateLinkage.familytreeRolesPlayed.find(role => role.dnbCode === 12775)) {
+            //functional equivalents to role.dnbCode === 12775 are
+            console.assert(this.dplDB.inquiryDetail.duns === this.org.corporateLinkage.globalUltimate.duns,
+                '🤔 global ult, inquiryDetail.duns should equal globalUltimate.duns');
+
+            console.assert(this.org.corporateLinkage.hierarchyLevel === 1,
+                '🤔 global ult, corporateLinkage.hierarchyLevel should equal 1');
+
+            return true;
+        }
+
+        return false;
     }
 }
 

@@ -50,6 +50,7 @@ function processDnbDplDB(jsonIn, bLabel) {
 
         arrValues.push(bLabel ? new ElemLabel('duns') : org.duns);
         arrValues.push(bLabel ? new ElemLabel('Transaction date') : oDpl.transactionTimestamp() );
+        arrValues.push(bLabel ? new ElemLabel('Global ult') : oDpl.isGlobalUlt() );
 
         console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
 }

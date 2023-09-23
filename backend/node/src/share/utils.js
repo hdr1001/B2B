@@ -82,4 +82,27 @@ function sDateIsoToYYYYMMDD (sDateIso, length = 8) {
     return sDateIso.split('T')[0].replace(/-/g,"").slice(length * -1)
 }
 
-export { dcdrUtf8, setEnvValue, cleanDUNS, sDateIsoToYYYYMMDD };
+//Function objEmpty returns true if:
+// 1. The value of the parameter is undefined of null
+// 2. The parameter passed in is an object and has no (enumerable) properties
+//An error will be thrown when the parameter passed in is not undefined, null
+//or of type object. In all other cases false will be returned.
+function objEmpty(obj) {
+    if(obj === undefined || obj === null) { return true }
+
+    if(obj && obj.constructor !== Object) {
+        throw new Error('Only an object parameter is allowed when invoking function objEmpty')
+    }
+
+    if(Object.keys(obj).length === 0) { return true }
+
+    return false;
+}
+
+export {
+    dcdrUtf8,
+    setEnvValue,
+    cleanDUNS,
+    sDateIsoToYYYYMMDD,
+    objEmpty
+};
