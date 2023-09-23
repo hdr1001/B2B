@@ -26,32 +26,43 @@ import { readFileLimiter } from '../share/limiters.js';
 
 import { dplDBs } from '../share/dnbDplDBs.js';
 
+import { ElemLabel } from '../share/elemLabel.js';
+
 const nullUndefToEmptyStr = elem => elem === null || elem === undefined ? '' : elem;
 
 //Process a collection of D&B Direct+ Data Blocks
-function processDnbDplDB(jsonIn) {
-        let oDpl;
+function processDnbDplDB(jsonIn, bLabel) {
+        let oDpl, org;
 
-        try {
-            oDpl = new dplDBs(jsonIn)
-        }
-        catch(err) {
-            console.error(err.message);
-            return;
-        }
+        if(!bLabel) {
+            try {
+                oDpl = new dplDBs(jsonIn)
+            }
+            catch(err) {
+                console.error(err.message);
+                return;
+            }
 
-        const org = oDpl.org;
+            org = oDpl.org;
+        }
 
         const arrValues = [];
 
-        arrValues.push(org.duns);
+        arrValues.push(bLabel ? new ElemLabel('duns') : org.duns);
+        arrValues.push(bLabel ? new ElemLabel('Transaction date') : oDpl.transactionTimestamp() );
 
         console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
 }
 
+let listHeader = true;
+
 //Read the D&B Direct+ JSON data
 fs.readdir('../io/out')
-    .then(arrFiles =>
+    .then(arrFiles => {
+        //Produce an output header if requested
+        if(arrFiles.length && listHeader) { processDnbDplDB('', listHeader) }
+
+        //Process the files available in the specified directory
         arrFiles
             .filter(fn => fn.endsWith('.json'))
             .forEach(fn => 
@@ -60,5 +71,5 @@ fs.readdir('../io/out')
                     .then(processDnbDplDB)
                     .catch(err => console.error(err.message))
             )
-    )
+    })
     .catch(err => console.error(err.message))
