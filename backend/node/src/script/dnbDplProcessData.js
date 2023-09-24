@@ -52,6 +52,7 @@ function processDnbDplDB(jsonIn, bLabel) {
         arrValues.push(bLabel ? new ElemLabel('Transaction date') : oDpl.transactionTimestamp() );
         arrValues.push(bLabel ? new ElemLabel('Global ult') : oDpl.isGlobalUlt() );
 
+if(oDpl) { console.log(oDpl.blockIDs()) }
         console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
 }
 
