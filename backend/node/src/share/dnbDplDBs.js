@@ -22,7 +22,26 @@
 
 import { sDateIsoToYYYYMMDD, objEmpty } from "./utils.js";
 
-const classConst = {
+//Application constants
+const appConsts = {
+    map121: { //label values 
+        //inquiry detail
+        inqDuns: 'inquiry DUNS',
+        tradeUp: 'trade up',
+        custRef: 'customer reference',
+
+        //Common data-elements
+        duns:        'DUNS',
+        primaryName: 'name',
+        countryISO:  'country ISO',
+
+        //Company information data-elements
+        opStatus:     'operating status',
+        opStatusDate: 'operating status date',
+        startDate:    'start date',
+        SMB:          'entity size',
+        defaultCurr:  'default currency',
+    },
     blockIDs: {
         key: 0,
         level: 1,
@@ -58,9 +77,29 @@ class dplDBs {
             throw(new Error(msg));
         }
 
-        //Make the class constants available on the object instance
-        this.const = classConst;
+        //One-to-one mappings
+        this.map121 = { //The actual directly mapped values
+            // inquiry detail
+            inqDuns: this.dplDB?.inquiryDetail?.duns,
+            tradeUp: this.dplDB?.inquiryDetail?.tradeUp,
+            custRef: this.dplDB?.inquiryDetail?.customerReference,
+
+            // Common data-elements
+            duns:        this.org?.duns,
+            primaryName: this.org?.primaryName,
+            countryISO:  this.org?.countryISOAlpha2Code,
+
+            // Company information data-elements
+            opStatus:     this.org?.dunsControlStatus?.operatingStatus?.description,
+            opStatusDate: this.org?.dunsControlStatus?.operatingStatus?.startDate,
+            startDate:    this.org?.startDate,
+            SMB:          this.org?.organizationSizeCategory?.description,
+            defaultCurr:  this.org?.defaultCurrency,
+        };
     }
+
+    //Expose the application constants through the class interface
+    get consts() { return appConsts }
 
     //Method blockIDs combines Data Block property inquiryDetail.blockIDs
     //
@@ -97,15 +136,13 @@ class dplDBs {
     //    baseinfo: { resp: { level: 1, version: 1, status: 'ok', reason: null } }
     //  }
     blockIDs() {
-        const bIDs = this.const.blockIDs; 
-
         const ret = this.dplDB.inquiryDetail.blockIDs.reduce((obj, blockID) => {
             const arrBlockID = blockID.split('_');
 
-            obj[arrBlockID[bIDs.key]] = {
+            obj[arrBlockID[appConsts.blockIDs.key]] = {
                 req: {
-                    level: parseInt(arrBlockID[bIDs.level].slice(1 - arrBlockID[bIDs.level].length)),
-                    version: parseInt(arrBlockID[bIDs.ver].slice(1 - arrBlockID[bIDs.ver].length))
+                    level: parseInt(arrBlockID[appConsts.blockIDs.level].slice(1 - arrBlockID[appConsts.blockIDs.level].length)),
+                    version: parseInt(arrBlockID[appConsts.blockIDs.ver].slice(1 - arrBlockID[appConsts.blockIDs.ver].length))
                 }
             };
 
@@ -115,11 +152,11 @@ class dplDBs {
         this.dplDB.blockStatus.forEach(aBlockStatus => {
             const arrBlockID = aBlockStatus.blockID.split('_');
 
-            if( !ret[arrBlockID[bIDs.key]] ) { ret[arrBlockID[bIDs.key]] = {} }
+            if( !ret[arrBlockID[appConsts.blockIDs.key]] ) { ret[arrBlockID[appConsts.blockIDs.key]] = {} }
 
-            ret[arrBlockID[bIDs.key]].resp = {
-                level: parseInt(arrBlockID[bIDs.level].slice(1 - arrBlockID[bIDs.level].length)),
-                version: parseInt(arrBlockID[bIDs.ver].slice(1 - arrBlockID[bIDs.ver].length)),
+            ret[arrBlockID[appConsts.blockIDs.key]].resp = {
+                level: parseInt(arrBlockID[appConsts.blockIDs.level].slice(1 - arrBlockID[appConsts.blockIDs.level].length)),
+                version: parseInt(arrBlockID[appConsts.blockIDs.ver].slice(1 - arrBlockID[appConsts.blockIDs.ver].length)),
                 status: aBlockStatus.status,
                 reason: aBlockStatus.reason
             };
@@ -129,16 +166,16 @@ class dplDBs {
     }
 
     //Method transactionTimestamp will get the transaction timestamp in the format YYYYMMDD
-    transactionTimestamp() {
+    transactionTimestamp(length) {
         const tts = this.dplDB?.transactionDetail?.transactionTimestamp;
 
-        if(tts) { return sDateIsoToYYYYMMDD(tts) }
+        if(tts) { return sDateIsoToYYYYMMDD(tts, length) }
 
         return '';
     }
 
-    //This function will return true if the duns requested is the global ultimate duns, false if it
-    //is not the global ultimate and undefined if no linkage information is available
+    //Method isGlobalUlt will return true if the duns requested is the global ultimate duns, false 
+    //if it is not the global ultimate and null if no linkage information is available
     isGlobalUlt() {
         if(objEmpty(this.org?.corporateLinkage)) { return null }
 
@@ -156,8 +193,9 @@ class dplDBs {
         return false;
     }
 
-    // This function will give access to the three levels of linkage available in hierarchies & connections level 1
-    // Because only an HQ or a parent is included there are three levels, see corpLinkage constants above
+    //Method corpLinkageLevels will give access to the three levels of linkage available
+    //in Hierarchies & Connections level 1
+    //➡️ There are only three levels because only an HQ or a parent will be available ⬅️
     corpLinkageLevels() {
         const corpLinkage = this.org?.corporateLinkage;
 
@@ -166,11 +204,11 @@ class dplDBs {
         if(objEmpty(corpLinkage)) { return ret }
 
         //Set the corporate linkage level references
-        this.const.corpLinkage.levels.forEach((level, idx) => {
+        appConsts.corpLinkage.levels.forEach((level, idx) => {
             level.attrs.forEach(attr => {
                 if(!objEmpty(corpLinkage[attr])) {
                     corpLinkage[attr].dplAttr = attr;
-                    corpLinkage[attr].label = this.const.corpLinkage.levels[idx].label;
+                    corpLinkage[attr].label = appConsts.corpLinkage.levels[idx].label;
 
                     ret[idx] = corpLinkage[attr];
                 }
@@ -181,4 +219,4 @@ class dplDBs {
     }
 }
 
-export { dplDBs };
+export { appConsts as dplDBsConsts, dplDBs };
