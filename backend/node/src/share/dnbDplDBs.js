@@ -22,6 +22,8 @@
 
 import { sDateIsoToYYYYMMDD, objEmpty } from "./utils.js";
 
+import { regNumTypeIsVAT } from "./sharedRefTables.js";
+
 //Application constants
 const appConsts = {
     map121: { //label values 
@@ -42,13 +44,13 @@ const appConsts = {
         SMB:          'entity size',
         defaultCurr:  'default currency',
     },
-    blockIDs: {
+    blockIDs: { //Parts of the blockIDs attribute
         key: 0,
         level: 1,
         ver: 2
     },
     corpLinkage: {
-        levels: [
+        levels: [ //Linkage levels in Hierarchies & Connections level 1
             {attrs: ['headQuarter', 'parent'], label: 'parent'},
             {attrs: ['domesticUltimate'], label: 'dom ult'},
             {attrs: ['globalUltimate'], label: 'global ult'}
@@ -56,6 +58,7 @@ const appConsts = {
     }
 };
 
+//D&B Direct+ Data Blocks JavaScript object wrapper
 class dplDBs {
     constructor(inp) {
         //Parse the JSON oassed in as a string
@@ -96,6 +99,15 @@ class dplDBs {
             SMB:          this.org?.organizationSizeCategory?.description,
             defaultCurr:  this.org?.defaultCurrency,
         };
+
+        //Add, where applicable, the vat attribute 
+        if(this.org?.registrationNumbers) {
+            this.org.registrationNumbers.forEach(regNum => {
+                if(regNum.typeDnBCode && regNumTypeIsVAT.has(regNum.typeDnBCode)) {
+                    regNum.vat = true
+                }
+            })
+        }
     }
 
     //Expose the application constants through the class interface
@@ -181,7 +193,7 @@ class dplDBs {
 
         if(this.org.corporateLinkage.familytreeRolesPlayed.find(role => role.dnbCode === 12775)) {
             //functional equivalents to role.dnbCode === 12775 are
-            console.assert(this.dplDB.inquiryDetail.duns === this.org.corporateLinkage.globalUltimate.duns,
+            console.assert(this.map121.duns === this.org.corporateLinkage.globalUltimate.duns,
                 '🤔 global ult, inquiryDetail.duns should equal globalUltimate.duns');
 
             console.assert(this.org.corporateLinkage.hierarchyLevel === 1,
