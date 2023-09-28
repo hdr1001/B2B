@@ -24,7 +24,7 @@ import { promises as fs } from 'fs';
 
 import { readFileLimiter } from '../share/limiters.js';
 
-import { dplDBsConsts, dplDBs } from '../share/dnbDplDBs.js';
+import { DplDBs } from '../share/dnbDplDBs.js';
 
 import { ElemLabel } from '../share/elemLabel.js';
 
@@ -32,36 +32,32 @@ const nullUndefToEmptyStr = elem => elem === null || elem === undefined ? '' : e
 
 //Process a collection of D&B Direct+ Data Blocks
 function processDnbDplDB(jsonIn, bLabel) {
-        let oDpl, org;
+        let oDpl;
 
-        if(!bLabel) {
-            try {
-                oDpl = new dplDBs(jsonIn)
-            }
-            catch(err) {
-                console.error(err.message);
-                return;
-            }
-
-            org = oDpl.org;
+        try {
+            oDpl = new DplDBs(jsonIn)
+        }
+        catch(err) {
+            console.error(err.message);
+            return;
         }
 
         const arrValues = [];
 
         //Customer reference should be specified as a query parameter in the Direct+ request
-        arrValues.push(bLabel ? new ElemLabel(dplDBsConsts.map121.custRef) : oDpl.map121.custRef);
+        arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.custRef) : oDpl.map121.custRef);
 
         //Timestamp dating the D&B Direct+ REST request
         arrValues.push(bLabel ? new ElemLabel('date requested') : oDpl.transactionTimestamp(6) );
 
         //DUNS requested
-        arrValues.push(bLabel ? new ElemLabel(dplDBsConsts.map121.inqDuns) : oDpl.map121.inqDuns);
+        arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.inqDuns) : oDpl.map121.inqDuns);
 
         //DUNS delivered
-        arrValues.push(bLabel ? new ElemLabel(dplDBsConsts.map121.duns) : oDpl.map121.duns);
+        arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.duns) : oDpl.map121.duns);
 
         //Primary name
-        arrValues.push(bLabel ? new ElemLabel(dplDBsConsts.map121.primaryName) : oDpl.map121.primaryName);
+        arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.primaryName) : oDpl.map121.primaryName);
 
 
         arrValues.push(bLabel ? new ElemLabel('Global ult') : oDpl.isGlobalUlt() );

@@ -59,54 +59,70 @@ const appConsts = {
 };
 
 //D&B Direct+ Data Blocks JavaScript object wrapper
-class dplDBs {
+class DplDBs {
     constructor(inp) {
-        //Parse the JSON oassed in as a string
-        try {
-            this.dplDB = JSON.parse(inp)
+        //Parse the JSON passed in as a string
+        if((typeof inp === 'string' || Buffer.isBuffer(inp)) && inp.length) {
+            try {
+                this.dplDBs = JSON.parse(inp)
+            }
+            catch(err) {
+                console.error(err.message);
+                throw(err);
+            }
+
+            //The parsed object should have an organization node
+            if(!this.dplDBs.organization) {
+                throw('Constructor parameter is valid JSON but not a collection of D&B Direct+ data blocks')
+            }
+
+            //Create a shortcut to the organization attribute
+            this.org = this.dplDBs.organization;
         }
-        catch(err) {
-            console.error(err.message);
-            throw(err);
+
+        //A D&B Direct+ collection of data blocks can be passed in, as an object, to the constructor as well
+        if(typeof inp === 'object' && !Buffer.isBuffer(inp)) {
+            //The object passed in to the constructor should have an organization node
+            if(inp.organization) {
+                throw('The constructor parameter is an object but not a collection of D&B Direct+ data blocks')
+            }
+
+            //Store a reference to the object passed in to the constructor
+            this.dplDBs = inp;
+
+            //Create a shortcut to the organization attribute
+            this.org = inp.organization;
         }
 
-        //Create a shortcut to the organization attribute
-        this.org = this.dplDB.organization;
+        if(this.org) {
+            //One-to-one mappings
+            this.map121 = { //The actual directly mapped values
+                // inquiry detail
+                inqDuns: this.dplDBs?.inquiryDetail?.duns,
+                tradeUp: this.dplDBs?.inquiryDetail?.tradeUp,
+                custRef: this.dplDBs?.inquiryDetail?.customerReference,
 
-        if(!this.org) {
-            const msg = 'Parsed JSON does not contain the organization attribute';
+                // Common data-elements
+                duns:        this.org?.duns,
+                primaryName: this.org?.primaryName,
+                countryISO:  this.org?.countryISOAlpha2Code,
 
-            console.error(msg);
-            throw(new Error(msg));
-        }
+                // Company information data-elements
+                opStatus:     this.org?.dunsControlStatus?.operatingStatus?.description,
+                opStatusDate: this.org?.dunsControlStatus?.operatingStatus?.startDate,
+                startDate:    this.org?.startDate,
+                SMB:          this.org?.organizationSizeCategory?.description,
+                defaultCurr:  this.org?.defaultCurrency,
+            };
 
-        //One-to-one mappings
-        this.map121 = { //The actual directly mapped values
-            // inquiry detail
-            inqDuns: this.dplDB?.inquiryDetail?.duns,
-            tradeUp: this.dplDB?.inquiryDetail?.tradeUp,
-            custRef: this.dplDB?.inquiryDetail?.customerReference,
-
-            // Common data-elements
-            duns:        this.org?.duns,
-            primaryName: this.org?.primaryName,
-            countryISO:  this.org?.countryISOAlpha2Code,
-
-            // Company information data-elements
-            opStatus:     this.org?.dunsControlStatus?.operatingStatus?.description,
-            opStatusDate: this.org?.dunsControlStatus?.operatingStatus?.startDate,
-            startDate:    this.org?.startDate,
-            SMB:          this.org?.organizationSizeCategory?.description,
-            defaultCurr:  this.org?.defaultCurrency,
-        };
-
-        //Add, where applicable, the vat attribute 
-        if(this.org?.registrationNumbers) {
-            this.org.registrationNumbers.forEach(regNum => {
-                if(regNum.typeDnBCode && regNumTypeIsVAT.has(regNum.typeDnBCode)) {
-                    regNum.vat = true
-                }
-            })
+            //Add, where applicable, the vat attribute 
+            if(this.org?.registrationNumbers) {
+                this.org.registrationNumbers.forEach(regNum => {
+                    if(regNum.typeDnBCode && regNumTypeIsVAT.has(regNum.typeDnBCode)) {
+                        regNum.vat = true
+                    }
+                })
+            }
         }
     }
 
@@ -148,7 +164,7 @@ class dplDBs {
     //    baseinfo: { resp: { level: 1, version: 1, status: 'ok', reason: null } }
     //  }
     blockIDs() {
-        const ret = this.dplDB.inquiryDetail.blockIDs.reduce((obj, blockID) => {
+        const ret = this.dplDBs?.inquiryDetail.blockIDs.reduce((obj, blockID) => {
             const arrBlockID = blockID.split('_');
 
             obj[arrBlockID[appConsts.blockIDs.key]] = {
@@ -161,7 +177,7 @@ class dplDBs {
             return obj;
         }, {});
 
-        this.dplDB.blockStatus.forEach(aBlockStatus => {
+        this.dplDBs?.blockStatus.forEach(aBlockStatus => {
             const arrBlockID = aBlockStatus.blockID.split('_');
 
             if( !ret[arrBlockID[appConsts.blockIDs.key]] ) { ret[arrBlockID[appConsts.blockIDs.key]] = {} }
@@ -179,7 +195,7 @@ class dplDBs {
 
     //Method transactionTimestamp will get the transaction timestamp in the format YYYYMMDD
     transactionTimestamp(length) {
-        const tts = this.dplDB?.transactionDetail?.transactionTimestamp;
+        const tts = this.dplDBs?.transactionDetail?.transactionTimestamp;
 
         if(tts) { return sDateIsoToYYYYMMDD(tts, length) }
 
@@ -231,4 +247,4 @@ class dplDBs {
     }
 }
 
-export { appConsts as dplDBsConsts, dplDBs };
+export { DplDBs };
