@@ -24,6 +24,8 @@ import { sDateIsoToYYYYMMDD, objEmpty } from "./utils.js";
 
 import { regNumTypeIsVAT } from "./sharedRefTables.js";
 
+import { constructElemLabel } from "./elemLabel.js";
+
 //Application constants
 const appConsts = {
     map121: { //label values 
@@ -48,6 +50,20 @@ const appConsts = {
         key: 0,
         level: 1,
         ver: 2
+    },
+    indCodes: {
+        type: {
+            dnbIndCode: {code: 3599, desc: 'D&B Industry Code', descShort: 'D&B'},
+            naics: {code: 30832, desc: 'NAICS Code', descShort: 'NAICS'},
+            sic87: {code: 399, desc: 'US 1987 SIC Code', descShort: 'SIC'},
+            naceRev2: {code: 29104, desc: 'NACE Revision 2', descShort: 'NACE'},
+            hooversIndCode: {code: 25838, desc: 'D&B Hoovers Industry Code', descShort: 'Hoovers'},
+            majorIndCat: {code: 24657, desc: 'Major Industry Category', descShort: 'major'}
+        },
+        component: {
+            code: {attr: 'code', desc: 'activity code'},
+            desc: {attr: 'description', desc: 'act code description'}
+        }
     },
     corpLinkage: {
         levels: [ //Linkage levels in Hierarchies & Connections level 1
@@ -163,7 +179,7 @@ class DplDBs {
     //    },
     //    baseinfo: { resp: { level: 1, version: 1, status: 'ok', reason: null } }
     //  }
-    blockIDs() {
+    get blockIDs() {
         const ret = this.dplDBs?.inquiryDetail.blockIDs.reduce((obj, blockID) => {
             const arrBlockID = blockID.split('_');
 
@@ -202,9 +218,46 @@ class DplDBs {
         return '';
     }
 
+    //This function will convert D&B Direct+ industry code objects (organization.industryCodes) to an
+    //array of a certain length
+    //
+    //Four parameters
+    //1. Only one type of activity code (SIC, NACE, ...) will be returned,
+    //   options: oDpl.consts.indCodes.type
+    //2. Multiple attributes from the D+ object can be returned, options: oDpl.consts.indCodes.component
+    //3. Specify the number of activity codes to be returned
+    //4. Specify the element labels associated with the values returned
+    indCodesToArray(indTypeCode, arrIndCodeComponents, numIndCodes, label) {
+        let retArr = new Array(numIndCodes * arrIndCodeComponents.length);
+
+        if(label) {
+            for(let i = 0; i < numIndCodes; i++) {
+                arrIndCodeComponents.forEach((component, idx) => {
+                    retArr[i * arrIndCodeComponents.length + idx] = constructElemLabel(label, component.desc, numIndCodes > 1 ? i + 1 : null)
+                })
+            }
+
+            return retArr;
+        }
+
+        if(!this.org.industryCodes || !this.org.industryCodes.length) { return retArr }
+
+        retArr = this.org.industryCodes
+            .filter(indCode => indCode.typeDnBCode === indTypeCode.code)
+            .sort((indCode1, indCode2) => indCode1.priority - indCode2.priority)
+            .slice(0, numIndCodes)
+            .reduce((arr, indCode) => arr.concat(arrIndCodeComponents.map(component => indCode[component.attr])), []);
+
+        if(numIndCodes * arrIndCodeComponents.length - retArr.length > 0) {
+            retArr = retArr.concat(new Array((numIndCodes * arrIndCodeComponents.length - retArr.length)));
+        }
+
+        return retArr;
+    }
+
     //Method isGlobalUlt will return true if the duns requested is the global ultimate duns, false 
     //if it is not the global ultimate and null if no linkage information is available
-    isGlobalUlt() {
+    get isGlobalUlt() {
         if(objEmpty(this.org?.corporateLinkage)) { return null }
 
         if(this.org.corporateLinkage.familytreeRolesPlayed.find(role => role.dnbCode === 12775)) {
@@ -224,7 +277,7 @@ class DplDBs {
     //Method corpLinkageLevels will give access to the three levels of linkage available
     //in Hierarchies & Connections level 1
     //➡️ There are only three levels because only an HQ or a parent will be available ⬅️
-    corpLinkageLevels() {
+    get corpLinkageLevels() {
         const corpLinkage = this.org?.corporateLinkage;
 
         const ret = [ null, null, null ]; 

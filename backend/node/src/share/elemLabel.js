@@ -31,7 +31,7 @@ class ElemLabel {
     setLabelIdx(label, idx) {
         if(label) { this.label = label }
 
-        if(this.idx || this.idx === 0) {
+        if(idx || idx === 0) {
             this.idx = idx 
         }
 
@@ -48,4 +48,6 @@ class ElemLabel {
     }
 }
 
-export { ElemLabel };
+const constructElemLabel = (elemLabel, text, idx) => elemLabel instanceof ElemLabel ? elemLabel.setLabelIdx(text, idx).toString() : new elemLabel(text, idx);
+
+export { ElemLabel, constructElemLabel };

@@ -42,7 +42,7 @@ function processDnbDplDB(jsonIn, bLabel) {
             return;
         }
 
-        const arrValues = [];
+        let arrValues = [];
 
         //Customer reference should be specified as a query parameter in the Direct+ request
         arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.custRef) : oDpl.map121.custRef);
@@ -59,9 +59,13 @@ function processDnbDplDB(jsonIn, bLabel) {
         //Primary name
         arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.primaryName) : oDpl.map121.primaryName);
 
-
-        arrValues.push(bLabel ? new ElemLabel('Global ult') : oDpl.isGlobalUlt() );
-
+        //Get primary industry code
+        arrValues = arrValues.concat( oDpl.indCodesToArray(
+            oDpl.consts.indCodes.type.sic87,
+            [ oDpl.consts.indCodes.component.code, oDpl.consts.indCodes.component.desc ],
+            2,
+            bLabel && new ElemLabel(null, null, null, `(${oDpl.consts.indCodes.type.sic87.descShort})`)
+        ));
 
         console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
 }
