@@ -62,9 +62,24 @@ function processDnbDplDB(jsonIn, bLabel) {
         //Get primary industry code
         arrValues = arrValues.concat( oDpl.indCodesToArray(
             oDpl.consts.indCodes.type.sic87,
-            [ oDpl.consts.indCodes.component.code, oDpl.consts.indCodes.component.desc ],
             2,
+            [ oDpl.consts.indCodes.component.code, oDpl.consts.indCodes.component.desc ],
             bLabel && new ElemLabel(null, null, null, `(${oDpl.consts.indCodes.type.sic87.descShort})`)
+        ));
+
+        //Get employee counts
+        arrValues = arrValues.concat( oDpl.numEmplsToArray(
+            3,
+            [
+                oDpl.consts.numEmpl.component.value,
+                oDpl.consts.numEmpl.component.reliability,
+                oDpl.consts.numEmpl.component.scope
+            ],
+            [
+                oDpl.consts.numEmpl.scopeCodes.individual.code,
+                oDpl.consts.numEmpl.scopeCodes.hq.code
+            ],
+            bLabel && new ElemLabel()
         ));
 
         console.log(arrValues.map(nullUndefToEmptyStr).join('|'));

@@ -65,12 +65,44 @@ const appConsts = {
             desc: {attr: 'description', desc: 'act code description'}
         }
     },
+    numEmpl: {
+        scopeCodes: {
+            individual: {code: 9066, prio: 1, desc: 'individual'},
+            hq: {code: 9068, prio: 2, desc: 'HQ only'},
+            consolidated: {code: 9067, prio: 3, desc: 'consolidated'}
+        },
+        component: {
+            value: {attr: 'value', desc: 'number of employees'},
+            scope: {attr: 'informationScopeDescription', desc: 'information scope (num empl)'},
+            reliability: {attr: 'reliabilityDescription', desc: 'reliability (num empl)'}
+        }
+    },
     corpLinkage: {
         levels: [ //Linkage levels in Hierarchies & Connections level 1
             {attrs: ['headQuarter', 'parent'], label: 'parent'},
             {attrs: ['domesticUltimate'], label: 'dom ult'},
             {attrs: ['globalUltimate'], label: 'global ult'}
         ]
+    },
+    reliability: {
+        min: {code: 11078, desc: 'minimum value from range'},
+        rounded: {code: 11147, desc: 'rounded'},
+        derived: {code: 11176, desc: 'derived'},
+        final: {code: 16970, desc: 'final'},
+        projected: {code: 192, desc: 'projected'},
+        average: {code: 25100, desc: 'average'},
+        assigned: {code: 33392, desc: 'assigned'},
+        actual: {code: 9092, desc: 'actual'},
+        estimated: {code: 9093, desc: 'estimated'},
+        modelled: {code: 9094, desc: 'modelled'}
+    },
+    infoScope: {
+        group: {code: 13173, desc: 'group'},
+        emplTotal: {code: 36429, desc: 'employees total'},
+        emplHere: {code: 36430, desc: 'employees here'},
+        individual: {code: 9066, desc: 'individual'},
+        consolidated: {code: 9067, desc: 'consolidated'},
+        hq: {code: 9068, desc: 'HQ only'}
     }
 };
 
@@ -218,18 +250,19 @@ class DplDBs {
         return '';
     }
 
-    //This function will convert D&B Direct+ industry code objects (organization.industryCodes) to an
-    //array of a certain length
+    //Method indCodesToArray will convert D&B Direct+ industry code objects (organization.industryCodes)
+    //to an array of a specified length (= numIndCodes * arrIndCodeComponents.length)
     //
     //Four parameters
     //1. Only one type of activity code (SIC, NACE, ...) will be returned,
     //   options: oDpl.consts.indCodes.type
-    //2. Multiple attributes from the D+ object can be returned, options: oDpl.consts.indCodes.component
-    //3. Specify the number of activity codes to be returned
+    //2. Specify the number of activity codes to be returned
+    //3. Multiple attributes from the D+ object can be returned, options: oDpl.consts.indCodes.component
     //4. Specify the element labels associated with the values returned
-    indCodesToArray(indTypeCode, arrIndCodeComponents, numIndCodes, label) {
+    indCodesToArray(indTypeCode, numIndCodes, arrIndCodeComponents, label) {
         let retArr = new Array(numIndCodes * arrIndCodeComponents.length);
 
+        //Create the labels associated with the different parts of the array (if applicable)
         if(label) {
             for(let i = 0; i < numIndCodes; i++) {
                 arrIndCodeComponents.forEach((component, idx) => {
@@ -240,18 +273,111 @@ class DplDBs {
             return retArr;
         }
 
+        //Return an array of empty values if no industry codes available
         if(!this.org.industryCodes || !this.org.industryCodes.length) { return retArr }
 
+        //The actual transformation, (1) filter the spcified type, (2) sort in order of
+        //priority, (3) selct the number of act codes specified and (4) flatten out the
+        //objects just containing the attributes specified
         retArr = this.org.industryCodes
             .filter(indCode => indCode.typeDnBCode === indTypeCode.code)
             .sort((indCode1, indCode2) => indCode1.priority - indCode2.priority)
             .slice(0, numIndCodes)
             .reduce((arr, indCode) => arr.concat(arrIndCodeComponents.map(component => indCode[component.attr])), []);
 
+        //Add, if needed, some empty elements to the return array
         if(numIndCodes * arrIndCodeComponents.length - retArr.length > 0) {
             retArr = retArr.concat(new Array((numIndCodes * arrIndCodeComponents.length - retArr.length)));
         }
 
+        return retArr;
+    }
+
+    //Method numEmplsToArray will convert D&B D+ employee count objects (organization.numberOfEmployees)
+    //to an array of a specified length (= )
+    //
+    //Supported number of employees reliability info, see numEmpl.reliability
+    //Supported number of employees information scopes, see numEmpl.scope
+    //Supported number of employees components, see numEmpl.component
+    numEmplsToArray(numNumEmpl, arrNumEmplComponents, arrNumEmplScope, label) {
+        let retArr = new Array(numNumEmpl * arrNumEmplComponents.length);
+
+        //Create the labels associated with the different parts of the array (if applicable)
+        if(label) {
+            for(let i = 0; i < numNumEmpl; i++) {
+                arrNumEmplComponents.forEach((component, idx) => {
+                    retArr[i * arrNumEmplComponents.length + idx] = constructElemLabel(label, component.desc, numNumEmpl > 1 ? i + 1 : null )
+                })
+            }
+
+            return retArr;
+        }
+
+        //Return an array of empty values if no employee counts are available
+        if(!this.org.numberOfEmployees || !this.org.numberOfEmployees.length) { return retArr }
+
+        //Configure the information scope & reliability priorities 
+        const arrNumEmplPrios = {
+            infoScopeDnBCode: [
+                { ...appConsts.infoScope.individual, prio: 1 },
+                { ...appConsts.infoScope.hq, prio: 2 },
+                { ...appConsts.infoScope.consolidated, prio: 3 }
+            ],
+            reliabilityDnBCode: [
+                { ...appConsts.reliability.actual, prio: 1 },
+                { ...appConsts.reliability.modelled, prio: 2 },
+                { ...appConsts.reliability.estimated, prio: 3 }
+            ]
+        };
+
+        //Assign the priorities to the number of employee objects in the array
+        retArr = 
+            this.org.numberOfEmployees.map(numEmpl => {
+                numEmpl.infoScopePrio = arrNumEmplPrios.infoScopeDnBCode.find(elem => elem.code === numEmpl.informationScopeDnBCode)?.prio
+                numEmpl.reliabilityPrio = arrNumEmplPrios.reliabilityDnBCode.find(elem => elem.code === numEmpl.reliabilityDnBCode)?.prio
+
+                return numEmpl;
+            })
+            .filter(numEmpl => numEmpl.infoScopePrio);
+        
+            console.log(retArr)
+/*
+        retArr = retArr
+            .sort((numEmpl1, numEmpl2) => {
+                function sortNumEmpl(idx) {
+                    const prio1 = arrPrios[idx].prios.find(prio => prio.code === numEmpl1[arrPrios[idx].attr]);
+                    const prio2 = arrPrios[idx].prios.find(prio => prio.code === numEmpl2[arrPrios[idx].attr]);
+
+                    if(prio1 === undefined && prio1 === undefined) {
+                        if(++idx < arrPrios.length) {
+                            return sortNumEmpl(idx)
+                        }
+                        else { return 0 }
+                    }
+
+                    if(prio1 === undefined) { return 1 }
+
+                    if(prio2 === undefined) { return -1 }
+
+                    const prioDiff = prio1.prio - prio2.prio;
+
+                    if(prioDiff === 0 && ++idx < arrPrios.length) {
+                        return sortNumEmpl(idx)
+                    }
+                    else {
+                        return prioDiff
+                    }
+                }
+
+                return sortNumEmpl(0);
+            })
+            .slice(0, numNumEmpl)
+            .reduce((arr, numEmpl) => arr.concat(arrNumEmplComponents.map(component => numEmpl[component.attr])), []);
+
+        if(numNumEmpl * arrNumEmplComponents.length - retArr.length > 0) {
+            retArr = retArr.concat(new Array((numNumEmpl * arrNumEmplComponents.length - retArr.length)));
+        }
+*/
         return retArr;
     }
 
