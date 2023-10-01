@@ -20,7 +20,11 @@
 //
 // *********************************************************************
 
-import { sDateIsoToYYYYMMDD, objEmpty } from "./utils.js";
+import { 
+    sDateIsoToYYYYMMDD,
+    objEmpty,
+    isNumber
+} from "./utils.js";
 
 import { regNumTypeIsVAT } from "./sharedRefTables.js";
 
@@ -294,12 +298,38 @@ class DplDBs {
     }
 
     //Method numEmplsToArray will convert D&B D+ employee count objects (organization.numberOfEmployees)
-    //to an array of a specified length (= )
+    //to an array of a specified length (= numNumEmpl * arrNumEmplComponents.length). The order of the
+    //employee counts included in the array will be influenced by the order of array arrNumEmplScope and
+    //arrReliabilityPrio
     //
-    //Supported number of employees reliability info, see numEmpl.reliability
-    //Supported number of employees information scopes, see numEmpl.scope
-    //Supported number of employees components, see numEmpl.component
-    numEmplsToArray(numNumEmpl, arrNumEmplComponents, arrNumEmplScope, label) {
+    //Four parameters
+    //1. Only number of employee counts of a predefined set of information scopes (hq, consolidated, ...)
+    //   will be returned, options: oDpl.consts.numEmpl.scopeCodes. This array will influence the ordering
+    //   of the return values as well
+    //2. Specify the number of employee counts to be returned
+    //3. Multiple attributes from the D+ object can be returned, options: oDpl.consts.numEmpl.component
+    //4. Specify the element labels associated with the values returned
+    numEmplsToArray(arrNumEmplScope, numNumEmpl, arrNumEmplComponents, label) {
+        //Comparison function used for sorting based on infoScope
+        function doCompareInfoScope(elem1, elem2) {
+            //Leave or move non-numerical values at/to the end
+            if(!isNumber(elem2.infoScopePrio)) { return 0 }
+            if(!isNumber(elem1.infoScopePrio)) { return 1 }
+
+            //Sort higher prio (is smaller number) before lower prio (higher number)
+            return elem1.infoScopePrio - elem2.infoScopePrio;
+        }
+
+        //Comparison function used for sorting based on reliability
+        function doCompareReliability(elem1, elem2) {
+            //Leave or move non-numerical values at/to the end
+            if(!isNumber(elem2.reliabilityPrio)) { return 0 }
+            if(!isNumber(elem1.reliabilityPrio)) { return 1 }
+
+            //Sort higher prio (is smaller number) before lower prio (higher number)
+            return elem1.reliabilityPrio - elem2.reliabilityPrio;
+        }
+
         let retArr = new Array(numNumEmpl * arrNumEmplComponents.length);
 
         //Create the labels associated with the different parts of the array (if applicable)
@@ -316,68 +346,42 @@ class DplDBs {
         //Return an array of empty values if no employee counts are available
         if(!this.org.numberOfEmployees || !this.org.numberOfEmployees.length) { return retArr }
 
-        //Configure the information scope & reliability priorities 
-        const arrNumEmplPrios = {
-            infoScopeDnBCode: [
-                { ...appConsts.infoScope.individual, prio: 1 },
-                { ...appConsts.infoScope.hq, prio: 2 },
-                { ...appConsts.infoScope.consolidated, prio: 3 }
-            ],
-            reliabilityDnBCode: [
-                { ...appConsts.reliability.actual, prio: 1 },
-                { ...appConsts.reliability.modelled, prio: 2 },
-                { ...appConsts.reliability.estimated, prio: 3 }
-            ]
-        };
+        //Configure the reliability priorities 
+        const arrReliabilityPrio = [
+            { ...appConsts.reliability.actual, prio: 1 },
+            { ...appConsts.reliability.modelled, prio: 2 },
+            { ...appConsts.reliability.estimated, prio: 3 }
+        ];
 
-        //Assign the priorities to the number of employee objects in the array
-        retArr = 
-            this.org.numberOfEmployees.map(numEmpl => {
-                numEmpl.infoScopePrio = arrNumEmplPrios.infoScopeDnBCode.find(elem => elem.code === numEmpl.informationScopeDnBCode)?.prio
-                numEmpl.reliabilityPrio = arrNumEmplPrios.reliabilityDnBCode.find(elem => elem.code === numEmpl.reliabilityDnBCode)?.prio
+        //First filter the objects in the information scopes specified
+        retArr = this.org.numberOfEmployees
+            //Only return the number of employee objects with the info scopes as specified in arrNumEmplScope
+            .filter(numEmpl => arrNumEmplScope.includes(numEmpl.informationScopeDnBCode))
+            
+            //Add priority attribute based on parameter arrNumEmplScope and arrReliabilityPrio
+            .map(numEmpl => {
+                //The information scope precedence is determined by parameter arrNumEmplScope
+                const idxNumEmplScope = arrNumEmplScope.findIndex(elem => elem === numEmpl.informationScopeDnBCode);
+
+                if(idxNumEmplScope > -1) { numEmpl.infoScopePrio = idxNumEmplScope + 1}
+
+                //The reliability precedence is determined by arrReliabilityPrio
+                numEmpl.reliabilityPrio = arrReliabilityPrio.find(elem => elem.code === numEmpl.reliabilityDnBCode)?.prio;
 
                 return numEmpl;
             })
-            .filter(numEmpl => numEmpl.infoScopePrio);
-        
-            console.log(retArr)
-/*
-        retArr = retArr
-            .sort((numEmpl1, numEmpl2) => {
-                function sortNumEmpl(idx) {
-                    const prio1 = arrPrios[idx].prios.find(prio => prio.code === numEmpl1[arrPrios[idx].attr]);
-                    const prio2 = arrPrios[idx].prios.find(prio => prio.code === numEmpl2[arrPrios[idx].attr]);
+            .sort(doCompareInfoScope)   //1st sort on information scope as specified in parameter arrNumEmplScope
+            .sort(doCompareReliability) //Next sort on reliability. If available, the 1st entry of arrReliabilityPrio will bubble up
+            .slice(0, numNumEmpl)       //Cut the entries which are not needed
 
-                    if(prio1 === undefined && prio1 === undefined) {
-                        if(++idx < arrPrios.length) {
-                            return sortNumEmpl(idx)
-                        }
-                        else { return 0 }
-                    }
-
-                    if(prio1 === undefined) { return 1 }
-
-                    if(prio2 === undefined) { return -1 }
-
-                    const prioDiff = prio1.prio - prio2.prio;
-
-                    if(prioDiff === 0 && ++idx < arrPrios.length) {
-                        return sortNumEmpl(idx)
-                    }
-                    else {
-                        return prioDiff
-                    }
-                }
-
-                return sortNumEmpl(0);
-            })
-            .slice(0, numNumEmpl)
+            //Convert to an array
             .reduce((arr, numEmpl) => arr.concat(arrNumEmplComponents.map(component => numEmpl[component.attr])), []);
 
+        //Fill out to the requested number of columns
         if(numNumEmpl * arrNumEmplComponents.length - retArr.length > 0) {
             retArr = retArr.concat(new Array((numNumEmpl * arrNumEmplComponents.length - retArr.length)));
         }
-*/
+    
         return retArr;
     }
 

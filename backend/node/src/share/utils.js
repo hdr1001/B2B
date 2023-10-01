@@ -99,10 +99,16 @@ function objEmpty(obj) {
     return false;
 }
 
+//Does a value represent a valid number
+function isNumber(value) {
+    return typeof value === 'number' && isFinite(value);
+}
+  
 export {
     dcdrUtf8,
     setEnvValue,
     cleanDUNS,
     sDateIsoToYYYYMMDD,
-    objEmpty
+    objEmpty,
+    isNumber
 };

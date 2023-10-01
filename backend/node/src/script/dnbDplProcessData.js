@@ -58,26 +58,38 @@ function processDnbDplDB(jsonIn, bLabel) {
 
         //Primary name
         arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.primaryName) : oDpl.map121.primaryName);
-
-        //Get primary industry code
+/*
+        //Get primary industry code of a certain type
         arrValues = arrValues.concat( oDpl.indCodesToArray(
             oDpl.consts.indCodes.type.sic87,
             2,
             [ oDpl.consts.indCodes.component.code, oDpl.consts.indCodes.component.desc ],
             bLabel && new ElemLabel(null, null, null, `(${oDpl.consts.indCodes.type.sic87.descShort})`)
         ));
-
-        //Get employee counts
+*/
+        //Get employee counts from a specified set of scopes (i.e. individual, hq, ...)
         arrValues = arrValues.concat( oDpl.numEmplsToArray(
-            3,
+            [
+                oDpl.consts.numEmpl.scopeCodes.individual.code,
+                oDpl.consts.numEmpl.scopeCodes.hq.code
+            ],
+            2,
             [
                 oDpl.consts.numEmpl.component.value,
                 oDpl.consts.numEmpl.component.reliability,
                 oDpl.consts.numEmpl.component.scope
             ],
+            bLabel && new ElemLabel()
+        ));
+
+        arrValues = arrValues.concat( oDpl.numEmplsToArray(
             [
-                oDpl.consts.numEmpl.scopeCodes.individual.code,
-                oDpl.consts.numEmpl.scopeCodes.hq.code
+                oDpl.consts.numEmpl.scopeCodes.consolidated.code
+            ],
+            1,
+            [
+                oDpl.consts.numEmpl.component.value,
+                oDpl.consts.numEmpl.component.reliability
             ],
             bLabel && new ElemLabel()
         ));
