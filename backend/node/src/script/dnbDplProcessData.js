@@ -45,10 +45,10 @@ function processDnbDplDB(jsonIn, bLabel) {
         let arrValues = [];
 
         //Customer reference should be specified as a query parameter in the Direct+ request
-        arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.custRef) : oDpl.map121.custRef);
+        //arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.custRef) : oDpl.map121.custRef);
 
         //Timestamp dating the D&B Direct+ REST request
-        arrValues.push(bLabel ? new ElemLabel('date requested') : oDpl.transactionTimestamp(6) );
+       // arrValues.push(bLabel ? new ElemLabel('date requested') : oDpl.transactionTimestamp(6) );
 
         //DUNS requested
         arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.inqDuns) : oDpl.map121.inqDuns);
@@ -58,6 +58,10 @@ function processDnbDplDB(jsonIn, bLabel) {
 
         //Primary name
         arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.primaryName) : oDpl.map121.primaryName);
+
+        //SMB indicator
+        arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.SMB) : oDpl.map121.SMB);
+
 /*
         //Get primary industry code of a certain type
         arrValues = arrValues.concat( oDpl.indCodesToArray(
@@ -73,26 +77,31 @@ function processDnbDplDB(jsonIn, bLabel) {
                 oDpl.consts.numEmpl.scopeCodes.individual.code,
                 oDpl.consts.numEmpl.scopeCodes.hq.code
             ],
-            2,
+            1,
             [
                 oDpl.consts.numEmpl.component.value,
                 oDpl.consts.numEmpl.component.reliability,
                 oDpl.consts.numEmpl.component.scope
             ],
-            bLabel && new ElemLabel()
+            bLabel && new ElemLabel(null, null, null, '(indv/hq)')
         ));
 
         arrValues = arrValues.concat( oDpl.numEmplsToArray(
             [
-                oDpl.consts.numEmpl.scopeCodes.consolidated.code
+                oDpl.consts.numEmpl.scopeCodes.consolidated.code,
             ],
             1,
             [
                 oDpl.consts.numEmpl.component.value,
-                oDpl.consts.numEmpl.component.reliability
+                oDpl.consts.numEmpl.component.reliability,
+                oDpl.consts.numEmpl.component.scope
             ],
-            bLabel && new ElemLabel()
+            bLabel && new ElemLabel(null, null, null, '(cons)')
         ));
+
+        arrValues = arrValues.concat( oDpl.latestFinsToArray(bLabel) );
+
+        arrValues.push(bLabel ? new ElemLabel('Gbl Ult') : oDpl.isGlobalUlt);
 
         console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
 }

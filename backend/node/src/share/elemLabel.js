@@ -48,6 +48,8 @@ class ElemLabel {
     }
 }
 
-const constructElemLabel = (elemLabel, text, idx) => elemLabel instanceof ElemLabel ? elemLabel.setLabelIdx(text, idx).toString() : new elemLabel(text, idx);
+const constructElemLabel = (elemLabel, text, idx) => elemLabel instanceof ElemLabel
+        ? elemLabel.setLabelIdx(text, idx).toString()
+        : new ElemLabel(text, idx);
 
 export { ElemLabel, constructElemLabel };

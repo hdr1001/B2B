@@ -182,6 +182,7 @@ class DplDBs {
     get consts() { return appConsts }
 
     //Method blockIDs combines Data Block property inquiryDetail.blockIDs
+    //All data block responses contain a inquiryDetail.blockIDs & blockStatus array
     //
     //JSON example: "blockIDs": [
     //        "companyinfo_L1_v1",
@@ -246,6 +247,7 @@ class DplDBs {
     }
 
     //Method transactionTimestamp will get the transaction timestamp in the format YYYYMMDD
+    //All data block responses contain a transactionDetail object
     transactionTimestamp(length) {
         const tts = this.dplDBs?.transactionDetail?.transactionTimestamp;
 
@@ -256,6 +258,7 @@ class DplDBs {
 
     //Method indCodesToArray will convert D&B Direct+ industry code objects (organization.industryCodes)
     //to an array of a specified length (= numIndCodes * arrIndCodeComponents.length)
+    //This method is applicable on data block collections which contain Company Information L2+
     //
     //Four parameters
     //1. Only one type of activity code (SIC, NACE, ...) will be returned,
@@ -301,6 +304,7 @@ class DplDBs {
     //to an array of a specified length (= numNumEmpl * arrNumEmplComponents.length). The order of the
     //employee counts included in the array will be influenced by the order of array arrNumEmplScope and
     //arrReliabilityPrio
+    //This method is applicable on data block collections which contain Company Information L2+
     //
     //Four parameters
     //1. Only number of employee counts of a predefined set of information scopes (hq, consolidated, ...)
@@ -385,8 +389,130 @@ class DplDBs {
         return retArr;
     }
 
+    //Method latestFinsToArray returns latest financial figures in array format
+    //Best results with Company Financials L1+, fall back implemented to Company Information L2+
+    latestFinsToArray(bLabel) {
+        const sales_rev      = 0;
+        const total_assets   = 1;
+        const currency       = 2;
+        const units          = 3;
+        const reliability    = 4;
+        const info_scope     = 5;
+        const stmt_from_date = 6;
+        const stmt_to_date   = 7;
+
+        let retArr = new Array(stmt_to_date + 1);
+
+        if(bLabel) {
+            retArr[sales_rev] = constructElemLabel(null, 'sales rev');
+            retArr[total_assets] = constructElemLabel(null, 'total assets');
+            retArr[currency] = constructElemLabel(null, 'currency');
+            retArr[units] = constructElemLabel(null, 'units');
+            retArr[reliability] = constructElemLabel(null, 'reliability (financials)');
+            retArr[info_scope] = constructElemLabel(null, 'info scope (financials)');
+            retArr[stmt_from_date] = constructElemLabel(null, 'stmt from date');
+            retArr[stmt_to_date] = constructElemLabel(null, 'stmt to date');
+
+            return retArr;
+        }
+
+        //Financial data from Company Financials L1+
+        const latestFins = this.org?.latestFinancials;
+
+        if(!objEmpty(latestFins)) {
+            retArr[sales_rev]      = latestFins?.overview?.salesRevenue;
+            retArr[total_assets]   = latestFins?.overview?.totalAssets;
+            retArr[currency]       = latestFins?.currency;
+            retArr[units]          = latestFins?.units;
+            retArr[reliability]    = latestFins?.reliability?.description;
+            retArr[info_scope]     = latestFins?.informationScope?.description;
+            retArr[stmt_from_date] = latestFins?.financialStatementFromDate;
+            retArr[stmt_to_date]   = latestFins?.financialStatementToDate;
+    
+            if(retArr[currency]) { return retArr }
+        }
+
+        //No currency available, revert to modelled/estimated values from Company Information L2+
+        let ciFinancials = this.org?.financials || [];
+
+        if(ciFinancials.length === 0) { return retArr } //No luck in CI L2+ either :-(
+
+        //Assign priority to the modelled/estimated values
+        const arrReliabilityPrio = [ 
+            { ...appConsts.reliability.modelled, prio: 1 },
+            { ...appConsts.reliability.estimated, prio: 2 }
+        ];
+
+        //Prefer recent statement dates and stick to the reliability priorities
+        ciFinancials = ciFinancials
+            .map(fin => {
+                fin.reliabilityPrio = arrReliabilityPrio.find(elem => elem.code === fin.reliabilityDnBCode)?.prio;
+
+                return fin;
+            })
+            .sort((fin1, fin2) => {
+                function getFinStatementDateYear(finStatementDate) {
+                    if(!finStatementDate) { return 0 }
+
+                    const year = parseInt(finStatementDate.slice(0, 4));
+
+                    if(isNaN(year)) { return 0 }
+
+                    return year;             
+                }
+
+                //Bubble the high years to the top of the array
+                const year1 = getFinStatementDateYear(fin1.financialStatementToDate);
+                const year2 = getFinStatementDateYear(fin2.financialStatementToDate);
+
+                if(year1 && !year2) { return -1 }
+
+                if(!year1 && year2) { return 1 }
+
+                if(year1 && year2) {
+                    if(year1 - year2 !== 0) { return year2 - year1 }
+                }
+
+                //Both years not a number or equal then prefer modelled
+                if(!fin1.reliabilityPrio && fin2.reliabilityPrio) { return 1 }
+
+                if(fin1.reliabilityPrio && !fin2.reliabilityPrio) { return -1 }
+
+                if(fin1.reliabilityPrio && fin2.reliabilityPrio) {
+                    if(fin1.reliabilityPrio - fin2.reliabilityPrio !== 0) {
+                        return fin1.reliabilityPrio - fin2.reliabilityPrio
+                    }
+                }
+
+                return 0;
+            })
+
+        let arrYearlyRev = ciFinancials[0]?.yearlyRevenue || [], yearlyRev = null;
+
+        if(arrYearlyRev.length === 1) {
+            yearlyRev = arrYearlyRev[0];
+        }
+        else if(arrYearlyRev.length > 1) {
+            arrYearlyRev = arrYearlyRev.filter(rev => rev.currency !== 'USD'); //Preference for local currency
+
+            if(arrYearlyRev.length) { yearlyRev = arrYearlyRev[0] }
+        }
+
+        retArr[sales_rev]      = yearlyRev && yearlyRev.value;
+        retArr[total_assets]   = null;
+        retArr[currency]       = yearlyRev && yearlyRev.currency;
+        retArr[units]          = ciFinancials[0]?.unitCode;
+        retArr[reliability]    = ciFinancials[0]?.reliabilityDescription;
+        retArr[info_scope]     = ciFinancials[0]?.informationScopeDescription;
+        retArr[stmt_from_date] = null;
+        retArr[stmt_to_date]   = ciFinancials[0]?.financialStatementToDate;
+
+        return retArr;
+    }
+
     //Method isGlobalUlt will return true if the duns requested is the global ultimate duns, false 
     //if it is not the global ultimate and null if no linkage information is available
+    //This method is applicable on data block collections which contain Hierachies & Connections L1
     get isGlobalUlt() {
         if(objEmpty(this.org?.corporateLinkage)) { return null }
 
