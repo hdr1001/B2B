@@ -55,6 +55,13 @@ const appConsts = {
         level: 1,
         ver: 2
     },
+    regNum: {
+        component: {
+            num: {attr: 'registrationNumber', desc: 'registration number'},
+            type: {attr: 'typeDescription', desc: 'registration number type'},
+            vat: {attr: 'vat', desc: 'is VAT'} //Custom attribute
+        }
+    },
     indCodes: {
         type: {
             dnbIndCode: {code: 3599, desc: 'D&B Industry Code', descShort: 'D&B'},
@@ -254,6 +261,47 @@ class DplDBs {
         if(tts) { return sDateIsoToYYYYMMDD(tts, length) }
 
         return '';
+    }
+
+    //Method regNumsToArray will convert D&B Direct+ registration number objects (organization.registrationNumbers)
+    //to an array of a specified length (= numRegNums * arrRegNumComponents.length).
+    //This method is applicable on data block collections which contain Company Information L2+
+    //
+    //Three parameters
+    //1. Specify the number of registration numbers to be returned
+    //2. Multiple attributes from the D+ object can be returned, options: oDpl.consts.regNum.component
+    //3. Specify the element labels associated with the values returned
+    regNumsToArray(numRegNums, arrRegNumComponents, bLabel) {
+        //Create an empty return array
+        let retArr = new Array(numRegNums * arrRegNumComponents.length);
+
+        //If header requsted, return the component descriptions
+        if(bLabel) {
+            for(let i = 0; i < numRegNums; i++) {
+                arrRegNumComponents.forEach((regNumComponent, idx) => {
+                    retArr[i * arrRegNumComponents.length + idx] = constructElemLabel(null, regNumComponent.desc, numRegNums > 1 ? i + 1 : null)
+                })
+            }
+
+            return retArr;
+        }
+
+        //No content available
+        if(!this.org.registrationNumbers || !this.org.registrationNumbers.length) { return retArr }
+
+        //Prioritize the preferred registration number and VAT number
+        retArr = this.org.registrationNumbers
+            .sort((regNum1, regNum2) => regNum1.vat && !regNum2.vat ? -1 : 0)
+            .sort((regNum1, regNum2) => regNum1.isPreferredRegistrationNumber && !regNum2.isPreferredRegistrationNumber ? -1 : 0)
+            .slice(0, numRegNums)
+            .reduce((arr, regNum) => arr.concat(arrRegNumComponents.map(component => regNum[component.attr])), []);
+
+        //Fill out to the requested number of columns
+        if(numRegNums * arrRegNumComponents.length - retArr.length > 0) {
+            retArr = retArr.concat(new Array((numRegNums * arrRegNumComponents.length - retArr.length)));
+        }
+        
+        return retArr;
     }
 
     //Method indCodesToArray will convert D&B Direct+ industry code objects (organization.industryCodes)
