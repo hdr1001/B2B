@@ -59,6 +59,18 @@ function processDnbDplDB(jsonIn, bLabel) {
         //Primary name
         arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.primaryName) : oDpl.map121.primaryName);
 
+        //Primary address
+        arrValues = arrValues.concat( oDpl.addrToArray(
+            oDpl.consts.addr.type.primary,
+            [
+                oDpl.consts.addr.component.addrLine1,
+                oDpl.consts.addr.component.addrLine2,
+                oDpl.consts.addr.component.streetName,
+                oDpl.consts.addr.component.streetNumber
+            ],
+            bLabel
+        ));
+
         //Country code
         arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.countryISO) : oDpl.map121.countryISO);
 

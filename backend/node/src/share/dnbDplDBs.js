@@ -55,6 +55,24 @@ const appConsts = {
         level: 1,
         ver: 2
     },
+    addr: { //Address parts
+        type: {
+            primary: {attr: 'primaryAddress', desc: 'Primary address'},
+            registered: {attr: 'registeredAddress', desc: 'Registered address'},
+            mailing: {attr: 'mailingAddress', desc: 'Mailing address'}
+        },
+        component: {
+            addrLine1: { attrs: [ 'streetAddress', 'line1'], desc: 'addr line1' },
+            addrLine2: { attrs: [ 'streetAddress', 'line2'], desc: 'addr line2' },
+            streetName: { attrs: ['streetName'], desc: 'street' },
+            streetNumber: { attrs: ['streetNumber'], desc: 'street nbr' },
+            postalCode: { attrs: ['postalCode'], desc: 'postalcode' },
+            latitude: { attrs: ['latitude'], desc: 'latitude' },
+            longitude: { attrs: ['longitude'], desc: 'longitude' },
+            isRegisteredAddress: { attrs: ['isRegisteredAddress'], desc: 'registered addr' },
+            isManufacturingLocation: { attrs: ['isManufacturingLocation'], desc: 'mfg location' }
+        }
+    },
     regNum: {
         component: {
             num: {attr: 'registrationNumber', desc: 'registration number'},
@@ -261,6 +279,25 @@ class DplDBs {
         if(tts) { return sDateIsoToYYYYMMDD(tts, length) }
 
         return '';
+    }
+
+    addrToArray(addr, arrAddrComponents, bLabel) {
+        function getAttrValue(ref, attrs) {
+            if(typeof ref !== 'object') { return null }
+
+            for(let i = 0; i < attrs.length; i++) {
+                if(ref[attrs[i]] == null) { return undefined }
+
+                ref = ref[attrs[i]];
+            }
+
+            return ref; //The reference should now be a reference to a value 
+        }
+
+        return arrAddrComponents.map(elem => bLabel 
+            ? elem.desc
+            : getAttrValue(this.org?.[addr.attr], elem.attrs)
+        )
     }
 
     //Method regNumsToArray will convert D&B Direct+ registration number objects (organization.registrationNumbers)
