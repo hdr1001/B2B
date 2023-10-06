@@ -61,12 +61,23 @@ function processDnbDplDB(jsonIn, bLabel) {
 
         //Primary address
         arrValues = arrValues.concat( oDpl.addrToArray(
-            oDpl.consts.addr.type.primary,
+            oDpl.org?.primaryAddress,
             [
                 oDpl.consts.addr.component.addrLine1,
                 oDpl.consts.addr.component.addrLine2,
                 oDpl.consts.addr.component.streetName,
-                oDpl.consts.addr.component.streetNumber
+                oDpl.consts.addr.component.streetNumber,
+                oDpl.consts.addr.component.locality,
+                oDpl.consts.addr.component.minorTownName,
+                oDpl.consts.addr.component.postalCode,
+                oDpl.consts.addr.component.regionAbbr,
+                oDpl.consts.addr.component.country,
+                oDpl.consts.addr.component.countryISO,
+                oDpl.consts.addr.component.poBox,
+                oDpl.consts.addr.component.latitude,
+                oDpl.consts.addr.component.longitude,
+                oDpl.consts.addr.component.isRegisteredAddress,
+                oDpl.consts.addr.component.isManufacturingLocation
             ],
             bLabel
         ));

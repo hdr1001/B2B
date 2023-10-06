@@ -65,12 +65,19 @@ const appConsts = {
             addrLine1: { attrs: [ 'streetAddress', 'line1'], desc: 'addr line1' },
             addrLine2: { attrs: [ 'streetAddress', 'line2'], desc: 'addr line2' },
             streetName: { attrs: ['streetName'], desc: 'street' },
-            streetNumber: { attrs: ['streetNumber'], desc: 'street nbr' },
-            postalCode: { attrs: ['postalCode'], desc: 'postalcode' },
-            latitude: { attrs: ['latitude'], desc: 'latitude' },
-            longitude: { attrs: ['longitude'], desc: 'longitude' },
-            isRegisteredAddress: { attrs: ['isRegisteredAddress'], desc: 'registered addr' },
-            isManufacturingLocation: { attrs: ['isManufacturingLocation'], desc: 'mfg location' }
+            streetNumber: { attrs: [ 'streetNumber' ], desc: 'street nbr' },
+            locality: { attrs: [ 'addressLocality', 'name' ], desc: 'city' },
+            minorTownName: { attrs: [ 'minorTownName' ], desc: 'minor town name' },
+            postalCode: { attrs: [ 'postalCode' ], desc: 'postalcode' },
+            region: { attrs: [ 'addressRegion', 'name' ], desc: 'region' },
+            regionAbbr: { attrs: [ 'addressRegion', 'abbreviatedName' ], desc: 'region abbr' },
+            country: { attrs: [ 'addressCountry', 'name' ], desc: 'country' },
+            countryISO: { attrs: [ 'addressCountry', 'isoAlpha2Code' ], desc: 'country ISO' },
+            poBox: { attrs: [ 'postOfficeBox', 'postOfficeBoxNumber' ], desc: 'pobox' },
+            latitude: { attrs: [ 'latitude' ], desc: 'latitude' },
+            longitude: { attrs: [ 'longitude' ], desc: 'longitude' },
+            isRegisteredAddress: { attrs: [ 'isRegisteredAddress' ], desc: 'registered addr' },
+            isManufacturingLocation: { attrs: [ 'isManufacturingLocation' ], desc: 'mfg location' }
         }
     },
     regNum: {
@@ -282,21 +289,24 @@ class DplDBs {
     }
 
     addrToArray(addr, arrAddrComponents, bLabel) {
-        function getAttrValue(ref, attrs) {
-            if(typeof ref !== 'object') { return null }
+        function getAttrValue(obj, attrs) {
+            if(typeof obj !== 'object') { return null }
 
-            for(let i = 0; i < attrs.length; i++) {
-                if(ref[attrs[i]] == null) { return undefined }
-
-                ref = ref[attrs[i]];
+            if(attrs.length === 1) {
+                return obj?.[attrs[0]]
             }
-
-            return ref; //The reference should now be a reference to a value 
+            else if(attrs.length === 2) {
+                return obj?.[attrs[0]]?.[attrs[1]]
+            }
+            else {
+                console.error('Address object attributes should be defined as one or two levels deep');
+                return null;
+            }
         }
 
         return arrAddrComponents.map(elem => bLabel 
             ? elem.desc
-            : getAttrValue(this.org?.[addr.attr], elem.attrs)
+            : getAttrValue(addr, elem.attrs)
         )
     }
 
