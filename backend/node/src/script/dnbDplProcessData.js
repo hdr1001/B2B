@@ -63,7 +63,7 @@ function processDnbDplDB(jsonIn, bLabel) {
         arrValues = arrValues.concat( oDpl.addrToArray(
             oDpl.org?.primaryAddress,
             [
-                oDpl.consts.addr.component.addrLine1,
+                oDpl.consts.addr.component.customLine1,
                 oDpl.consts.addr.component.addrLine2,
                 oDpl.consts.addr.component.streetName,
                 oDpl.consts.addr.component.streetNumber,

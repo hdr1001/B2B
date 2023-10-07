@@ -77,7 +77,9 @@ const appConsts = {
             latitude: { attrs: [ 'latitude' ], desc: 'latitude' },
             longitude: { attrs: [ 'longitude' ], desc: 'longitude' },
             isRegisteredAddress: { attrs: [ 'isRegisteredAddress' ], desc: 'registered addr' },
-            isManufacturingLocation: { attrs: [ 'isManufacturingLocation' ], desc: 'mfg location' }
+            isManufacturingLocation: { attrs: [ 'isManufacturingLocation' ], desc: 'mfg location' },
+            
+            customLine1: { custom: 'line1', desc: 'addr line1' }
         }
     },
     regNum: {
@@ -289,14 +291,44 @@ class DplDBs {
     }
 
     addrToArray(addr, arrAddrComponents, bLabel) {
-        function getAttrValue(obj, attrs) {
-            if(typeof obj !== 'object') { return null }
+        function getAttrValue(oAddr, addrComponent) {
+            if(typeof oAddr !== 'object') { return null }
 
-            if(attrs.length === 1) {
-                return obj?.[attrs[0]]
+            if(addrComponent.custom === 'line1') {
+                if(oAddr?.streetAddress?.line1) { return oAddr.streetAddress.line1 }
+
+                let ret;
+
+                if(oAddr?.streetName) { ret = addr.streetName }
+
+                if(oAddr?.streetNumber) {
+                    if(ret) {
+                        ret += ' ' + oAddr.streetNumber
+                    }
+                    else {
+                        ret = oAddr.streetNumber
+                    }
+                }
+
+                if(ret) { return ret }
+
+                if(oAddr?.postOfficeBox && oAddr?.postOfficeBox?.postOfficeBoxNumber) {
+                    if(oAddr?.postOfficeBox?.typeDescription) {
+                        return oAddr.postOfficeBox.typeDescription + ' ' +  oAddr.postOfficeBox.postOfficeBoxNumber
+                    }
+                    else {
+                        return oAddr.postOfficeBox.postOfficeBoxNumber
+                    }
+                }
+
+                return null;
             }
-            else if(attrs.length === 2) {
-                return obj?.[attrs[0]]?.[attrs[1]]
+
+            if(addrComponent.attrs.length === 1) {
+                return oAddr?.[addrComponent.attrs[0]]
+            }
+            else if(addrComponent.attrs.length === 2) {
+                return oAddr?.[addrComponent.attrs[0]]?.[addrComponent.attrs[1]]
             }
             else {
                 console.error('Address object attributes should be defined as one or two levels deep');
@@ -304,9 +336,9 @@ class DplDBs {
             }
         }
 
-        return arrAddrComponents.map(elem => bLabel 
-            ? elem.desc
-            : getAttrValue(addr, elem.attrs)
+        return arrAddrComponents.map(addrComponent => bLabel 
+            ? addrComponent.desc
+            : getAttrValue(addr, addrComponent)
         )
     }
 
