@@ -48,7 +48,7 @@ function processDnbDplDB(jsonIn, bLabel) {
         //arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.custRef) : oDpl.map121.custRef);
 
         //Timestamp dating the D&B Direct+ REST request
-       // arrValues.push(bLabel ? new ElemLabel('date requested') : oDpl.transactionTimestamp(6) );
+        arrValues.push(bLabel ? new ElemLabel('date requested') : oDpl.transactionTimestamp(6) );
 
         //DUNS requested
         arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.inqDuns) : oDpl.map121.inqDuns);
@@ -65,19 +65,14 @@ function processDnbDplDB(jsonIn, bLabel) {
             [
                 oDpl.consts.addr.component.customLine1,
                 oDpl.consts.addr.component.addrLine2,
-                oDpl.consts.addr.component.streetName,
-                oDpl.consts.addr.component.streetNumber,
                 oDpl.consts.addr.component.locality,
-                oDpl.consts.addr.component.minorTownName,
                 oDpl.consts.addr.component.postalCode,
                 oDpl.consts.addr.component.regionAbbr,
-                oDpl.consts.addr.component.country,
                 oDpl.consts.addr.component.countryISO,
                 oDpl.consts.addr.component.poBox,
                 oDpl.consts.addr.component.latitude,
                 oDpl.consts.addr.component.longitude,
                 oDpl.consts.addr.component.isRegisteredAddress,
-                oDpl.consts.addr.component.isManufacturingLocation
             ],
             bLabel
         ));

@@ -62,8 +62,10 @@ const appConsts = {
             mailing: {attr: 'mailingAddress', desc: 'Mailing address'}
         },
         component: {
-            addrLine1: { attrs: [ 'streetAddress', 'line1'], desc: 'addr line1' },
-            addrLine2: { attrs: [ 'streetAddress', 'line2'], desc: 'addr line2' },
+            //1-2-1 address object attribute mappings (max two levels deep!)
+            //Structure (1) an array of attributes & (2) a component description 
+            addrLine1: { attrs: [ 'streetAddress', 'line1'], desc: 'addr line 1' },
+            addrLine2: { attrs: [ 'streetAddress', 'line2'], desc: 'addr line 2' },
             streetName: { attrs: ['streetName'], desc: 'street' },
             streetNumber: { attrs: [ 'streetNumber' ], desc: 'street nbr' },
             locality: { attrs: [ 'addressLocality', 'name' ], desc: 'city' },
@@ -79,7 +81,9 @@ const appConsts = {
             isRegisteredAddress: { attrs: [ 'isRegisteredAddress' ], desc: 'registered addr' },
             isManufacturingLocation: { attrs: [ 'isManufacturingLocation' ], desc: 'mfg location' },
             
-            customLine1: { custom: 'line1', desc: 'addr line1' }
+            //Custom, address component related, algorithms
+            //Structure (1) algorithm ID & (2) custom component description 
+            customLine1: { custom: 'line1', desc: 'addr line 1' }
         }
     },
     regNum: {
@@ -290,11 +294,27 @@ class DplDBs {
         return '';
     }
 
+    //Method addrToArray will convert D&B Direct+ address objects (primary, registered, ...)
+    //to an array of a specified length (= arrAddrComponents.length).
+    //This method is applicable to data blocks Company Information L1+ and Hierarchies & 
+    //Connections L1
+    //
+    //Three parameters
+    //1. A reference to a Direct+ address object
+    //2. An array of address object attributes or the outcome of a custom algorithm can be 
+    //   returned (options: oDpl.consts.addr.component)
+    //3. Specify boolean value true for the element labels to be returned
     addrToArray(addr, arrAddrComponents, bLabel) {
+        //Return the address attribute value for a specific address object attribute or
+        //invoke a custom, address related, algorithm
         function getAttrValue(oAddr, addrComponent) {
-            if(typeof oAddr !== 'object') { return null }
+            if(typeof oAddr !== 'object' || objEmpty(oAddr)) {
+                return null
+            }
 
-            if(addrComponent.custom === 'line1') {
+            //Custom address component algorithms
+            if(addrComponent.custom === 'line1') { //Custom algorithm named line1
+                //This algorithm goes the extra mile to insure data for line 1
                 if(oAddr?.streetAddress?.line1) { return oAddr.streetAddress.line1 }
 
                 let ret;
@@ -314,7 +334,7 @@ class DplDBs {
 
                 if(oAddr?.postOfficeBox && oAddr?.postOfficeBox?.postOfficeBoxNumber) {
                     if(oAddr?.postOfficeBox?.typeDescription) {
-                        return oAddr.postOfficeBox.typeDescription + ' ' +  oAddr.postOfficeBox.postOfficeBoxNumber
+                        return `Pobox ${oAddr.postOfficeBox.postOfficeBoxNumber}`
                     }
                     else {
                         return oAddr.postOfficeBox.postOfficeBoxNumber
@@ -324,6 +344,8 @@ class DplDBs {
                 return null;
             }
 
+            //From here on out straight-up address object attribute values are returned.
+            //These values are mapped 1-2-1 but, at most, two levels deep.
             if(addrComponent.attrs.length === 1) {
                 return oAddr?.[addrComponent.attrs[0]]
             }
@@ -336,8 +358,9 @@ class DplDBs {
             }
         }
 
+        //Use map to return a new array of labels or attribute values
         return arrAddrComponents.map(addrComponent => bLabel 
-            ? addrComponent.desc
+            ? constructElemLabel(null, addrComponent.desc)
             : getAttrValue(addr, addrComponent)
         )
     }
