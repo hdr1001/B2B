@@ -32,108 +32,143 @@ const nullUndefToEmptyStr = elem => elem === null || elem === undefined ? '' : e
 
 //Process a collection of D&B Direct+ Data Blocks
 function processDnbDplDB(jsonIn, bLabel) {
-        let oDpl;
+    let oDpl;
 
-        try {
-            oDpl = new DplDBs(jsonIn)
-        }
-        catch(err) {
-            console.error(err.message);
-            return;
-        }
+    try {
+        oDpl = new DplDBs(jsonIn)
+    }
+    catch(err) {
+        console.error(err.message);
+        return;
+    }
 
-        let arrValues = [];
+    let arrValues = [];
 
-        //Customer reference should be specified as a query parameter in the Direct+ request
-        //arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.custRef) : oDpl.map121.custRef);
+    //Customer reference should be specified as a query parameter in the Direct+ request
+    //arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.custRef) : oDpl.map121.custRef);
 
-        //Timestamp dating the D&B Direct+ REST request
-        arrValues.push(bLabel ? new ElemLabel('date requested') : oDpl.transactionTimestamp(6) );
+    //Timestamp dating the D&B Direct+ REST request
+    arrValues.push(bLabel ? new ElemLabel('date requested') : oDpl.transactionTimestamp(6) );
 
-        //DUNS requested
-        arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.inqDuns) : oDpl.map121.inqDuns);
+    //DUNS requested
+    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.inqDuns) : oDpl.map121.inqDuns);
 
-        //DUNS delivered
-        arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.duns) : oDpl.map121.duns);
+    //DUNS delivered
+    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.duns) : oDpl.map121.duns);
 
-        //Primary name
-        arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.primaryName) : oDpl.map121.primaryName);
+    //Primary name
+    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.primaryName) : oDpl.map121.primaryName);
 
-        //Primary address
-        arrValues = arrValues.concat( oDpl.addrToArray(
-            oDpl.org?.primaryAddress,
-            [
-                oDpl.consts.addr.component.customLine1,
-                oDpl.consts.addr.component.addrLine2,
-                oDpl.consts.addr.component.locality,
-                oDpl.consts.addr.component.postalCode,
-                oDpl.consts.addr.component.regionAbbr,
-                oDpl.consts.addr.component.countryISO,
-                oDpl.consts.addr.component.poBox,
-                oDpl.consts.addr.component.latitude,
-                oDpl.consts.addr.component.longitude,
-                oDpl.consts.addr.component.isRegisteredAddress,
-            ],
-            bLabel
-        ));
+    //Primary address
+    arrValues = arrValues.concat( oDpl.addrToArray(
+        oDpl.org?.primaryAddress,
+        [
+            oDpl.consts.addr.component.customLine1,
+            oDpl.consts.addr.component.addrLine2,
+            oDpl.consts.addr.component.locality,
+            oDpl.consts.addr.component.postalCode,
+            oDpl.consts.addr.component.regionAbbr,
+            oDpl.consts.addr.component.countryISO,
+            oDpl.consts.addr.component.poBox,
+            oDpl.consts.addr.component.latitude,
+            oDpl.consts.addr.component.longitude,
+            oDpl.consts.addr.component.isRegisteredAddress,
+        ],
+        bLabel
+    ));
 
-        //Country code
-        arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.countryISO) : oDpl.map121.countryISO);
+    //Country code
+    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.countryISO) : oDpl.map121.countryISO);
 
-        //Operating status
-        arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.opStatus) : oDpl.map121.opStatus);
+    //Operating status
+    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.opStatus) : oDpl.map121.opStatus);
 
-        //SMB indicator
-        arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.SMB) : oDpl.map121.SMB);
+    //SMB indicator
+    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.SMB) : oDpl.map121.SMB);
 
-        //Get a specified number of registration numbers
-        arrValues = arrValues.concat( oDpl.regNumsToArray(
-            2,
-            [ oDpl.consts.regNum.component.num, oDpl.consts.regNum.component.type, oDpl.consts.regNum.component.vat ],
-            bLabel
-        ));
+    //Get a specified number of registration numbers
+    arrValues = arrValues.concat( oDpl.regNumsToArray(
+        2,
+        [ oDpl.consts.regNum.component.num, oDpl.consts.regNum.component.type, oDpl.consts.regNum.component.vat ],
+        bLabel
+    ));
 
-        //Get primary industry code of a certain type
-        arrValues = arrValues.concat( oDpl.indCodesToArray(
-            oDpl.consts.indCodes.type.sic87,
-            2,
-            [ oDpl.consts.indCodes.component.code, oDpl.consts.indCodes.component.desc ],
-            bLabel && new ElemLabel(null, null, null, `(${oDpl.consts.indCodes.type.sic87.descShort})`)
-        ));
+    //Get primary industry code of a certain type
+    arrValues = arrValues.concat( oDpl.indCodesToArray(
+        oDpl.consts.indCodes.type.sic87,
+        2,
+        [ oDpl.consts.indCodes.component.code, oDpl.consts.indCodes.component.desc ],
+        bLabel && new ElemLabel(null, null, null, `(${oDpl.consts.indCodes.type.sic87.descShort})`)
+    ));
 
-        //Get employee counts from a specified set of scopes (i.e. individual, hq, ...)
-        arrValues = arrValues.concat( oDpl.numEmplsToArray(
-            [
-                oDpl.consts.numEmpl.scopeCodes.individual.code,
-                oDpl.consts.numEmpl.scopeCodes.hq.code
-            ],
-            1,
-            [
-                oDpl.consts.numEmpl.component.value,
-                oDpl.consts.numEmpl.component.reliability,
-                oDpl.consts.numEmpl.component.scope
-            ],
-            bLabel && new ElemLabel(null, null, null, '(indv/hq)')
-        ));
+    //Get employee counts from a specified set of scopes (i.e. individual, hq, ...)
+    arrValues = arrValues.concat( oDpl.numEmplsToArray(
+        [
+            oDpl.consts.numEmpl.scopeCodes.individual.code,
+            oDpl.consts.numEmpl.scopeCodes.hq.code
+        ],
+        1,
+        [
+            oDpl.consts.numEmpl.component.value,
+            oDpl.consts.numEmpl.component.reliability,
+            oDpl.consts.numEmpl.component.scope
+        ],
+        bLabel && new ElemLabel(null, null, null, '(indv/hq)')
+    ));
 
-        arrValues = arrValues.concat( oDpl.numEmplsToArray(
-            [
-                oDpl.consts.numEmpl.scopeCodes.consolidated.code,
-            ],
-            1,
-            [
-                oDpl.consts.numEmpl.component.value,
-                oDpl.consts.numEmpl.component.reliability,
-                oDpl.consts.numEmpl.component.scope
-            ],
-            bLabel && new ElemLabel(null, null, null, '(cons)')
-        ));
+    arrValues = arrValues.concat( oDpl.numEmplsToArray(
+        [
+            oDpl.consts.numEmpl.scopeCodes.consolidated.code,
+        ],
+        1,
+        [
+            oDpl.consts.numEmpl.component.value,
+            oDpl.consts.numEmpl.component.reliability,
+            oDpl.consts.numEmpl.component.scope
+        ],
+        bLabel && new ElemLabel(null, null, null, '(cons)')
+    ));
 
-        arrValues = arrValues.concat( oDpl.latestFinsToArray(bLabel) );
+    arrValues = arrValues.concat( oDpl.latestFinsToArray(bLabel) );
 
-        arrValues.push(bLabel ? new ElemLabel('Gbl Ult') : oDpl.isGlobalUlt);
+    const corpLinkLevels = oDpl.corpLinkageLevels;
+    
+    arrValues = oDpl.corpLinkageLevelToArray(
+        corpLinkLevels[0],
+        [
+            oDpl.consts.corpLinkage.component.duns,
+            oDpl.consts.corpLinkage.component.primaryName,
+            oDpl.consts.corpLinkage.component.hq,
+        ],
+        [
+            oDpl.consts.addr.component.locality,
+            oDpl.consts.addr.component.countryISO
+        ],
+        bLabel
+    )
 
-        console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
+    arrValues = arrValues.concat(
+        corpLinkLevels
+            .slice(-2)
+            .map(corpLinkLevel => 
+                oDpl.corpLinkageLevelToArray(
+                    corpLinkLevel,
+                    [
+                        oDpl.consts.corpLinkage.component.duns,
+                        oDpl.consts.corpLinkage.component.primaryName,
+                    ],
+                    [
+                        oDpl.consts.addr.component.countryISO
+                    ],
+                    bLabel
+                )
+            )
+            .flat()
+    )
+
+    arrValues.push(bLabel ? new ElemLabel('Gbl Ult') : oDpl.isGlobalUlt);
+
+    console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
 }
 
 let listHeader = true;

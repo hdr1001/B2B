@@ -121,10 +121,15 @@ const appConsts = {
     },
     corpLinkage: {
         levels: [ //Linkage levels in Hierarchies & Connections level 1
-            {attrs: ['headQuarter', 'parent'], label: 'parent'},
-            {attrs: ['domesticUltimate'], label: 'dom ult'},
-            {attrs: ['globalUltimate'], label: 'global ult'}
-        ]
+            {attrs: ['headQuarter', 'parent'], desc: 'hq/parent'},
+            {attrs: ['domesticUltimate'], desc: 'dom ult'},
+            {attrs: ['globalUltimate'], desc: 'global ult'}
+        ],
+        component: {
+            duns: { attrs: [ 'duns' ], desc: 'DUNS' },
+            primaryName: { attrs: [ 'primaryName' ], desc: 'name' },
+            hq: { custom: 'hq', desc: 'HQ' },
+        }
     },
     reliability: {
         min: {code: 11078, desc: 'minimum value from range'},
@@ -695,12 +700,35 @@ class DplDBs {
             level.attrs.forEach(attr => {
                 if(!objEmpty(corpLinkage[attr])) {
                     corpLinkage[attr].dplAttr = attr;
-                    corpLinkage[attr].label = appConsts.corpLinkage.levels[idx].label;
+                    corpLinkage[attr].desc = appConsts.corpLinkage.levels[idx].desc;
 
                     ret[idx] = corpLinkage[attr];
                 }
             })
         });
+
+        return ret;
+    }
+
+    corpLinkageLevelToArray(linkageLevel, arrLinkageLevelComponents, arrLinkageLevelAddrComponents, bLabel) {
+        if(!bLabel && objEmpty(linkageLevel)) {
+            return new Array(arrLinkageLevelComponents.length + arrLinkageLevelAddrComponents.length)
+        }
+
+        let ret = arrLinkageLevelComponents.map(linkLevelComponent => bLabel
+            ? constructElemLabel(null, linkLevelComponent.desc)
+            : linkLevelComponent.custom === 'hq'
+                ? (linkageLevel?.dplAttr === 'headQuarter' ? 'HQ' : null)
+                : linkageLevel?.[linkLevelComponent.attrs[0]]
+        );
+
+        if(arrLinkageLevelAddrComponents.length) {
+            ret = ret.concat(this.addrToArray(
+                bLabel ? null : linkageLevel.primaryAddress,
+                arrLinkageLevelAddrComponents,
+                bLabel
+            ))
+        }
 
         return ret;
     }
