@@ -131,6 +131,11 @@ const appConsts = {
             hq: { custom: 'hq', desc: 'HQ' },
         }
     },
+    b2bLinkLevels: {
+        oneLevelUp: { idx: 0, desc: 'hq/parent' },
+        domUlt: { idx: 1, desc: 'dom ult' },
+        gblUlt: { idx: 2, desc: 'global ult' },
+    },
     reliability: {
         min: {code: 11078, desc: 'minimum value from range'},
         rounded: {code: 11147, desc: 'rounded'},
@@ -688,41 +693,88 @@ class DplDBs {
     //Method corpLinkageLevels will give access to the three levels of linkage available
     //in Hierarchies & Connections level 1
     //➡️ There are only three levels because only an HQ or a parent will be available ⬅️
-    get corpLinkageLevels() {
-        const corpLinkage = this.org?.corporateLinkage;
+    getB2bLinkLevels(bForceParentOnGblUlt) {
+        //Does the collection of data blocks contain linkage info?
+        let corpLinkage = this.org?.corporateLinkage;
 
-        const ret = [ null, null, null ]; 
+        //If so, and attribute b2bLinkLevels exists, just return the existing attribute
+        if(corpLinkage) {
+            if(corpLinkage.b2bLinkLevels) { return corpLinkage.b2bLinkLevels }
+        }
+        else { //Make sure this.org.corporateLinkage refers to an empty object
+            corpLinkage = {}
+        }
 
-        if(objEmpty(corpLinkage)) { return ret }
+        //Default value of attribute b2bLinkLevels
+        const b2bLinkLevels = [ null, null, null ]; 
 
-        //Set the corporate linkage level references
+        //In case no linkage is available set and return the default b2bLinkLevels  
+        if(objEmpty(corpLinkage)) {
+            corpLinkage.b2bLinkLevels = b2bLinkLevels;
+
+            return b2bLinkLevels;
+        }
+
+        //Set the references to the appropriate linkage levels
         appConsts.corpLinkage.levels.forEach((level, idx) => {
             level.attrs.forEach(attr => {
                 if(!objEmpty(corpLinkage[attr])) {
-                    corpLinkage[attr].dplAttr = attr;
-                    corpLinkage[attr].desc = appConsts.corpLinkage.levels[idx].desc;
 
-                    ret[idx] = corpLinkage[attr];
+                    //Persist the D+ attribute name in the object
+                    corpLinkage[attr].dplAttr = attr;
+
+                    //Assign a linkage level description
+                    if(idx === 0) {
+                        if(attr === appConsts.corpLinkage.levels[idx].attrs[0]) {
+                            corpLinkage[attr].desc = 'HQ'
+                        }
+                        else {
+                            corpLinkage[attr].desc = 'parent'
+                        }
+                    }
+                    else {
+                        corpLinkage[attr].desc = appConsts.corpLinkage.levels[idx].desc;
+                    }
+
+                    //Store an object reference
+                    b2bLinkLevels[idx] = corpLinkage[attr];
                 }
             })
         });
 
-        return ret;
-    }
+        //If bForceParentOnGblUlt evaluates to true set the oneLevel up attribute to the domestic
+        //ultimate in case the DUNS is a global ultimate (this is non-standard behaviour)
+        if(bForceParentOnGblUlt && this.isGlobalUlt &&
+                !b2bLinkLevels[appConsts.b2bLinkLevels.oneLevelUp.idx] &&
+                b2bLinkLevels[appConsts.b2bLinkLevels.domUlt.idx] 
+        ) {
+            b2bLinkLevels[appConsts.b2bLinkLevels.oneLevelUp.idx] = Object.create(b2bLinkLevels[appConsts.b2bLinkLevels.domUlt.idx]);
+            b2bLinkLevels[appConsts.b2bLinkLevels.oneLevelUp.idx].desc = 'parent';
+        }
 
+        return b2bLinkLevels;
+    }
+/*
     corpLinkageLevelToArray(linkageLevel, arrLinkageLevelComponents, arrLinkageLevelAddrComponents, bLabel) {
+        //Return an array of empty values if no linkage data is available
         if(!bLabel && objEmpty(linkageLevel)) {
             return new Array(arrLinkageLevelComponents.length + arrLinkageLevelAddrComponents.length)
         }
 
-        let ret = arrLinkageLevelComponents.map(linkLevelComponent => bLabel
-            ? constructElemLabel(null, linkLevelComponent.desc)
-            : linkLevelComponent.custom === 'hq'
-                ? (linkageLevel?.dplAttr === 'headQuarter' ? 'HQ' : null)
-                : linkageLevel?.[linkLevelComponent.attrs[0]]
+        if(this.org)
+        let ret = [];
+
+        //Return the non-address attributes
+        if(arrLinkageLevelComponents && arrLinkageLevelComponents.length)
+            ret = arrLinkageLevelComponents.map(linkLevelComponent => bLabel
+                ? constructElemLabel(null, linkLevelComponent.desc)
+                : linkLevelComponent.custom === 'hq'
+                    ? (linkageLevel?.dplAttr === 'headQuarter' ? 'HQ' : null)
+                    : linkageLevel?.[linkLevelComponent.attrs[0]]
         );
 
-        if(arrLinkageLevelAddrComponents.length) {
+        //Add, if applicable, the address related attributes
+        if(arrLinkageLevelAddrComponents && arrLinkageLevelAddrComponents.length) {
             ret = ret.concat(this.addrToArray(
                 bLabel ? null : linkageLevel.primaryAddress,
                 arrLinkageLevelAddrComponents,
@@ -731,7 +783,7 @@ class DplDBs {
         }
 
         return ret;
-    }
+    } */
 }
 
 export { DplDBs };

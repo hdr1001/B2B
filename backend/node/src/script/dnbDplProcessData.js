@@ -131,8 +131,7 @@ function processDnbDplDB(jsonIn, bLabel) {
 
     arrValues = arrValues.concat( oDpl.latestFinsToArray(bLabel) );
 
-    const corpLinkLevels = oDpl.corpLinkageLevels;
-    
+/*    
     arrValues = oDpl.corpLinkageLevelToArray(
         corpLinkLevels[0],
         [
@@ -165,10 +164,12 @@ function processDnbDplDB(jsonIn, bLabel) {
             )
             .flat()
     )
-
+*/
     arrValues.push(bLabel ? new ElemLabel('Gbl Ult') : oDpl.isGlobalUlt);
 
-    console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
+    if(oDpl.isGlobalUlt) { console.log(`DUNS ${oDpl.map121.duns} is a global ultimate`) }
+    console.log(oDpl.getB2bLinkLevels());
+    //console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
 }
 
 let listHeader = true;
