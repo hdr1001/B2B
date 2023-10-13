@@ -121,18 +121,20 @@ const appConsts = {
     },
     corpLinkage: {
         levels: [ //Linkage levels in Hierarchies & Connections level 1
-            {attrs: ['headQuarter', 'parent'], desc: 'hq/parent'},
-            {attrs: ['domesticUltimate'], desc: 'dom ult'},
-            {attrs: ['globalUltimate'], desc: 'global ult'}
+            [{ attr: 'headQuarter', desc: 'HQ' }, {attr: 'parent', desc: 'parent' }],
+            [{ attr: 'domesticUltimate', desc: 'dom ult' }],
+            [{ attr: 'globalUltimate', desc: 'global ult' }]
         ],
         component: {
             duns: { attrs: [ 'duns' ], desc: 'DUNS' },
             primaryName: { attrs: [ 'primaryName' ], desc: 'name' },
             hq: { custom: 'hq', desc: 'HQ' },
-        }
+        }        
     },
     b2bLinkLevels: {
         oneLevelUp: { idx: 0, desc: 'hq/parent' },
+        hq: { idx: 0, idxAttr: 0, desc: 'HQ' },
+        parent: { idx: 0, idxAttr: 1, desc: 'parent' },
         domUlt: { idx: 1, desc: 'dom ult' },
         gblUlt: { idx: 2, desc: 'global ult' },
     },
@@ -717,27 +719,16 @@ class DplDBs {
 
         //Set the references to the appropriate linkage levels
         appConsts.corpLinkage.levels.forEach((level, idx) => {
-            level.attrs.forEach(attr => {
-                if(!objEmpty(corpLinkage[attr])) {
-
+            level.forEach(oAttr => {
+                if(!objEmpty(corpLinkage[oAttr.attr])) {
                     //Persist the D+ attribute name in the object
-                    corpLinkage[attr].dplAttr = attr;
+                    corpLinkage[oAttr.attr].dplAttr = oAttr.attr;
 
                     //Assign a linkage level description
-                    if(idx === 0) {
-                        if(attr === appConsts.corpLinkage.levels[idx].attrs[0]) {
-                            corpLinkage[attr].desc = 'HQ'
-                        }
-                        else {
-                            corpLinkage[attr].desc = 'parent'
-                        }
-                    }
-                    else {
-                        corpLinkage[attr].desc = appConsts.corpLinkage.levels[idx].desc;
-                    }
+                    corpLinkage[oAttr.attr].desc = oAttr.desc;
 
                     //Store an object reference
-                    b2bLinkLevels[idx] = corpLinkage[attr];
+                    b2bLinkLevels[idx] = corpLinkage[oAttr.attr];
                 }
             })
         });
@@ -748,42 +739,59 @@ class DplDBs {
                 !b2bLinkLevels[appConsts.b2bLinkLevels.oneLevelUp.idx] &&
                 b2bLinkLevels[appConsts.b2bLinkLevels.domUlt.idx] 
         ) {
-            b2bLinkLevels[appConsts.b2bLinkLevels.oneLevelUp.idx] = Object.create(b2bLinkLevels[appConsts.b2bLinkLevels.domUlt.idx]);
-            b2bLinkLevels[appConsts.b2bLinkLevels.oneLevelUp.idx].desc = 'parent';
+            const constB2bLLs = appConsts.b2bLinkLevels;
+            
+            //Copy the domestic ultimate reference to one level up in b2bLinkLevels
+            b2bLinkLevels[constB2bLLs.oneLevelUp.idx] = 
+                Object.create(b2bLinkLevels[constB2bLLs.domUlt.idx]);
+
+            //Create one level up overwrites for attributes dplAttr & desc
+            b2bLinkLevels[constB2bLLs.oneLevelUp.idx].dplAttr = 
+                appConsts.corpLinkage.levels[constB2bLLs.parent.idx][constB2bLLs.parent.idxAttr].attr;
+
+            b2bLinkLevels[constB2bLLs.oneLevelUp.idx].desc = 
+                appConsts.corpLinkage.levels[constB2bLLs.parent.idx][constB2bLLs.parent.idxAttr].desc;
         }
 
         return b2bLinkLevels;
     }
-/*
-    corpLinkageLevelToArray(linkageLevel, arrLinkageLevelComponents, arrLinkageLevelAddrComponents, bLabel) {
-        //Return an array of empty values if no linkage data is available
-        if(!bLabel && objEmpty(linkageLevel)) {
-            return new Array(arrLinkageLevelComponents.length + arrLinkageLevelAddrComponents.length)
+
+    corpLinkageLevelsToArray(arrLinkLevels, arrLinkLevelComponents, arrLinkLevelAddrComponents, bLabel) {
+        let b2bLinkLevels = this?.org?.corporateLinkage?.b2bLinkLevels;
+
+        if(!b2bLinkLevels) { b2bLinkLevels = this.getB2bLinkLevels() }
+
+        if(!bLabel && b2bLinkLevels.reduce((bEmpty, level) => bEmpty ? bEmpty : !level , false)) {
+            return new Array(arrLinkLevels.length * (arrLinkLevelComponents.length + arrLinkLevelAddrComponents.length))
         }
 
-        if(this.org)
         let ret = [];
 
         //Return the non-address attributes
-        if(arrLinkageLevelComponents && arrLinkageLevelComponents.length)
-            ret = arrLinkageLevelComponents.map(linkLevelComponent => bLabel
-                ? constructElemLabel(null, linkLevelComponent.desc)
-                : linkLevelComponent.custom === 'hq'
-                    ? (linkageLevel?.dplAttr === 'headQuarter' ? 'HQ' : null)
-                    : linkageLevel?.[linkLevelComponent.attrs[0]]
-        );
+        arrLinkLevels.forEach(linkLevel => {
+            const lLvl = b2bLinkLevels[linkLevel.idx];
 
-        //Add, if applicable, the address related attributes
-        if(arrLinkageLevelAddrComponents && arrLinkageLevelAddrComponents.length) {
-            ret = ret.concat(this.addrToArray(
-                bLabel ? null : linkageLevel.primaryAddress,
-                arrLinkageLevelAddrComponents,
-                bLabel
-            ))
-        }
+            if(arrLinkLevelComponents && arrLinkLevelComponents.length) {
+                ret = ret.concat(arrLinkLevelComponents.map(linkLevelComponent => bLabel
+                    ? constructElemLabel(null, linkLevelComponent.desc)
+                    : linkLevelComponent.custom === 'hq'
+                        ? (lLvl?.dplAttr === 'headQuarter' ? 'HQ' : null)
+                        : lLvl?.[linkLevelComponent.attrs[0]]
+                ))
+            };
+
+            //Add, if applicable, the address related attributes
+            if(arrLinkLevelAddrComponents && arrLinkLevelAddrComponents.length) {
+                ret = ret.concat(this.addrToArray(
+                    bLabel ? null : lLvl.primaryAddress,
+                    arrLinkLevelAddrComponents,
+                    bLabel
+                ))
+            }
+        });
 
         return ret;
-    } */
+    }
 }
 
 export { DplDBs };

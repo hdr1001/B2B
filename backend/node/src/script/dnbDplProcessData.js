@@ -131,45 +131,33 @@ function processDnbDplDB(jsonIn, bLabel) {
 
     arrValues = arrValues.concat( oDpl.latestFinsToArray(bLabel) );
 
-/*    
-    arrValues = oDpl.corpLinkageLevelToArray(
-        corpLinkLevels[0],
+    arrValues = oDpl.corpLinkageLevelsToArray(
+        [ oDpl.consts.b2bLinkLevels.oneLevelUp ],
         [
             oDpl.consts.corpLinkage.component.duns,
             oDpl.consts.corpLinkage.component.primaryName,
-            oDpl.consts.corpLinkage.component.hq,
+            //oDpl.consts.corpLinkage.component.hq
         ],
         [
             oDpl.consts.addr.component.locality,
             oDpl.consts.addr.component.countryISO
         ],
         bLabel
-    )
-
-    arrValues = arrValues.concat(
-        corpLinkLevels
-            .slice(-2)
-            .map(corpLinkLevel => 
-                oDpl.corpLinkageLevelToArray(
-                    corpLinkLevel,
-                    [
-                        oDpl.consts.corpLinkage.component.duns,
-                        oDpl.consts.corpLinkage.component.primaryName,
-                    ],
-                    [
-                        oDpl.consts.addr.component.countryISO
-                    ],
-                    bLabel
-                )
-            )
-            .flat()
-    )
+    );
+/*
+    arrValues = arrValues.concat( oDpl.corpLinkageLevelsToArray(
+        [ oDpl.consts.b2bLinkLevels.domUlt, oDpl.consts.b2bLinkLevels.gblUlt ],
+        [
+            oDpl.consts.corpLinkage.component.duns,
+            oDpl.consts.corpLinkage.component.primaryName
+        ],
+        [
+            oDpl.consts.addr.component.countryISO
+        ],
+        bLabel
+    ));
 */
-    arrValues.push(bLabel ? new ElemLabel('Gbl Ult') : oDpl.isGlobalUlt);
-
-    if(oDpl.isGlobalUlt) { console.log(`DUNS ${oDpl.map121.duns} is a global ultimate`) }
-    console.log(oDpl.getB2bLinkLevels());
-    //console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
+    console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
 }
 
 let listHeader = true;
