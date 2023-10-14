@@ -126,8 +126,8 @@ const appConsts = {
             [{ attr: 'globalUltimate', desc: 'global ult' }]
         ],
         component: {
-            duns: { attrs: [ 'duns' ], desc: 'DUNS' },
-            primaryName: { attrs: [ 'primaryName' ], desc: 'name' },
+            duns: { attr: 'duns', desc: 'DUNS' },
+            primaryName: { attr: 'primaryName', desc: 'name' },
             hq: { custom: 'hq', desc: 'HQ' },
         }        
     },
@@ -765,32 +765,21 @@ class DplDBs {
             return new Array(arrLinkLevels.length * (arrLinkLevelComponents.length + arrLinkLevelAddrComponents.length))
         }
 
-        let ret = [];
-
-        //Return the non-address attributes
-        arrLinkLevels.forEach(linkLevel => {
+        return arrLinkLevels.reduce((ret, linkLevel) => {
             const lLvl = b2bLinkLevels[linkLevel.idx];
 
-            if(arrLinkLevelComponents && arrLinkLevelComponents.length) {
-                ret = ret.concat(arrLinkLevelComponents.map(linkLevelComponent => bLabel
+            const getLinkLevelComponent = (retLLCs, linkLevelComponent) =>
+                retLLCs.concat( bLabel
                     ? constructElemLabel(null, linkLevelComponent.desc)
                     : linkLevelComponent.custom === 'hq'
-                        ? (lLvl?.dplAttr === 'headQuarter' ? 'HQ' : null)
-                        : lLvl?.[linkLevelComponent.attrs[0]]
-                ))
-            };
+                        ? (lLvl.dplAttr === appConsts.corpLinkage.levels[0][0].attr ? linkLevelComponent.desc : null)
+                        : lLvl[linkLevelComponent.attr]
+                );
 
-            //Add, if applicable, the address related attributes
-            if(arrLinkLevelAddrComponents && arrLinkLevelAddrComponents.length) {
-                ret = ret.concat(this.addrToArray(
-                    bLabel ? null : lLvl.primaryAddress,
-                    arrLinkLevelAddrComponents,
-                    bLabel
-                ))
-            }
-        });
-
-        return ret;
+            return ret
+                .concat(arrLinkLevelComponents.reduce( getLinkLevelComponent, ret ))
+                .concat(this.addrToArray( bLabel ? null : lLvl.primaryAddress, arrLinkLevelAddrComponents, bLabel ));
+        }, []);
     }
 }
 

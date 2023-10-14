@@ -130,13 +130,13 @@ function processDnbDplDB(jsonIn, bLabel) {
     ));
 
     arrValues = arrValues.concat( oDpl.latestFinsToArray(bLabel) );
-
+/*
     arrValues = oDpl.corpLinkageLevelsToArray(
         [ oDpl.consts.b2bLinkLevels.oneLevelUp ],
         [
             oDpl.consts.corpLinkage.component.duns,
             oDpl.consts.corpLinkage.component.primaryName,
-            //oDpl.consts.corpLinkage.component.hq
+            oDpl.consts.corpLinkage.component.hq
         ],
         [
             oDpl.consts.addr.component.locality,
@@ -144,8 +144,8 @@ function processDnbDplDB(jsonIn, bLabel) {
         ],
         bLabel
     );
-/*
-    arrValues = arrValues.concat( oDpl.corpLinkageLevelsToArray(
+*/
+    arrValues = oDpl.corpLinkageLevelsToArray(
         [ oDpl.consts.b2bLinkLevels.domUlt, oDpl.consts.b2bLinkLevels.gblUlt ],
         [
             oDpl.consts.corpLinkage.component.duns,
@@ -155,9 +155,9 @@ function processDnbDplDB(jsonIn, bLabel) {
             oDpl.consts.addr.component.countryISO
         ],
         bLabel
-    ));
-*/
-    console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
+    );
+
+    //console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
 }
 
 let listHeader = true;
