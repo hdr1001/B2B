@@ -756,18 +756,34 @@ class DplDBs {
         return b2bLinkLevels;
     }
 
+    //Method corpLinkageLevelsToArray will convert D&B Direct+ corporate linkage objects 
+    //(organization.corporateLinkage) to an array of a specified length (= arrLinkLevels.length * 
+    //(arrLinkLevelComponents.length + arrLinkLevelAddrComponents.length)). Array b2bLinkLevels
+    //plays a central part in the conversion (see ⬆️)
+    //This method is applicable if Hierarchies & Connections level 1 data is available
+    //
+    //Four parameters
+    //1. An array of linkage levels to fulfill (see oDpl.consts.b2bLinkLevels but only use oneLevelUp,
+    //   domUlt & gblUlt)
+    //2. An array of D+ object attributes to be returned, options: oDpl.consts.corpLinkage.component
+    //3. An array of address attributes to be returned, options: oDpl.consts.addr.component
+    //4. Specify the element labels associated with the values returned
     corpLinkageLevelsToArray(arrLinkLevels, arrLinkLevelComponents, arrLinkLevelAddrComponents, bLabel) {
+        //See method getB2bLinkLevels
         let b2bLinkLevels = this?.org?.corporateLinkage?.b2bLinkLevels;
 
         if(!b2bLinkLevels) { b2bLinkLevels = this.getB2bLinkLevels() }
 
+        //In case no linkage available, just return an empty array
         if(!bLabel && b2bLinkLevels.reduce((bEmpty, level) => bEmpty ? bEmpty : !level , false)) {
             return new Array(arrLinkLevels.length * (arrLinkLevelComponents.length + arrLinkLevelAddrComponents.length))
         }
 
+        //Process the linkage levels requested
         return arrLinkLevels.reduce((ret, linkLevel) => {
             const lLvl = b2bLinkLevels[linkLevel.idx];
 
+            //Extract the attribute values requested from D+ object
             const getLinkLevelComponent = (retLLCs, linkLevelComponent) =>
                 retLLCs.concat( bLabel
                     ? constructElemLabel(null, linkLevelComponent.desc)
@@ -776,9 +792,13 @@ class DplDBs {
                         : lLvl[linkLevelComponent.attr]
                 );
 
-            return ret
-                .concat(arrLinkLevelComponents.reduce( getLinkLevelComponent, ret ))
-                .concat(this.addrToArray( bLabel ? null : lLvl.primaryAddress, arrLinkLevelAddrComponents, bLabel ));
+            return ret.concat(
+                //Get the attribute values requested in arrLinkLevelComponents
+                arrLinkLevelComponents.reduce( getLinkLevelComponent, [] ),
+
+                //Get the address attribute values requested in arrLinkLevelAddrComponents
+                this.addrToArray( bLabel ? null : lLvl.primaryAddress, arrLinkLevelAddrComponents, bLabel )
+            );
         }, []);
     }
 }

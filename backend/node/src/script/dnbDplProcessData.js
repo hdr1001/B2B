@@ -129,9 +129,11 @@ function processDnbDplDB(jsonIn, bLabel) {
         bLabel && new ElemLabel(null, null, null, '(cons)')
     ));
 
+    //Add company financials
     arrValues = arrValues.concat( oDpl.latestFinsToArray(bLabel) );
-/*
-    arrValues = oDpl.corpLinkageLevelsToArray(
+
+    //Retrieve corporate hierarchy information
+    arrValues = arrValues.concat( oDpl.corpLinkageLevelsToArray(
         [ oDpl.consts.b2bLinkLevels.oneLevelUp ],
         [
             oDpl.consts.corpLinkage.component.duns,
@@ -143,9 +145,9 @@ function processDnbDplDB(jsonIn, bLabel) {
             oDpl.consts.addr.component.countryISO
         ],
         bLabel
-    );
-*/
-    arrValues = oDpl.corpLinkageLevelsToArray(
+    ));
+
+    arrValues = arrValues.concat( oDpl.corpLinkageLevelsToArray(
         [ oDpl.consts.b2bLinkLevels.domUlt, oDpl.consts.b2bLinkLevels.gblUlt ],
         [
             oDpl.consts.corpLinkage.component.duns,
@@ -155,9 +157,9 @@ function processDnbDplDB(jsonIn, bLabel) {
             oDpl.consts.addr.component.countryISO
         ],
         bLabel
-    );
+    ));
 
-    //console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
+    console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
 }
 
 let listHeader = true;
