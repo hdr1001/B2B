@@ -770,7 +770,7 @@ class DplDBs {
     //4. Specify the element labels associated with the values returned
     corpLinkageLevelsToArray(arrLinkLevels, arrLinkLevelComponents, arrLinkLevelAddrComponents, bLabel) {
         //See method getB2bLinkLevels
-        let b2bLinkLevels = this?.org?.corporateLinkage?.b2bLinkLevels;
+        let b2bLinkLevels = this.org?.corporateLinkage?.b2bLinkLevels;
 
         if(!b2bLinkLevels) { b2bLinkLevels = this.getB2bLinkLevels() }
 
@@ -800,6 +800,34 @@ class DplDBs {
                 this.addrToArray( bLabel ? null : lLvl.primaryAddress, arrLinkLevelAddrComponents, bLabel )
             );
         }, []);
+    }
+
+    principalsContactsToArray() {
+        //mostSeniorPrincipals is a v1 array, mostSeniorPrincipal is a v2 object
+        const { currentPrincipals, mostSeniorPrincipals, mostSeniorPrincipal } = this.org;
+
+        let arrPrincipals = [];
+
+        //v1
+        if(mostSeniorPrincipals && mostSeniorPrincipals.length > 0) {
+            arrPrincipals = mostSeniorPrincipals.map(principal => {
+                principal.isMostSenior = true;
+                return principal;
+            })
+        }
+        else { //v2
+            if(!bIsEmptyObj(mostSeniorPrincipal)) {
+                mostSeniorPrincipal.isMostSenior = true;
+                arrPrincipals.push(mostSeniorPrincipal);
+            }
+        }
+
+        //Add the other principals
+        if(currentPrincipals && currentPrincipals.length > 0) {
+            arrPrincipals.concat(currentPrincipals)
+        }
+
+        if(arrPrincipals.length === 0) { return null }
     }
 }
 
