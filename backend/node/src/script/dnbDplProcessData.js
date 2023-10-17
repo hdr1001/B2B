@@ -159,6 +159,16 @@ function processDnbDplDB(jsonIn, bLabel) {
         bLabel
     ));
 
+    arrValues = arrValues.concat( oDpl.principalsContactsToArray(
+        1,
+        [
+            oDpl.consts.principalsContacts.component.type,
+            oDpl.consts.principalsContacts.component.fullName,
+            oDpl.consts.principalsContacts.component.birthDate,           
+        ],
+        bLabel
+    ));
+
     console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
 }
 

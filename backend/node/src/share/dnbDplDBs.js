@@ -119,6 +119,30 @@ const appConsts = {
             reliability: {attr: 'reliabilityDescription', desc: 'reliability (num empl)'}
         }
     },
+    principalsContacts: {
+        component: {
+            type: { attrs: [ 'subjectType' ], desc: 'type'},
+            birthDate: { attrs: [ 'birthDate' ], desc: 'birthdate'},
+            givenName: { attrs: [ 'givenName' ], desc: 'given name'},
+            middleName: { attrs: [ 'middleName' ], desc: 'middle name'},
+            familyName: { attrs: [ 'familyName' ], desc: 'fam name'},
+            fullName: { attrs: [ 'fullName' ], desc: 'full name'},
+            namePrefix: { attrs: [ 'namePrefix' ], desc: 'name prefix'},
+            nameSuffix: { attrs: [ 'nameSuffix' ], desc: 'name suffix'},
+            assnStartDate: { attrs: [ 'associationStartDate' ], desc: 'assn start date'},
+            nationality: { attrs: [ 'nationality', 'isoAlpha2Code' ], desc: 'nationality'},
+            gender: {attrs: [ 'gender', 'description' ], desc: 'gender'},
+            respAreas: { attrs: [ 'responsibleAreas', 'description' ], desc: 'resp area'},
+            signingAuth: { attrs: [ 'isSigningAuthority' ], desc: 'signing authority'},
+            bankruptcyHistory: { attrs: [ 'hasBankruptcyHistory' ], desc: 'has bankruptcy'},
+            dsqDirector: { attrs: [ 'isDisqualifiedDirector' ], desc: 'disqualified'},
+
+            //Custom, principal related, algorithms & attributes
+            //Structure (1) algorithm ID & (2) custom component description 
+            customMostSenior: { custom: 'isMostSenior', desc: 'most senior' }
+
+        }
+    },
     corpLinkage: {
         levels: [ //Linkage levels in Hierarchies & Connections level 1
             [{ attr: 'headQuarter', desc: 'HQ' }, {attr: 'parent', desc: 'parent' }],
@@ -802,7 +826,31 @@ class DplDBs {
         }, []);
     }
 
-    principalsContactsToArray() {
+    principalsContactsToArray(numPrincipals, arrPrincipalComponents, label) {
+        function getAttrValue(oPrincipal, principalComponent) {
+            if(typeof oPrincipal !== 'object' || objEmpty(oPrincipal)) {
+                return null
+            }
+
+            //Custom address component algorithms
+            if(addrComponent.custom === 'isMostSenior') { //Custom algorithm named isMostSenior
+                return oPrincipal.isMostSenior;
+            }
+
+            //From here on out straight-up address object attribute values are returned.
+            //These values are mapped 1-2-1 but, at most, two levels deep.
+            if(principalComponent.attrs.length === 1) {
+                return oPrincipal?.[principalComponent.attrs[0]]
+            }
+            else if(arrPrincipalComponents.attrs.length === 2) {
+                return oPrincipal?.[principalComponent.attrs[0]]?.[principalComponent.attrs[1]]
+            }
+            else {
+                console.error('Principal & contacts object attributes should be defined as one or two levels deep');
+                return null;
+            }
+        }
+
         //mostSeniorPrincipals is a v1 array, mostSeniorPrincipal is a v2 object
         const { currentPrincipals, mostSeniorPrincipals, mostSeniorPrincipal } = this.org;
 
@@ -827,7 +875,15 @@ class DplDBs {
             arrPrincipals.concat(currentPrincipals)
         }
 
-        if(arrPrincipals.length === 0) { return null }
+        let retArr = new Array(numPrincipals * arrPrincipalComponents.length);
+
+        if(arrPrincipals.length === 0) { return retArr }
+
+        //Use map to return a new array of labels or attribute values
+        return arrPrincipalComponents.map(principalComponent => label 
+            ? constructElemLabel(null, principalComponent.desc)
+            : getAttrValue(addr, principalComponent)
+        )
     }
 }
 
