@@ -30,6 +30,17 @@ import { regNumTypeIsVAT } from "./sharedRefTables.js";
 
 import { constructElemLabel } from "./elemLabel.js";
 
+const isObject = obj => typeof obj === 'object' && obj !== null;
+
+const getObjAttrValue = (obj, component) => 
+    isObject(obj)
+        ? component.attrs.length === 1
+            ? obj[component.attrs[0]]
+            : component.attrs.length === 2 && isObject(obj[component.attrs[0]])
+                ? obj[component.attrs[0]][component.attrs[1]]
+                : null
+        : null
+
 //Application constants
 const appConsts = {
     map121: { //label values 
@@ -121,8 +132,6 @@ const appConsts = {
     },
     principalsContacts: {
         component: {
-            type: { attrs: [ 'subjectType' ], desc: 'type'},
-            birthDate: { attrs: [ 'birthDate' ], desc: 'birthdate'},
             givenName: { attrs: [ 'givenName' ], desc: 'given name'},
             middleName: { attrs: [ 'middleName' ], desc: 'middle name'},
             familyName: { attrs: [ 'familyName' ], desc: 'fam name'},
@@ -130,6 +139,8 @@ const appConsts = {
             namePrefix: { attrs: [ 'namePrefix' ], desc: 'name prefix'},
             nameSuffix: { attrs: [ 'nameSuffix' ], desc: 'name suffix'},
             assnStartDate: { attrs: [ 'associationStartDate' ], desc: 'assn start date'},
+            birthDate: { attrs: [ 'birthDate' ], desc: 'birthdate'},
+            type: { attrs: [ 'subjectType' ], desc: 'type'},
             nationality: { attrs: [ 'nationality', 'isoAlpha2Code' ], desc: 'nationality'},
             gender: {attrs: [ 'gender', 'description' ], desc: 'gender'},
             respAreas: { attrs: [ 'responsibleAreas', 'description' ], desc: 'resp area'},
@@ -140,7 +151,6 @@ const appConsts = {
             //Custom, principal related, algorithms & attributes
             //Structure (1) algorithm ID & (2) custom component description 
             customMostSenior: { custom: 'isMostSenior', desc: 'most senior' }
-
         }
     },
     corpLinkage: {
@@ -382,16 +392,7 @@ class DplDBs {
 
             //From here on out straight-up address object attribute values are returned.
             //These values are mapped 1-2-1 but, at most, two levels deep.
-            if(addrComponent.attrs.length === 1) {
-                return oAddr?.[addrComponent.attrs[0]]
-            }
-            else if(addrComponent.attrs.length === 2) {
-                return oAddr?.[addrComponent.attrs[0]]?.[addrComponent.attrs[1]]
-            }
-            else {
-                console.error('Address object attributes should be defined as one or two levels deep');
-                return null;
-            }
+            return getObjAttrValue(oAddr, addrComponent)
         }
 
         //Use map to return a new array of labels or attribute values
@@ -839,51 +840,58 @@ class DplDBs {
 
             //From here on out straight-up address object attribute values are returned.
             //These values are mapped 1-2-1 but, at most, two levels deep.
-            if(principalComponent.attrs.length === 1) {
-                return oPrincipal?.[principalComponent.attrs[0]]
+            return getObjAttrValue(oPrincipal, principalComponent)
+        }
+
+        let retArr = [];
+
+        //Return the column header labels if applicable
+        if(label) {
+            for(let i = 0; i < numPrincipals; i++) {
+                retArr = retArr.concat(arrPrincipalComponents.map(principalComponent => 
+                    constructElemLabel(null, principalComponent.desc)
+                ))
             }
-            else if(arrPrincipalComponents.attrs.length === 2) {
-                return oPrincipal?.[principalComponent.attrs[0]]?.[principalComponent.attrs[1]]
-            }
-            else {
-                console.error('Principal & contacts object attributes should be defined as one or two levels deep');
-                return null;
-            }
+
+            return retArr.flat();
         }
 
         //mostSeniorPrincipals is a v1 array, mostSeniorPrincipal is a v2 object
-        const { currentPrincipals, mostSeniorPrincipals, mostSeniorPrincipal } = this.org;
-
         let arrPrincipals = [];
 
-        //v1
-        if(mostSeniorPrincipals && mostSeniorPrincipals.length > 0) {
+        if(this.org.mostSeniorPrincipal && !bIsEmptyObj(this.org.mostSeniorPrincipal)) {
+            //v2 code
+            this.org.mostSeniorPrincipal.isMostSenior = true;
+            arrPrincipals.push(this.org.mostSeniorPrincipal)
+        }
+        else if(this.org.mostSeniorPrincipals) {
+            //v1 code
             arrPrincipals = mostSeniorPrincipals.map(principal => {
                 principal.isMostSenior = true;
                 return principal;
             })
         }
-        else { //v2
-            if(!bIsEmptyObj(mostSeniorPrincipal)) {
-                mostSeniorPrincipal.isMostSenior = true;
-                arrPrincipals.push(mostSeniorPrincipal);
-            }
-        }
 
         //Add the other principals
-        if(currentPrincipals && currentPrincipals.length > 0) {
-            arrPrincipals.concat(currentPrincipals)
+        if(this.org.currentPrincipals && this.org.currentPrincipals.length) {
+            arrPrincipals = arrPrincipals.concat(this.org.currentPrincipals)
         }
 
-        let retArr = new Array(numPrincipals * arrPrincipalComponents.length);
+        //Return an empty array in case no principals available
+        if(arrPrincipals.length === 0) {
+            return new Array(numPrincipals * arrPrincipalComponents.length)
+        }
 
-        if(arrPrincipals.length === 0) { return retArr }
+        //Map the requested attribute values out of the principals array
+        let i = 0;
 
-        //Use map to return a new array of labels or attribute values
-        return arrPrincipalComponents.map(principalComponent => label 
-            ? constructElemLabel(null, principalComponent.desc)
-            : getAttrValue(addr, principalComponent)
-        )
+        for(i; i < numPrincipals && i < arrPrincipals.length; i++) {
+            retArr = retArr.concat(arrPrincipalComponents.map(principalComponent => getAttrValue(addr, principalComponent)))
+        }
+
+        retArr = retArr.flat();
+
+        return retArr;
     }
 }
 
