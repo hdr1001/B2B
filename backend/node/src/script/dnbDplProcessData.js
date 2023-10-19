@@ -159,15 +159,24 @@ function processDnbDplDB(jsonIn, bLabel) {
         bLabel
     ));
 
-    arrValues = oDpl.principalsContactsToArray(
-        2,
+    arrValues = arrValues.concat( oDpl.principalsContactsToArray(
+        3,
         [
             oDpl.consts.principalsContacts.component.type,
+//            oDpl.consts.principalsContacts.component.givenName,
+//            oDpl.consts.principalsContacts.component.middleName,
+//            oDpl.consts.principalsContacts.component.familyName,
             oDpl.consts.principalsContacts.component.fullName,
-            oDpl.consts.principalsContacts.component.birthDate,           
+            oDpl.consts.principalsContacts.component.gender,
+            oDpl.consts.principalsContacts.component.customMostSenior,
+            oDpl.consts.principalsContacts.component.customPosition0,
+            oDpl.consts.principalsContacts.component.customJobTitle0,
+            oDpl.consts.principalsContacts.component.customMgmtResponsibility0,
+            oDpl.consts.principalsContacts.component.assnStartDate,
+            oDpl.consts.principalsContacts.component.birthDate
         ],
         bLabel
-    );
+    ));
 
     console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
 }

@@ -138,11 +138,11 @@ const appConsts = {
             fullName: { attrs: [ 'fullName' ], desc: 'full name'},
             namePrefix: { attrs: [ 'namePrefix' ], desc: 'name prefix'},
             nameSuffix: { attrs: [ 'nameSuffix' ], desc: 'name suffix'},
-            assnStartDate: { attrs: [ 'associationStartDate' ], desc: 'assn start date'},
-            birthDate: { attrs: [ 'birthDate' ], desc: 'birthdate'},
             type: { attrs: [ 'subjectType' ], desc: 'type'},
             nationality: { attrs: [ 'nationality', 'isoAlpha2Code' ], desc: 'nationality'},
             gender: {attrs: [ 'gender', 'description' ], desc: 'gender'},
+            assnStartDate: { attrs: [ 'associationStartDate' ], desc: 'assn start date'},
+            birthDate: { attrs: [ 'birthDate' ], desc: 'birthdate'},
             respAreas: { attrs: [ 'responsibleAreas', 'description' ], desc: 'resp area'},
             signingAuth: { attrs: [ 'isSigningAuthority' ], desc: 'signing authority'},
             bankruptcyHistory: { attrs: [ 'hasBankruptcyHistory' ], desc: 'has bankruptcy'},
@@ -150,7 +150,10 @@ const appConsts = {
 
             //Custom, principal related, algorithms & attributes
             //Structure (1) algorithm ID & (2) custom component description 
-            customMostSenior: { custom: 'isMostSenior', desc: 'most senior' }
+            customMostSenior: { custom: 'isMostSenior', desc: 'most senior' },
+            customPosition0: { custom: 'position0', desc: 'position' },
+            customJobTitle0: { custom: 'jobTitle0', desc: 'job title' },
+            customMgmtResponsibility0: { custom: 'mgmtResponsibility0', desc: 'mgmt responsibility' }
         }
     },
     corpLinkage: {
@@ -834,11 +837,23 @@ class DplDBs {
             }
 
             //Custom address component algorithms
-            if(addrComponent.custom === 'isMostSenior') { //Custom algorithm named isMostSenior
+            if(principalComponent.custom === 'isMostSenior') { //Custom algorithm named isMostSenior
                 return oPrincipal.isMostSenior;
             }
 
-            //From here on out straight-up address object attribute values are returned.
+            if(principalComponent.custom === 'position0') { //Custom algorithm named position0
+                return oPrincipal?.positions?.[0]?.description;
+            }
+
+            if(principalComponent.custom === 'jobTitle0') { //Custom algorithm named jobTitle0
+                return oPrincipal?.jobTitles?.[0]?.title;
+            }
+
+            if(principalComponent.custom === 'mgmtResponsibility0') { //Custom algorithm named mgmtResponsibility0
+                return oPrincipal?.managementResponsibilities?.[0]?.description;
+            }
+
+            //From here on out straight-up principal object attribute values are returned.
             //These values are mapped 1-2-1 but, at most, two levels deep.
             return getObjAttrValue(oPrincipal, principalComponent)
         }
@@ -859,7 +874,7 @@ class DplDBs {
         //mostSeniorPrincipals is a v1 array, mostSeniorPrincipal is a v2 object
         let arrPrincipals = [];
 
-        if(this.org.mostSeniorPrincipal && !bIsEmptyObj(this.org.mostSeniorPrincipal)) {
+        if(this.org.mostSeniorPrincipal && !objEmpty(this.org.mostSeniorPrincipal)) {
             //v2 code
             this.org.mostSeniorPrincipal.isMostSenior = true;
             arrPrincipals.push(this.org.mostSeniorPrincipal)
@@ -883,14 +898,17 @@ class DplDBs {
         }
 
         //Map the requested attribute values out of the principals array
-        let i = 0;
-
-        for(i; i < numPrincipals && i < arrPrincipals.length; i++) {
-            retArr = retArr.concat(arrPrincipalComponents.map(principalComponent => getAttrValue(addr, principalComponent)))
+        for(let i = 0; i < numPrincipals && i < arrPrincipals.length; i++) {
+            retArr = retArr.concat(arrPrincipalComponents.map(principalComponent => getAttrValue(arrPrincipals[i], principalComponent)))
         }
 
         retArr = retArr.flat();
 
+        //Fill out to the requested number of columns
+        if(numPrincipals * arrPrincipalComponents.length - retArr.length > 0) {
+            retArr = retArr.concat(new Array((numPrincipals * arrPrincipalComponents.length - retArr.length)));
+        }
+                
         return retArr;
     }
 }
