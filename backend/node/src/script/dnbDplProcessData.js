@@ -163,6 +163,7 @@ function processDnbDplDB(jsonIn, bLabel) {
         3,
         [
             oDpl.consts.principalsContacts.component.type,
+            oDpl.consts.principalsContacts.component.customRegNumDuns,
 //            oDpl.consts.principalsContacts.component.givenName,
 //            oDpl.consts.principalsContacts.component.middleName,
 //            oDpl.consts.principalsContacts.component.familyName,

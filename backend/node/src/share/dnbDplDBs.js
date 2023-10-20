@@ -153,7 +153,8 @@ const appConsts = {
             customMostSenior: { custom: 'isMostSenior', desc: 'most senior' },
             customPosition0: { custom: 'position0', desc: 'position' },
             customJobTitle0: { custom: 'jobTitle0', desc: 'job title' },
-            customMgmtResponsibility0: { custom: 'mgmtResponsibility0', desc: 'mgmt responsibility' }
+            customMgmtResponsibility0: { custom: 'mgmtResponsibility0', desc: 'mgmt responsibility' },
+            customRegNumDuns: { custom: 'regNumDuns', desc: 'principal DUNS' }
         }
     },
     corpLinkage: {
@@ -851,6 +852,18 @@ class DplDBs {
 
             if(principalComponent.custom === 'mgmtResponsibility0') { //Custom algorithm named mgmtResponsibility0
                 return oPrincipal?.managementResponsibilities?.[0]?.description;
+            }
+
+            if(principalComponent.custom === 'regNumDuns') { //Custom algoritm named regNumDuns
+                let ret = null;
+
+                if(oPrincipal.idNumbers && oPrincipal.idNumbers.length) {
+                    const arrDuns = oPrincipal.idNumbers.filter(idNum => idNum.idType.dnbCode === 3575);
+
+                    if(arrDuns && arrDuns.length) { return arrDuns[0].idNumber }
+                }
+
+                return ret;
             }
 
             //From here on out straight-up principal object attribute values are returned.
