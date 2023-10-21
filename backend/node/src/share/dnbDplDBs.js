@@ -51,7 +51,7 @@ const appConsts = {
 
         //Common data-elements
         duns:        'DUNS',
-        primaryName: 'name',
+        primaryName: 'business name',
         countryISO:  'country ISO',
 
         //Company information data-elements
@@ -82,10 +82,12 @@ const appConsts = {
             locality: { attrs: [ 'addressLocality', 'name' ], desc: 'city' },
             minorTownName: { attrs: [ 'minorTownName' ], desc: 'minor town name' },
             postalCode: { attrs: [ 'postalCode' ], desc: 'postalcode' },
+            county: { attrs: [ 'addressCounty', 'name' ], desc: 'county' },
             region: { attrs: [ 'addressRegion', 'name' ], desc: 'region' },
             regionAbbr: { attrs: [ 'addressRegion', 'abbreviatedName' ], desc: 'region abbr' },
             country: { attrs: [ 'addressCountry', 'name' ], desc: 'country' },
             countryISO: { attrs: [ 'addressCountry', 'isoAlpha2Code' ], desc: 'country ISO' },
+            continent: { attrs: [ 'continentalRegion', 'name' ], desc: 'continent' },
             poBox: { attrs: [ 'postOfficeBox', 'postOfficeBoxNumber' ], desc: 'pobox' },
             latitude: { attrs: [ 'latitude' ], desc: 'latitude' },
             longitude: { attrs: [ 'longitude' ], desc: 'longitude' },
@@ -151,6 +153,7 @@ const appConsts = {
             //Custom, principal related, algorithms & attributes
             //Structure (1) algorithm ID & (2) custom component description 
             customMostSenior: { custom: 'isMostSenior', desc: 'most senior' },
+            customTel0: { custom: 'tel0', desc: 'telephone' },
             customPosition0: { custom: 'position0', desc: 'position' },
             customJobTitle0: { custom: 'jobTitle0', desc: 'job title' },
             customMgmtResponsibility0: { custom: 'mgmtResponsibility0', desc: 'mgmt responsibility' },
@@ -342,6 +345,20 @@ class DplDBs {
         if(tts) { return sDateIsoToYYYYMMDD(tts, length) }
 
         return '';
+    }
+
+    getTradeStyleAtIdx(idx) {
+        let ret = null;
+
+        const arrTradeStyles = this.org.tradeStyleNames;
+
+        if(arrTradeStyles && arrTradeStyles.length) {
+            arrTradeStyles.sort((ts1, ts2) => ts1.priority - ts2.priority);
+
+            return arrTradeStyles?.[idx]?.name;
+        }
+
+        return ret;
     }
 
     //Method addrToArray will convert D&B Direct+ address objects (primary, registered, ...)
@@ -840,6 +857,10 @@ class DplDBs {
             //Custom address component algorithms
             if(principalComponent.custom === 'isMostSenior') { //Custom algorithm named isMostSenior
                 return oPrincipal.isMostSenior;
+            }
+
+            if(principalComponent.custom === 'tel0') { //Custom algorithm named tel0
+                return oPrincipal?.telephones?.[0]?.telephoneNumber;
             }
 
             if(principalComponent.custom === 'position0') { //Custom algorithm named position0
