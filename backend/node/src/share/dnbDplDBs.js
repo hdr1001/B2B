@@ -28,7 +28,7 @@ import {
 
 import { regNumTypeIsVAT } from "./sharedRefTables.js";
 
-import { constructElemLabel } from "./elemLabel.js";
+import { ElemLabel, constructElemLabel } from "./elemLabel.js";
 
 const isObject = obj => typeof obj === 'object' && obj !== null;
 
@@ -106,6 +106,14 @@ const appConsts = {
             vat: {attr: 'vat', desc: 'is VAT'} //Custom attribute
         }
     },
+    tel: {
+        component: {
+            num: {attr: 'telephoneNumber', desc: 'tel number'},
+            intAccess: {attr: 'isdCode', desc: 'int access code'},
+
+            customIntAccess: { custom: 'intAccess', desc: 'int access code'}
+        }
+    },
     indCodes: {
         type: {
             dnbIndCode: {code: 3599, desc: 'D&B Industry Code', descShort: 'D&B'},
@@ -132,7 +140,7 @@ const appConsts = {
             reliability: {attr: 'reliabilityDescription', desc: 'reliability (num empl)'}
         }
     },
-    principalsContacts: {
+    principal: {
         component: {
             givenName: { attrs: [ 'givenName' ], desc: 'given name'},
             middleName: { attrs: [ 'middleName' ], desc: 'middle name'},
@@ -157,7 +165,7 @@ const appConsts = {
             customPosition0: { custom: 'position0', desc: 'position' },
             customJobTitle0: { custom: 'jobTitle0', desc: 'job title' },
             customMgmtResponsibility0: { custom: 'mgmtResponsibility0', desc: 'mgmt responsibility' },
-            customRegNumDuns: { custom: 'regNumDuns', desc: 'principal DUNS' }
+            customRegNumDuns: { custom: 'regNumDuns', desc: 'DUNS' }
         }
     },
     corpLinkage: {
@@ -172,7 +180,7 @@ const appConsts = {
             hq: { custom: 'hq', desc: 'HQ' },
         }        
     },
-    b2bLinkLevels: {
+    b2bLinkLevel: {
         oneLevelUp: { idx: 0, desc: 'hq/parent' },
         hq: { idx: 0, idxAttr: 0, desc: 'HQ' },
         parent: { idx: 0, idxAttr: 1, desc: 'parent' },
@@ -361,6 +369,37 @@ class DplDBs {
         return ret;
     }
 
+    telsToArray(numTels, arrTelComponents, bLabel) {
+        function getAttrValue(oTel, telComponent) {
+            if(typeof oTel !== 'object' || objEmpty(oTel)) { return null }
+
+            if(telComponent.custom === 'intAccess') { //Custom algorithm named intAccess
+                return oTel[appConsts.tel.component.intAccess.attr] ? '+' + oTel[appConsts.tel.component.intAccess.attr] : null
+            }
+
+            return oTel[telComponent.attr];
+        }
+
+        const arrRet = new Array(numTels * arrTelComponents.length);
+
+        const arrTels = bLabel ? null : this.org.telephone;
+
+        if(bLabel || (arrTels && arrTels.length)) {
+            for(let idxObj = 0; idxObj < numTels; idxObj++) {
+                arrTelComponents.forEach((telComponent, idxComponent) => {
+                    if(bLabel) {
+                        arrRet[idxObj * arrTelComponents.length + idxComponent] = new ElemLabel(telComponent.desc, numTels > 1 ? idxObj + 1 : null)
+                    }
+                    else {
+                        arrRet[idxObj * arrTelComponents.length + idxComponent] = getAttrValue(arrTels[idxObj], telComponent)
+                    }
+                }
+            )}
+        }
+
+        return arrRet;
+    }
+
     //Method addrToArray will convert D&B Direct+ address objects (primary, registered, ...)
     //to an array of a specified length (= arrAddrComponents.length).
     //This method is applicable to data blocks Company Information L1+ and Hierarchies & 
@@ -371,7 +410,7 @@ class DplDBs {
     //2. An array of address object attributes or the outcome of a custom algorithm can be 
     //   returned (options: oDpl.consts.addr.component)
     //3. Specify boolean value true for the element labels to be returned
-    addrToArray(addr, arrAddrComponents, bLabel) {
+    addrToArray(addr, arrAddrComponents, elemLabel) {
         //Return the address attribute value for a specific address object attribute or
         //invoke a custom, address related, algorithm
         function getAttrValue(oAddr, addrComponent) {
@@ -417,8 +456,8 @@ class DplDBs {
         }
 
         //Use map to return a new array of labels or attribute values
-        return arrAddrComponents.map(addrComponent => bLabel 
-            ? constructElemLabel(null, addrComponent.desc)
+        return arrAddrComponents.map(addrComponent => elemLabel 
+            ? constructElemLabel(elemLabel, addrComponent.desc)
             : getAttrValue(addr, addrComponent)
         )
     }
@@ -782,10 +821,10 @@ class DplDBs {
         //If bForceParentOnGblUlt evaluates to true set the oneLevel up attribute to the domestic
         //ultimate in case the DUNS is a global ultimate (this is non-standard behaviour)
         if(bForceParentOnGblUlt && this.isGlobalUlt &&
-                !b2bLinkLevels[appConsts.b2bLinkLevels.oneLevelUp.idx] &&
-                b2bLinkLevels[appConsts.b2bLinkLevels.domUlt.idx] 
+                !b2bLinkLevels[appConsts.b2bLinkLevel.oneLevelUp.idx] &&
+                b2bLinkLevels[appConsts.b2bLinkLevel.domUlt.idx] 
         ) {
-            const constB2bLLs = appConsts.b2bLinkLevels;
+            const constB2bLLs = appConsts.b2bLinkLevel;
             
             //Copy the domestic ultimate reference to one level up in b2bLinkLevels
             b2bLinkLevels[constB2bLLs.oneLevelUp.idx] = 
@@ -898,7 +937,7 @@ class DplDBs {
         if(label) {
             for(let i = 0; i < numPrincipals; i++) {
                 retArr = retArr.concat(arrPrincipalComponents.map(principalComponent => 
-                    constructElemLabel(null, principalComponent.desc)
+                    new ElemLabel(principalComponent.desc, numPrincipals > 1 ? i + 1 : null, 'principal')
                 ))
             }
 

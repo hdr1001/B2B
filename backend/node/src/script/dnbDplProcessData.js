@@ -55,7 +55,7 @@ function processDnbDplDB(jsonIn, bLabel) {
 
     //Primary name
     arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.primaryName) : oDpl.map121.primaryName);
-
+/*
     //Tradestyle name
     arrValues.push(bLabel ? new ElemLabel('tradestyle name') : oDpl.getTradeStyleAtIdx(0));
 
@@ -77,7 +77,7 @@ function processDnbDplDB(jsonIn, bLabel) {
         bLabel
     ));
 
-    //Primary address
+    //Mail address
     arrValues = arrValues.concat( oDpl.addrToArray(
         oDpl.org?.mailingAddress,
         [
@@ -91,17 +91,8 @@ function processDnbDplDB(jsonIn, bLabel) {
             oDpl.consts.addr.component.postalCode,
             oDpl.consts.addr.component.continent
         ],
-        bLabel
+        bLabel ? new ElemLabel(null, null, 'mail') : null
     ));
-/*
-    //Country code
-    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.countryISO) : oDpl.map121.countryISO);
-
-    //Operating status
-    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.opStatus) : oDpl.map121.opStatus);
-
-    //SMB indicator
-    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.SMB) : oDpl.map121.SMB);
 
     //Get a specified number of registration numbers
     arrValues = arrValues.concat( oDpl.regNumsToArray(
@@ -109,6 +100,27 @@ function processDnbDplDB(jsonIn, bLabel) {
         [ oDpl.consts.regNum.component.num, oDpl.consts.regNum.component.type, oDpl.consts.regNum.component.vat ],
         bLabel
     ));
+
+    //Get the requested number of telephone numbers
+    arrValues = arrValues.concat( oDpl.telsToArray(
+        1,
+        [ oDpl.consts.tel.component.customIntAccess, oDpl.consts.tel.component.num ],
+        bLabel
+    ));
+*/
+    //Get the CEO name & title
+    arrValues = arrValues.concat( oDpl.principalsContactsToArray(
+        1,
+        [ oDpl.consts.principal.component.fullName, oDpl.consts.principal.component.customJobTitle0 ],
+        bLabel
+    ));
+    
+/*
+    //Operating status
+    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.opStatus) : oDpl.map121.opStatus);
+
+    //SMB indicator
+    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.SMB) : oDpl.map121.SMB);
 
     //Get primary industry code of a certain type
     arrValues = arrValues.concat( oDpl.indCodesToArray(
@@ -163,19 +175,23 @@ function processDnbDplDB(jsonIn, bLabel) {
         ],
         bLabel
     ));
-
+*/
     arrValues = arrValues.concat( oDpl.corpLinkageLevelsToArray(
-        [ oDpl.consts.b2bLinkLevels.domUlt, oDpl.consts.b2bLinkLevels.gblUlt ],
+        [ oDpl.consts.b2bLinkLevel.domUlt, oDpl.consts.b2bLinkLevel.gblUlt ],
         [
             oDpl.consts.corpLinkage.component.duns,
             oDpl.consts.corpLinkage.component.primaryName
         ],
         [
+            oDpl.consts.addr.component.customLine1,
+            oDpl.consts.addr.component.locality,
+            oDpl.consts.addr.component.regionAbbr,
+            oDpl.consts.addr.component.postalCode,
             oDpl.consts.addr.component.countryISO
         ],
         bLabel
     ));
-
+/*
     arrValues = arrValues.concat( oDpl.principalsContactsToArray(
         3,
         [
