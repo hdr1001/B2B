@@ -114,7 +114,7 @@ const appConsts = {
             customIntAccess: { custom: 'intAccess', desc: 'int access code'}
         }
     },
-    indCodes: {
+    indCode: {
         type: {
             dnbIndCode: {code: 3599, desc: 'D&B Industry Code', descShort: 'D&B'},
             naics: {code: 30832, desc: 'NAICS Code', descShort: 'NAICS'},
@@ -509,9 +509,9 @@ class DplDBs {
     //
     //Four parameters
     //1. Only one type of activity code (SIC, NACE, ...) will be returned,
-    //   options: oDpl.consts.indCodes.type
+    //   options: oDpl.consts.indCode.type
     //2. Specify the number of activity codes to be returned
-    //3. Multiple attributes from the D+ object can be returned, options: oDpl.consts.indCodes.component
+    //3. Multiple attributes from the D+ object can be returned, options: oDpl.consts.indCode.component
     //4. Specify the element labels associated with the values returned
     indCodesToArray(indTypeCode, numIndCodes, arrIndCodeComponents, label) {
         let retArr = new Array(numIndCodes * arrIndCodeComponents.length);

@@ -55,7 +55,7 @@ function processDnbDplDB(jsonIn, bLabel) {
 
     //Primary name
     arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.primaryName) : oDpl.map121.primaryName);
-/*
+
     //Tradestyle name
     arrValues.push(bLabel ? new ElemLabel('tradestyle name') : oDpl.getTradeStyleAtIdx(0));
 
@@ -91,7 +91,7 @@ function processDnbDplDB(jsonIn, bLabel) {
             oDpl.consts.addr.component.postalCode,
             oDpl.consts.addr.component.continent
         ],
-        bLabel ? new ElemLabel(null, null, 'mail') : null
+        bLabel && new ElemLabel(null, null, 'mail')
     ));
 
     //Get a specified number of registration numbers
@@ -107,28 +107,47 @@ function processDnbDplDB(jsonIn, bLabel) {
         [ oDpl.consts.tel.component.customIntAccess, oDpl.consts.tel.component.num ],
         bLabel
     ));
-*/
+
     //Get the CEO name & title
     arrValues = arrValues.concat( oDpl.principalsContactsToArray(
         1,
         [ oDpl.consts.principal.component.fullName, oDpl.consts.principal.component.customJobTitle0 ],
         bLabel
     ));
+
+    //Get description of the primary industry code (SIC v87)
+    arrValues = arrValues.concat( oDpl.indCodesToArray(
+        oDpl.consts.indCode.type.sic87,
+        1,
+        [ oDpl.consts.indCode.component.desc ],
+        bLabel && new ElemLabel(null, null, null, `(${oDpl.consts.indCode.type.sic87.descShort})`)
+    ));
+
+    //Get SIC v87 industry codes
+    arrValues = arrValues.concat( oDpl.indCodesToArray(
+        oDpl.consts.indCode.type.sic87,
+        6,
+        [ oDpl.consts.indCode.component.code ],
+        bLabel && new ElemLabel(null, null, null, `(${oDpl.consts.indCode.type.sic87.descShort})`)
+    ));
     
+    //Get primary NACE description and code
+    arrValues = arrValues.concat( oDpl.indCodesToArray(
+        oDpl.consts.indCode.type.naceRev2,
+        1,
+        [ oDpl.consts.indCode.component.desc, oDpl.consts.indCode.component.code ],
+        bLabel && new ElemLabel(null, null, null, `(${oDpl.consts.indCode.type.naceRev2.descShort})`)
+    ));
+
+    //Start date
+    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.startDate) : oDpl.map121.startDate);
+
 /*
     //Operating status
     arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.opStatus) : oDpl.map121.opStatus);
 
     //SMB indicator
     arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.SMB) : oDpl.map121.SMB);
-
-    //Get primary industry code of a certain type
-    arrValues = arrValues.concat( oDpl.indCodesToArray(
-        oDpl.consts.indCodes.type.sic87,
-        2,
-        [ oDpl.consts.indCodes.component.code, oDpl.consts.indCodes.component.desc ],
-        bLabel && new ElemLabel(null, null, null, `(${oDpl.consts.indCodes.type.sic87.descShort})`)
-    ));
 
     //Get employee counts from a specified set of scopes (i.e. individual, hq, ...)
     arrValues = arrValues.concat( oDpl.numEmplsToArray(
@@ -175,7 +194,7 @@ function processDnbDplDB(jsonIn, bLabel) {
         ],
         bLabel
     ));
-*/
+
     arrValues = arrValues.concat( oDpl.corpLinkageLevelsToArray(
         [ oDpl.consts.b2bLinkLevel.domUlt, oDpl.consts.b2bLinkLevel.gblUlt ],
         [
