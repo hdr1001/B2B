@@ -636,6 +636,118 @@ class DplDBs {
         return retArr;
     }
 
+    //Method latestYearlyRevToArray returns latest revenue figures in array format
+    //Get information from attribute financials in Company Information L2+
+    latestYearlyRevToArray(bLabel) {
+        const sales_rev      = 0;
+        const currency       = 1;
+        const sales_rev_usd  = 2;
+        const units          = 3;
+        const reliability    = 4;
+        const info_scope     = 5;
+        const stmt_to_date   = 6;
+
+        let retArr = new Array(stmt_to_date + 1);
+
+        if(bLabel) {
+            retArr[sales_rev] = constructElemLabel(null, 'sales rev');
+            retArr[currency] = constructElemLabel(null, 'currency');
+            retArr[sales_rev_usd] = constructElemLabel(null, 'sales rev usd');
+            retArr[units] = constructElemLabel(null, 'units');
+            retArr[reliability] = constructElemLabel(null, 'reliability (financials)');
+            retArr[info_scope] = constructElemLabel(null, 'info scope (financials)');
+            retArr[stmt_to_date] = constructElemLabel(null, 'stmt to date');
+
+            return retArr;
+        }
+
+        let ciFinancials = this.org?.financials || [];
+
+        if(ciFinancials.length === 0) { return retArr } //No financials available in CI L2+
+
+        //Assign reliability priorities
+        const arrReliabilityPrio = [
+            { ...appConsts.reliability.actual, prio: 1},
+            { ...appConsts.reliability.modelled, prio: 2 },
+            { ...appConsts.reliability.estimated, prio: 3 }
+        ];
+
+        //Prefer recent statement dates and stick to the reliability priorities
+        ciFinancials = ciFinancials
+            .map(fin => {
+                fin.reliabilityPrio = arrReliabilityPrio.find(elem => elem.code === fin.reliabilityDnBCode)?.prio;
+
+                return fin;
+            })
+            .sort((fin1, fin2) => {
+                //Order based on reliability preference defined above
+                if(!fin1.reliabilityPrio && fin2.reliabilityPrio) { return 1 }
+
+                if(fin1.reliabilityPrio && !fin2.reliabilityPrio) { return -1 }
+
+                if(fin1.reliabilityPrio && fin2.reliabilityPrio) {
+                    if(fin1.reliabilityPrio - fin2.reliabilityPrio !== 0) {
+                        return fin1.reliabilityPrio - fin2.reliabilityPrio
+                    }
+                }
+
+                return 0;
+            })
+            .sort((fin1, fin2) => {
+                //Ultimately prefer more recent financial statement years
+                function getFinStatementDateYear(finStatementDate) {
+                    if(!finStatementDate) { return 0 }
+
+                    const year = parseInt(finStatementDate.slice(0, 4));
+
+                    if(isNaN(year)) { return 0 }
+
+                    return year;             
+                }
+
+                //Bubble the high years to the top of the array
+                const year1 = getFinStatementDateYear(fin1.financialStatementToDate);
+                const year2 = getFinStatementDateYear(fin2.financialStatementToDate);
+
+                if(year1 && !year2) { return -1 }
+
+                if(!year1 && year2) { return 1 }
+
+                if(year1 && year2) {
+                    if(year1 - year2 !== 0) { return year2 - year1 }
+                }
+
+                return 0;
+            })
+
+        let arrYearlyRev = ciFinancials[0]?.yearlyRevenue || []
+        let yearlyRev = null
+        let yearlyRevUSD = null;
+        let arrFiltered;
+
+        if(arrYearlyRev && arrYearlyRev.length) {
+            //Preference for local currency
+            arrFiltered = arrYearlyRev.filter(rev => rev.currency !== 'USD');
+
+            if(arrFiltered.length) { yearlyRev = arrFiltered[0] }
+
+            //Get the USD amount
+            arrFiltered = arrYearlyRev.filter(rev => rev.currency === 'USD');
+
+            if(arrFiltered.length) { yearlyRevUSD = arrFiltered[0] }
+        }
+
+        retArr[sales_rev]      = yearlyRev?.value;
+        retArr[currency]       = yearlyRev?.currency;
+        retArr[sales_rev_usd]  = yearlyRevUSD?.value;
+        retArr[units]          = ciFinancials[0]?.unitCode;
+        retArr[reliability]    = ciFinancials[0]?.reliabilityDescription;
+        retArr[info_scope]     = ciFinancials[0]?.informationScopeDescription;
+        retArr[stmt_to_date]   = ciFinancials[0]?.financialStatementToDate;
+
+        return retArr;
+    }
+
     //Method latestFinsToArray returns latest financial figures in array format
     //Best results with Company Financials L1+, fall back implemented to Company Information L2+
     latestFinsToArray(bLabel) {

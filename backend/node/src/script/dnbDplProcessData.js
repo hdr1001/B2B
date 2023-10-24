@@ -55,7 +55,7 @@ function processDnbDplDB(jsonIn, bLabel) {
 
     //Primary name
     arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.primaryName) : oDpl.map121.primaryName);
-
+/*
     //Tradestyle name
     arrValues.push(bLabel ? new ElemLabel('tradestyle name') : oDpl.getTradeStyleAtIdx(0));
 
@@ -141,6 +141,10 @@ function processDnbDplDB(jsonIn, bLabel) {
 
     //Start date
     arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.startDate) : oDpl.map121.startDate);
+*/
+
+    //Yearly revenue figures
+    arrValues = arrValues.concat( oDpl.latestYearlyRevToArray(bLabel) );
 
 /*
     //Operating status
