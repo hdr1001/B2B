@@ -168,6 +168,18 @@ const appConsts = {
             customRegNumDuns: { custom: 'regNumDuns', desc: 'DUNS' }
         }
     },
+    fin: {
+        latest: [
+            {attrs: ['overview', 'salesRevenue'], desc: 'sales rev'},
+            {attrs: ['overview', 'totalAssets'], desc: 'total assets'},
+            {attrs: ['currency'], desc: 'currency'},
+            {attrs: ['units'], desc: 'units'},
+            {attrs: ['reliability', 'description'], desc: 'reliability (financials)'},
+            {attrs: ['informationScope', 'description'], desc: 'info scope (financials)'},
+            {attrs: ['financialStatementFromDate'], desc: 'stmt from date'},
+            {attrs: ['financialStatementToDate'], desc: 'stmt to date'}
+        ]
+    },
     corpLinkage: {
         levels: [ //Linkage levels in Hierarchies & Connections level 1
             [{ attr: 'headQuarter', desc: 'HQ' }, {attr: 'parent', desc: 'parent' }],
@@ -751,51 +763,27 @@ class DplDBs {
     //Method latestFinsToArray returns latest financial figures in array format
     //Best results with Company Financials L1+, fall back implemented to Company Information L2+
     latestFinsToArray(bLabel) {
-        const sales_rev      = 0;
-        const total_assets   = 1;
-        const currency       = 2;
-        const units          = 3;
-        const reliability    = 4;
-        const info_scope     = 5;
-        const stmt_from_date = 6;
-        const stmt_to_date   = 7;
-
-        let retArr = new Array(stmt_to_date + 1);
-
         if(bLabel) {
-            retArr[sales_rev] = constructElemLabel(null, 'sales rev');
-            retArr[total_assets] = constructElemLabel(null, 'total assets');
-            retArr[currency] = constructElemLabel(null, 'currency');
-            retArr[units] = constructElemLabel(null, 'units');
-            retArr[reliability] = constructElemLabel(null, 'reliability (financials)');
-            retArr[info_scope] = constructElemLabel(null, 'info scope (financials)');
-            retArr[stmt_from_date] = constructElemLabel(null, 'stmt from date');
-            retArr[stmt_to_date] = constructElemLabel(null, 'stmt to date');
-
-            return retArr;
+            return appConsts.fin.latest.map(elem => constructElemLabel(null, elem.desc));
         }
 
         //Financial data from Company Financials L1+
         const latestFins = this.org?.latestFinancials;
 
+        let retArr;
+
         if(!objEmpty(latestFins)) {
-            retArr[sales_rev]      = latestFins?.overview?.salesRevenue;
-            retArr[total_assets]   = latestFins?.overview?.totalAssets;
-            retArr[currency]       = latestFins?.currency;
-            retArr[units]          = latestFins?.units;
-            retArr[reliability]    = latestFins?.reliability?.description;
-            retArr[info_scope]     = latestFins?.informationScope?.description;
-            retArr[stmt_from_date] = latestFins?.financialStatementFromDate;
-            retArr[stmt_to_date]   = latestFins?.financialStatementToDate;
-    
-            if(retArr[currency]) { return retArr }
+            retArr = appConsts.fin.latest.map(elem => getObjAttrValue(latestFins, elem))
+
+            if(latestFins.currency) { return retArr }
         }
 
         //No currency available, revert to modelled/estimated values from Company Information L2+
         let ciFinancials = this.org?.financials || [];
 
-        if(ciFinancials.length === 0) { return retArr } //No luck in CI L2+ either :-(
+        if(ciFinancials.length === 0) { return new Array(appConsts.fin.latest.length) } //No luck in CI L2+ either :-(
 
+        return;
         //Assign priority to the modelled/estimated values
         const arrReliabilityPrio = [ 
             { ...appConsts.reliability.modelled, prio: 1 },

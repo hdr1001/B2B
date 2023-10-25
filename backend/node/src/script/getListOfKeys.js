@@ -47,7 +47,7 @@ const dnbDplDBs = { //Set level to 0 ⬇️ to not include the block
         {db: 'financialstrengthinsight',  level: 0, dbShort: 'fs', version: '1'},
         {db: 'paymentinsight',            level: 0, dbShort: 'pi', version: '1'},
         {db: 'eventfilings',              level: 0, dbShort: 'ef', version: '1'},
-        {db: 'companyfinancials',         level: 0, dbShort: 'cf', version: '2'},
+        {db: 'companyfinancials',         level: 1, dbShort: 'cf', version: '2'},
         {db: 'globalfinancials',          level: 0, dbShort: 'gf', version: '1'},
         {db: 'esginsight',                level: 0, dbShort: 'ei', version: '1'},
         {db: 'ownershipinsight',          level: 0, dbShort: 'oi', version: '1'},
