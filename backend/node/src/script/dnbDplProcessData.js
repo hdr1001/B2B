@@ -144,7 +144,7 @@ function processDnbDplDB(jsonIn, bLabel) {
 */
 
     //Yearly revenue figures
-    arrValues = arrValues.concat( oDpl.latestFinsToArray(bLabel) );
+    arrValues = arrValues.concat( oDpl.latestYearlyRevToArray(bLabel) );
 
 /*
     //Operating status
@@ -252,7 +252,7 @@ fs.readdir('../io/out')
         //Process the files available in the specified directory
         arrFiles
             .filter(fn => fn.endsWith('.json'))
-            .filter(fn => fn.indexOf('1025_') > -1)
+            .filter(fn => fn.indexOf('1021_') > -1)
             .forEach(fn => 
                 readFileLimiter.removeTokens(1)
                     .then(() => fs.readFile(`../io/out/${fn}`))

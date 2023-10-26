@@ -170,15 +170,31 @@ const appConsts = {
     },
     fin: {
         latest: [
-            {attrs: ['overview', 'salesRevenue'], desc: 'sales rev'},
-            {attrs: ['overview', 'totalAssets'], desc: 'total assets'},
-            {attrs: ['currency'], desc: 'currency'},
-            {attrs: ['units'], desc: 'units'},
-            {attrs: ['reliability', 'description'], desc: 'reliability (financials)'},
-            {attrs: ['informationScope', 'description'], desc: 'info scope (financials)'},
-            {attrs: ['financialStatementFromDate'], desc: 'stmt from date'},
-            {attrs: ['financialStatementToDate'], desc: 'stmt to date'}
-        ]
+            { attrs: [ 'overview', 'salesRevenue' ], desc: 'sales rev' },
+            { attrs: [ 'overview', 'totalAssets' ], desc: 'total assets' },
+            { attrs: [ 'currency' ], desc: 'currency' },
+            { attrs: [ 'units' ], desc: 'units' },
+            { attrs: [ 'reliability', 'description' ], desc: 'reliability (financials)' },
+            { attrs: [ 'informationScope', 'description' ], desc: 'info scope (financials)' },
+            { attrs: [ 'financialStatementFromDate' ], desc: 'stmt from date' },
+            { attrs: [ 'financialStatementToDate' ], desc: 'stmt to date' }
+        ],
+        latestYearlyRev: {
+            yearlyRevObj: {
+                fins0: 0, //refers to the 1st object in the organization.financials array (after sorting)
+                yearlyRevLocal: 1, //refers to the, local currency based, yearly revenue object 
+                yearlyRevUSD: 2 //refers to the, US$ based, yearly revenue object
+            },
+            components: [
+                { attr: 'value', desc: 'sales rev' },
+                { attr: 'currency', desc: 'currency' },
+                { attr: 'value', desc: 'sales rev usd' },
+                { attr: 'unitCode', desc: 'units' },
+                { attr: 'reliabilityDescription', desc: 'reliability (revenue)' },
+                { attr: 'informationScopeDescription', desc: 'info scope (revenue)' },
+                { attr: 'financialStatementToDate', desc: 'stmt to date' }
+            ]
+        }
     },
     corpLinkage: {
         levels: [ //Linkage levels in Hierarchies & Connections level 1
@@ -220,6 +236,18 @@ const appConsts = {
         hq: {code: 9068, desc: 'HQ only'}
     }
 };
+
+appConsts.fin.latestYearlyRev.components = appConsts.fin.latestYearlyRev.components.map(elem => {
+    if(elem.desc === 'sales rev' || elem.desc === 'currency') {
+        return { objIdx: appConsts.fin.latestYearlyRev.yearlyRevObj.yearlyRevLocal, ...elem }
+    }
+
+    if(elem.desc === 'sales rev usd') {
+        return { objIdx: appConsts.fin.latestYearlyRev.yearlyRevObj.yearlyRevUSD, ...elem }
+    }
+
+    return { objIdx: appConsts.fin.latestYearlyRev.yearlyRevObj.fins0, ...elem }
+});
 
 //D&B Direct+ Data Blocks JavaScript object wrapper
 class DplDBs {
@@ -651,31 +679,15 @@ class DplDBs {
     //Method latestYearlyRevToArray returns latest revenue figures in array format
     //Get information from attribute financials in Company Information L2+
     latestYearlyRevToArray(bLabel) {
-        const sales_rev      = 0;
-        const currency       = 1;
-        const sales_rev_usd  = 2;
-        const units          = 3;
-        const reliability    = 4;
-        const info_scope     = 5;
-        const stmt_to_date   = 6;
-
-        let retArr = new Array(stmt_to_date + 1);
-
         if(bLabel) {
-            retArr[sales_rev] = constructElemLabel(null, 'sales rev');
-            retArr[currency] = constructElemLabel(null, 'currency');
-            retArr[sales_rev_usd] = constructElemLabel(null, 'sales rev usd');
-            retArr[units] = constructElemLabel(null, 'units');
-            retArr[reliability] = constructElemLabel(null, 'reliability (financials)');
-            retArr[info_scope] = constructElemLabel(null, 'info scope (financials)');
-            retArr[stmt_to_date] = constructElemLabel(null, 'stmt to date');
-
-            return retArr;
+            return appConsts.fin.latestYearlyRev.components.map(elem => constructElemLabel(null, elem.desc));
         }
 
         let ciFinancials = this.org?.financials || [];
 
-        if(ciFinancials.length === 0) { return retArr } //No financials available in CI L2+
+        if(ciFinancials.length === 0) { //No financials available in CI L2+
+            return new Array(appConsts.fin.latestYearlyRev.components.length)
+        }
 
         //Assign reliability priorities
         const arrReliabilityPrio = [
@@ -732,32 +744,29 @@ class DplDBs {
                 return 0;
             })
 
+        //Store references to the relevant, identified objects
+        const finObjs = new Array(Object.keys(appConsts.fin.latestYearlyRev.yearlyRevObj).length);
+        
+        finObjs[appConsts.fin.latestYearlyRev.yearlyRevObj.fins0] = ciFinancials[0];
+
+        //Get a reference to a local currency & a USD revenue figures
         let arrYearlyRev = ciFinancials[0]?.yearlyRevenue || []
-        let yearlyRev = null
-        let yearlyRevUSD = null;
         let arrFiltered;
 
         if(arrYearlyRev && arrYearlyRev.length) {
             //Preference for local currency
             arrFiltered = arrYearlyRev.filter(rev => rev.currency !== 'USD');
 
-            if(arrFiltered.length) { yearlyRev = arrFiltered[0] }
+            if(arrFiltered.length) { finObjs[appConsts.fin.latestYearlyRev.yearlyRevObj.yearlyRevLocal] = arrFiltered[0] }
 
             //Get the USD amount
             arrFiltered = arrYearlyRev.filter(rev => rev.currency === 'USD');
 
-            if(arrFiltered.length) { yearlyRevUSD = arrFiltered[0] }
+            if(arrFiltered.length) { finObjs[appConsts.fin.latestYearlyRev.yearlyRevObj.yearlyRevUSD] = arrFiltered[0] }
         }
 
-        retArr[sales_rev]      = yearlyRev?.value;
-        retArr[currency]       = yearlyRev?.currency;
-        retArr[sales_rev_usd]  = yearlyRevUSD?.value;
-        retArr[units]          = ciFinancials[0]?.unitCode;
-        retArr[reliability]    = ciFinancials[0]?.reliabilityDescription;
-        retArr[info_scope]     = ciFinancials[0]?.informationScopeDescription;
-        retArr[stmt_to_date]   = ciFinancials[0]?.financialStatementToDate;
-
-        return retArr;
+        return appConsts.fin.latestYearlyRev.components
+            .map(elem => finObjs[elem.objIdx]?.[elem.attr])
     }
 
     //Method latestFinsToArray returns latest financial figures in array format
