@@ -122,7 +122,7 @@ const monthDay = sDateIsoToYYYYMMDD(new Date().toISOString(), 4);
 // ➡️ Main application configuration settings
 
 // First specify the API to call
-const api = 'dnbDpl';       //Available options are gleif & dnbDpl
+const api = 'gleif';       //Available options are gleif & dnbDpl
 
 // Choose an endpoint in case the API selected is D&B Direct+
 // If Data Blocks (i.e. dbs) configure object dnbDplDBs above

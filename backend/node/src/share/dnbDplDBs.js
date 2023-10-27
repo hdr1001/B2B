@@ -193,7 +193,91 @@ const appConsts = {
                 { attr: 'reliabilityDescription', desc: 'reliability (revenue)' },
                 { attr: 'informationScopeDescription', desc: 'info scope (revenue)' },
                 { attr: 'financialStatementToDate', desc: 'stmt to date' }
-            ]
+            ],
+            getYearlyRevObjs: function(fins, reliabilityPrios) {
+                if(!this.components[0].objIdx) {
+                    this.components = this.components.map(elem => {
+                        if(elem.desc === 'sales rev' || elem.desc === 'currency') {
+                            return { objIdx: this.yearlyRevObj.yearlyRevLocal, ...elem }
+                        }
+                    
+                        if(elem.desc === 'sales rev usd') {
+                            return { objIdx: this.yearlyRevObj.yearlyRevUSD, ...elem }
+                        }
+                    
+                        return { objIdx: this.yearlyRevObj.fins0, ...elem }
+                    })
+                }
+
+                //Prefer recent statement dates and stick to the reliability priorities
+                const finsSorted = fins
+                    .map(fin => {
+                        fin.reliabilityPrio = reliabilityPrios.find(elem => elem.code === fin.reliabilityDnBCode)?.prio;
+
+                        return fin;
+                    })
+                    .sort((fin1, fin2) => {
+                        //Order based on reliability preference defined above
+                        if(!fin1.reliabilityPrio && fin2.reliabilityPrio) { return 1 }
+
+                        if(fin1.reliabilityPrio && !fin2.reliabilityPrio) { return -1 }
+
+                        if(fin1.reliabilityPrio && fin2.reliabilityPrio) {
+                            if(fin1.reliabilityPrio - fin2.reliabilityPrio !== 0) {
+                                return fin1.reliabilityPrio - fin2.reliabilityPrio
+                            }
+                        }
+
+                        return 0;
+                    })
+                    .sort((fin1, fin2) => {
+                        //Ultimately prefer more recent financial statement years
+                        function getFinStatementDateYear(finStatementDate) {
+                            if(!finStatementDate) { return 0 }
+
+                            const year = parseInt(finStatementDate.slice(0, 4));
+
+                            if(isNaN(year)) { return 0 }
+
+                            return year;             
+                        }
+
+                        //Bubble the high years to the top of the array
+                        const year1 = getFinStatementDateYear(fin1.financialStatementToDate);
+                        const year2 = getFinStatementDateYear(fin2.financialStatementToDate);
+
+                        if(year1 && !year2) { return -1 }
+
+                        if(!year1 && year2) { return 1 }
+
+                        if(year1 && year2) {
+                            if(year1 - year2 !== 0) { return year2 - year1 }
+                        }
+
+                        return 0;
+                    })
+
+                //Store references to the relevant, identified objects
+                fins.mostRecentYearlyRevObjs = new Array(Object.keys(this.yearlyRevObj).length);
+                
+                fins.mostRecentYearlyRevObjs[this.yearlyRevObj.fins0] = finsSorted[0];
+
+                //Get a reference to a local currency & a USD revenue figures
+                let arrYearlyRev = finsSorted[0]?.yearlyRevenue || []
+                let arrFiltered;
+
+                if(arrYearlyRev && arrYearlyRev.length) {
+                    //Preference for local currency
+                    arrFiltered = arrYearlyRev.filter(rev => rev.currency !== 'USD');
+
+                    if(arrFiltered.length) { fins.mostRecentYearlyRevObjs[this.yearlyRevObj.yearlyRevLocal] = arrFiltered[0] }
+
+                    //Get the USD amount
+                    arrFiltered = arrYearlyRev.filter(rev => rev.currency === 'USD');
+
+                    if(arrFiltered.length) { fins.mostRecentYearlyRevObjs[this.yearlyRevObj.yearlyRevUSD] = arrFiltered[0] }
+                }
+            }
         }
     },
     corpLinkage: {
@@ -236,18 +320,6 @@ const appConsts = {
         hq: {code: 9068, desc: 'HQ only'}
     }
 };
-
-appConsts.fin.latestYearlyRev.components = appConsts.fin.latestYearlyRev.components.map(elem => {
-    if(elem.desc === 'sales rev' || elem.desc === 'currency') {
-        return { objIdx: appConsts.fin.latestYearlyRev.yearlyRevObj.yearlyRevLocal, ...elem }
-    }
-
-    if(elem.desc === 'sales rev usd') {
-        return { objIdx: appConsts.fin.latestYearlyRev.yearlyRevObj.yearlyRevUSD, ...elem }
-    }
-
-    return { objIdx: appConsts.fin.latestYearlyRev.yearlyRevObj.fins0, ...elem }
-});
 
 //D&B Direct+ Data Blocks JavaScript object wrapper
 class DplDBs {
@@ -696,77 +768,12 @@ class DplDBs {
             { ...appConsts.reliability.estimated, prio: 3 }
         ];
 
-        //Prefer recent statement dates and stick to the reliability priorities
-        ciFinancials = ciFinancials
-            .map(fin => {
-                fin.reliabilityPrio = arrReliabilityPrio.find(elem => elem.code === fin.reliabilityDnBCode)?.prio;
-
-                return fin;
-            })
-            .sort((fin1, fin2) => {
-                //Order based on reliability preference defined above
-                if(!fin1.reliabilityPrio && fin2.reliabilityPrio) { return 1 }
-
-                if(fin1.reliabilityPrio && !fin2.reliabilityPrio) { return -1 }
-
-                if(fin1.reliabilityPrio && fin2.reliabilityPrio) {
-                    if(fin1.reliabilityPrio - fin2.reliabilityPrio !== 0) {
-                        return fin1.reliabilityPrio - fin2.reliabilityPrio
-                    }
-                }
-
-                return 0;
-            })
-            .sort((fin1, fin2) => {
-                //Ultimately prefer more recent financial statement years
-                function getFinStatementDateYear(finStatementDate) {
-                    if(!finStatementDate) { return 0 }
-
-                    const year = parseInt(finStatementDate.slice(0, 4));
-
-                    if(isNaN(year)) { return 0 }
-
-                    return year;             
-                }
-
-                //Bubble the high years to the top of the array
-                const year1 = getFinStatementDateYear(fin1.financialStatementToDate);
-                const year2 = getFinStatementDateYear(fin2.financialStatementToDate);
-
-                if(year1 && !year2) { return -1 }
-
-                if(!year1 && year2) { return 1 }
-
-                if(year1 && year2) {
-                    if(year1 - year2 !== 0) { return year2 - year1 }
-                }
-
-                return 0;
-            })
-
-        //Store references to the relevant, identified objects
-        const finObjs = new Array(Object.keys(appConsts.fin.latestYearlyRev.yearlyRevObj).length);
-        
-        finObjs[appConsts.fin.latestYearlyRev.yearlyRevObj.fins0] = ciFinancials[0];
-
-        //Get a reference to a local currency & a USD revenue figures
-        let arrYearlyRev = ciFinancials[0]?.yearlyRevenue || []
-        let arrFiltered;
-
-        if(arrYearlyRev && arrYearlyRev.length) {
-            //Preference for local currency
-            arrFiltered = arrYearlyRev.filter(rev => rev.currency !== 'USD');
-
-            if(arrFiltered.length) { finObjs[appConsts.fin.latestYearlyRev.yearlyRevObj.yearlyRevLocal] = arrFiltered[0] }
-
-            //Get the USD amount
-            arrFiltered = arrYearlyRev.filter(rev => rev.currency === 'USD');
-
-            if(arrFiltered.length) { finObjs[appConsts.fin.latestYearlyRev.yearlyRevObj.yearlyRevUSD] = arrFiltered[0] }
+        if(!ciFinancials.mostRecentYearlyRevObjs) {
+            appConsts.fin.latestYearlyRev.getYearlyRevObjs(ciFinancials, arrReliabilityPrio)
         }
 
         return appConsts.fin.latestYearlyRev.components
-            .map(elem => finObjs[elem.objIdx]?.[elem.attr])
+            .map(elem => ciFinancials.mostRecentYearlyRevObjs[elem.objIdx]?.[elem.attr])
     }
 
     //Method latestFinsToArray returns latest financial figures in array format
