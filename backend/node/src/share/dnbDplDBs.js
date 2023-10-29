@@ -169,16 +169,26 @@ const appConsts = {
         }
     },
     fin: {
+        //The latest constant primarily sources data from the latestFinancials attribute from
+        //Company Financials L1+. In case no actuals are available method latestFinsToArray will
+        //revert to figures captured in attribute financials available in Company Information L2+.
+        //Attribute latestYearlyRevIdx provides a mapping to the latestYearlyRev components.
         latest: [
-            { attrs: [ 'overview', 'salesRevenue' ], desc: 'sales rev' },
+            { attrs: [ 'overview', 'salesRevenue' ], desc: 'sales rev', latestYearlyRevIdx: 0 },
             { attrs: [ 'overview', 'totalAssets' ], desc: 'total assets' },
-            { attrs: [ 'currency' ], desc: 'currency' },
-            { attrs: [ 'units' ], desc: 'units' },
-            { attrs: [ 'reliability', 'description' ], desc: 'reliability (financials)' },
-            { attrs: [ 'informationScope', 'description' ], desc: 'info scope (financials)' },
+            { attrs: [ 'currency' ], desc: 'currency', latestYearlyRevIdx: 1 },
+            { attrs: [ 'units' ], desc: 'units', latestYearlyRevIdx: 3 },
+            { attrs: [ 'reliability', 'description' ], desc: 'reliability (financials)', latestYearlyRevIdx: 4 },
+            { attrs: [ 'informationScope', 'description' ], desc: 'info scope (financials)', latestYearlyRevIdx: 5 },
             { attrs: [ 'financialStatementFromDate' ], desc: 'stmt from date' },
-            { attrs: [ 'financialStatementToDate' ], desc: 'stmt to date' }
+            { attrs: [ 'financialStatementToDate' ], desc: 'stmt to date', latestYearlyRevIdx: 6 }
         ],
+        //The latestYearlyRev constant retrieves yearly revenue figures from the financials
+        //array. In the algorithm reliability priorities and an ordering on most recent 
+        //statement dates is used to get to the most relevant data. The components of the 
+        //array returned are then sourced from three distinct objects (1) the first element 
+        //of the sorted financials array, (2) the revenue object with the revenue figure in
+        //the default currrency and (3) the revenue object containing the USD figure.
         latestYearlyRev: {
             objs: [ 'fins0', 'yearlyRevLocal', 'yearlyRevUSD' ],
             components: [
@@ -211,17 +221,19 @@ const appConsts = {
         domUlt: { idx: 1, desc: 'dom ult' },
         gblUlt: { idx: 2, desc: 'global ult' },
     },
-    reliability: {
-        min: {code: 11078, desc: 'minimum value from range'},
-        rounded: {code: 11147, desc: 'rounded'},
-        derived: {code: 11176, desc: 'derived'},
-        final: {code: 16970, desc: 'final'},
-        projected: {code: 192, desc: 'projected'},
-        average: {code: 25100, desc: 'average'},
-        assigned: {code: 33392, desc: 'assigned'},
-        actual: {code: 9092, desc: 'actual'},
-        estimated: {code: 9093, desc: 'estimated'},
-        modelled: {code: 9094, desc: 'modelled'}
+    reliability: { 
+        code: {
+            min: {code: 11078, desc: 'minimum value from range'},
+            rounded: {code: 11147, desc: 'rounded'},
+            derived: {code: 11176, desc: 'derived'},
+            final: {code: 16970, desc: 'final'},
+            projected: {code: 192, desc: 'projected'},
+            average: {code: 25100, desc: 'average'},
+            assigned: {code: 33392, desc: 'assigned'},
+            actual: {code: 9092, desc: 'actual'},
+            estimated: {code: 9093, desc: 'estimated'},
+            modelled: {code: 9094, desc: 'modelled'}
+        }
     },
     infoScope: {
         group: {code: 13173, desc: 'group'},
@@ -232,6 +244,13 @@ const appConsts = {
         hq: {code: 9068, desc: 'HQ only'}
     }
 };
+
+//By default prefer actual over modelled and modelled over estimated
+const defaultReliabilityPrios = [
+    { ...appConsts.reliability.code.actual, prio: 1 },
+    { ...appConsts.reliability.code.modelled, prio: 2 },
+    { ...appConsts.reliability.code.estimated, prio: 3 }
+];
 
 //D&B Direct+ Data Blocks JavaScript object wrapper
 class DplDBs {
@@ -574,7 +593,7 @@ class DplDBs {
     //Method numEmplsToArray will convert D&B D+ employee count objects (organization.numberOfEmployees)
     //to an array of a specified length (= numNumEmpl * arrNumEmplComponents.length). The order of the
     //employee counts included in the array will be influenced by the order of array arrNumEmplScope and
-    //arrReliabilityPrio
+    //defaultReliabilityPrios
     //This method is applicable on data block collections which contain Company Information L2+
     //
     //Four parameters
@@ -621,32 +640,25 @@ class DplDBs {
         //Return an array of empty values if no employee counts are available
         if(!this.org.numberOfEmployees || !this.org.numberOfEmployees.length) { return retArr }
 
-        //Configure the reliability priorities 
-        const arrReliabilityPrio = [
-            { ...appConsts.reliability.actual, prio: 1 },
-            { ...appConsts.reliability.modelled, prio: 2 },
-            { ...appConsts.reliability.estimated, prio: 3 }
-        ];
-
         //First filter the objects in the information scopes specified
         retArr = this.org.numberOfEmployees
             //Only return the number of employee objects with the info scopes as specified in arrNumEmplScope
             .filter(numEmpl => arrNumEmplScope.includes(numEmpl.informationScopeDnBCode))
             
-            //Add priority attribute based on parameter arrNumEmplScope and arrReliabilityPrio
+            //Add priority attribute based on parameter arrNumEmplScope and defaultReliabilityPrios
             .map(numEmpl => {
                 //The information scope precedence is determined by parameter arrNumEmplScope
                 const idxNumEmplScope = arrNumEmplScope.findIndex(elem => elem === numEmpl.informationScopeDnBCode);
 
                 if(idxNumEmplScope > -1) { numEmpl.infoScopePrio = idxNumEmplScope + 1}
 
-                //The reliability precedence is determined by arrReliabilityPrio
-                numEmpl.reliabilityPrio = arrReliabilityPrio.find(elem => elem.code === numEmpl.reliabilityDnBCode)?.prio;
+                //The reliability precedence is determined by defaultReliabilityPrios
+                numEmpl.reliabilityPrio = defaultReliabilityPrios.find(elem => elem.code === numEmpl.reliabilityDnBCode)?.prio;
 
                 return numEmpl;
             })
             .sort(doCompareInfoScope)   //1st sort on information scope as specified in parameter arrNumEmplScope
-            .sort(doCompareReliability) //Next sort on reliability. If available, the 1st entry of arrReliabilityPrio will bubble up
+            .sort(doCompareReliability) //Next sort on reliability. If available, the 1st entry of defaultReliabilityPrios will bubble up
             .slice(0, numNumEmpl)       //Cut the entries which are not needed
 
             //Convert to an array
@@ -676,17 +688,10 @@ class DplDBs {
             return this.org.financials.latestYearlyRevObjs;
         }
 
-        //Prefer actual over modelled and modelled over estimated
-        const arrReliabilityPrios = [
-            { ...appConsts.reliability.actual, prio: 1},
-            { ...appConsts.reliability.modelled, prio: 2 },
-            { ...appConsts.reliability.estimated, prio: 3 }
-        ];
-
         //Prefer recent statement dates and stick to the reliability priorities
         const finsSorted = this.org.financials
             .map(fin => {
-                fin.reliabilityPrio = arrReliabilityPrios.find(elem => elem.code === fin.reliabilityDnBCode)?.prio;
+                fin.reliabilityPrio = defaultReliabilityPrios.find(elem => elem.code === fin.reliabilityDnBCode)?.prio;
 
                 return fin;
             })
@@ -778,82 +783,15 @@ class DplDBs {
         }
 
         //No currency available, revert to modelled/estimated values from Company Information L2+
-        let ciFinancials = this.org?.financials || [];
+        let arrlatestYearlyRev = this.latestYearlyRevToArray(bLabel);
 
-        if(ciFinancials.length === 0) { return new Array(appConsts.fin.latest.length) } //No luck in CI L2+ either :-(
+        return appConsts.fin.latest.map(elem => {
+            if(elem.latestYearlyRevIdx || elem.latestYearlyRevIdx === 0) {
+                return arrlatestYearlyRev[elem.latestYearlyRevIdx]
+            }
 
-        return;
-        //Assign priority to the modelled/estimated values
-        const arrReliabilityPrio = [ 
-            { ...appConsts.reliability.modelled, prio: 1 },
-            { ...appConsts.reliability.estimated, prio: 2 }
-        ];
-
-        //Prefer recent statement dates and stick to the reliability priorities
-        ciFinancials = ciFinancials
-            .map(fin => {
-                fin.reliabilityPrio = arrReliabilityPrio.find(elem => elem.code === fin.reliabilityDnBCode)?.prio;
-
-                return fin;
-            })
-            .sort((fin1, fin2) => {
-                function getFinStatementDateYear(finStatementDate) {
-                    if(!finStatementDate) { return 0 }
-
-                    const year = parseInt(finStatementDate.slice(0, 4));
-
-                    if(isNaN(year)) { return 0 }
-
-                    return year;             
-                }
-
-                //Bubble the high years to the top of the array
-                const year1 = getFinStatementDateYear(fin1.financialStatementToDate);
-                const year2 = getFinStatementDateYear(fin2.financialStatementToDate);
-
-                if(year1 && !year2) { return -1 }
-
-                if(!year1 && year2) { return 1 }
-
-                if(year1 && year2) {
-                    if(year1 - year2 !== 0) { return year2 - year1 }
-                }
-
-                //Both years not a number or equal then prefer modelled
-                if(!fin1.reliabilityPrio && fin2.reliabilityPrio) { return 1 }
-
-                if(fin1.reliabilityPrio && !fin2.reliabilityPrio) { return -1 }
-
-                if(fin1.reliabilityPrio && fin2.reliabilityPrio) {
-                    if(fin1.reliabilityPrio - fin2.reliabilityPrio !== 0) {
-                        return fin1.reliabilityPrio - fin2.reliabilityPrio
-                    }
-                }
-
-                return 0;
-            })
-
-        let arrYearlyRev = ciFinancials[0]?.yearlyRevenue || [], yearlyRev = null;
-
-        if(arrYearlyRev.length === 1) {
-            yearlyRev = arrYearlyRev[0];
-        }
-        else if(arrYearlyRev.length > 1) {
-            arrYearlyRev = arrYearlyRev.filter(rev => rev.currency !== 'USD'); //Preference for local currency
-
-            if(arrYearlyRev.length) { yearlyRev = arrYearlyRev[0] }
-        }
-
-        retArr[sales_rev]      = yearlyRev && yearlyRev.value;
-        retArr[total_assets]   = null;
-        retArr[currency]       = yearlyRev && yearlyRev.currency;
-        retArr[units]          = ciFinancials[0]?.unitCode;
-        retArr[reliability]    = ciFinancials[0]?.reliabilityDescription;
-        retArr[info_scope]     = ciFinancials[0]?.informationScopeDescription;
-        retArr[stmt_from_date] = null;
-        retArr[stmt_to_date]   = ciFinancials[0]?.financialStatementToDate;
-
-        return retArr;
+            return null;
+        });
     }
 
     //Method isGlobalUlt will return true if the duns requested is the global ultimate duns, false 

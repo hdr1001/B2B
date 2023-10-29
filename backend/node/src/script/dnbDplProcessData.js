@@ -55,7 +55,7 @@ function processDnbDplDB(jsonIn, bLabel) {
 
     //Primary name
     arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.primaryName) : oDpl.map121.primaryName);
-/*
+
     //Tradestyle name
     arrValues.push(bLabel ? new ElemLabel('tradestyle name') : oDpl.getTradeStyleAtIdx(0));
 
@@ -141,7 +141,6 @@ function processDnbDplDB(jsonIn, bLabel) {
 
     //Start date
     arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.startDate) : oDpl.map121.startDate);
-*/
 
     //Yearly revenue figures
     arrValues = arrValues.concat( oDpl.latestYearlyRevToArray(bLabel) );
@@ -252,7 +251,7 @@ fs.readdir('../io/out')
         //Process the files available in the specified directory
         arrFiles
             .filter(fn => fn.endsWith('.json'))
-            .filter(fn => fn.indexOf('1021_') > -1)
+            .filter(fn => fn.indexOf('1025_') > -1)
             .forEach(fn => 
                 readFileLimiter.removeTokens(1)
                     .then(() => fs.readFile(`../io/out/${fn}`))
