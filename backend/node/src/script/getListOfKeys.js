@@ -42,7 +42,7 @@ import { pgPool } from "../share/postgres.js";
 const dnbDplDBs = { //Set level to 0 ⬇️ to not include the block
     dbs: [
         {db: 'companyinfo',               level: 2, dbShort: 'ci', version: '1'},
-        {db: 'principalscontacts',        level: 1, dbShort: 'pc', version: '2'},
+        {db: 'principalscontacts',        level: 0, dbShort: 'pc', version: '2'},
         {db: 'hierarchyconnections',      level: 1, dbShort: 'hc', version: '1'},
         {db: 'financialstrengthinsight',  level: 0, dbShort: 'fs', version: '1'},
         {db: 'paymentinsight',            level: 0, dbShort: 'pi', version: '1'},
@@ -122,7 +122,7 @@ const monthDay = sDateIsoToYYYYMMDD(new Date().toISOString(), 4);
 // ➡️ Main application configuration settings
 
 // First specify the API to call
-const api = 'gleif';       //Available options are gleif & dnbDpl
+const api = 'dnbDpl';       //Available options are gleif & dnbDpl
 
 // Choose an endpoint in case the API selected is D&B Direct+
 // If Data Blocks (i.e. dbs) configure object dnbDplDBs above

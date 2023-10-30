@@ -145,13 +145,6 @@ function processDnbDplDB(jsonIn, bLabel) {
     //Yearly revenue figures
     arrValues = arrValues.concat( oDpl.latestYearlyRevToArray(bLabel) );
 
-/*
-    //Operating status
-    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.opStatus) : oDpl.map121.opStatus);
-
-    //SMB indicator
-    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.SMB) : oDpl.map121.SMB);
-
     //Get employee counts from a specified set of scopes (i.e. individual, hq, ...)
     arrValues = arrValues.concat( oDpl.numEmplsToArray(
         [
@@ -179,6 +172,16 @@ function processDnbDplDB(jsonIn, bLabel) {
         ],
         bLabel && new ElemLabel(null, null, null, '(cons)')
     ));
+
+    //Worldbase import/export code
+    arrValues.push(bLabel ? new ElemLabel('imp/exp code') : oDpl.wbImpExpInd);
+
+    //Operating status
+    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.opStatus) : oDpl.map121.opStatus);
+
+    //SMB indicator
+    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.SMB) : oDpl.map121.SMB);
+/*
 
     //Add company financials
     arrValues = arrValues.concat( oDpl.latestFinsToArray(bLabel) );

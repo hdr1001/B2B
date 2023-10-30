@@ -135,9 +135,10 @@ const appConsts = {
             consolidated: {code: 9067, prio: 3, desc: 'consolidated'}
         },
         component: {
-            value: {attr: 'value', desc: 'number of employees'},
-            scope: {attr: 'informationScopeDescription', desc: 'information scope (num empl)'},
-            reliability: {attr: 'reliabilityDescription', desc: 'reliability (num empl)'}
+            value: {attr: 'value', desc: 'num of employees'},
+            date: {attr: 'employeeFiguresDate', desc: 'date reported'},
+            scope: {attr: 'informationScopeDescription', desc: 'num empl info scope'},
+            reliability: {attr: 'reliabilityDescription', desc: 'num empl reliability'}
         }
     },
     principal: {
@@ -443,6 +444,23 @@ class DplDBs {
         return arrRet;
     }
 
+    get wbImpExpInd() {
+        if(this.org.isImporter) {
+            if(this.org.isExporter) {
+                return 'B'
+            }
+            else {
+                return 'C'
+            }
+        }
+
+        if(this.org.isExporter) {
+            return 'H'
+        }
+
+        return '';
+    }
+
     //Method addrToArray will convert D&B Direct+ address objects (primary, registered, ...)
     //to an array of a specified length (= arrAddrComponents.length).
     //This method is applicable to data blocks Company Information L1+ and Hierarchies & 
@@ -591,9 +609,10 @@ class DplDBs {
     }
 
     //Method numEmplsToArray will convert D&B D+ employee count objects (organization.numberOfEmployees)
-    //to an array of a specified length (= numNumEmpl * arrNumEmplComponents.length). The order of the
-    //employee counts included in the array will be influenced by the order of array arrNumEmplScope and
-    //defaultReliabilityPrios
+    //to an array of a specified length (= numNumEmpl * arrNumEmplComponents.length). The employee counts
+    //returned are determined by the information scopes included in array arrNumEmplScope. This array
+    //also influences the ordering of the return values but leading in this regard are the default
+    //reliability priorities
     //This method is applicable on data block collections which contain Company Information L2+
     //
     //Four parameters
