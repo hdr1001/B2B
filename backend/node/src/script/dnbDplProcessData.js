@@ -173,8 +173,14 @@ function processDnbDplDB(jsonIn, bLabel) {
         bLabel && new ElemLabel(null, null, null, '(cons)')
     ));
 
-    //Worldbase import/export code
+    //Worldbase import/export indicator
     arrValues.push(bLabel ? new ElemLabel('imp/exp code') : oDpl.wbImpExpInd);
+
+    //Business entity type (lowest resolution legal form)
+    arrValues.push(bLabel ? new ElemLabel('legal form') : oDpl.org?.businessEntityType?.description);
+
+    //Most prominent family tree role
+    arrValues.push(bLabel ? new ElemLabel('Fam tree role') : oDpl.mostProminentFamTreeRole);
 
     //Operating status
     arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.opStatus) : oDpl.map121.opStatus);

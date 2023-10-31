@@ -204,6 +204,18 @@ const appConsts = {
         }
     },
     corpLinkage: {
+        famTreeRoles: [
+            { key: 'gblUlt', code: 12775, desc: 'Global Ultimate' },
+            { key: 'domUlt', code: 12774, desc: 'Domestic Ultimate' },
+            { key: 'parent', code: 12773, desc: 'Parent' },
+            { key: 'parentHQ', code: 9141, desc: 'Parent/Headquarters' },
+            { key: 'HQ', code: 12771, desc: 'Headquarters' },
+            { key: 'subsidiary', code: 9159, desc: 'Subsidiary' },
+            { key: 'branch', code: 12769, desc: 'Branch' },
+            { key: 'branchDiv', code: 9140, desc: 'Branch/Division' },
+            { key: 'division', code: 12770, desc: 'Division' },
+            { key: 'singleLoc', code: 9142, desc: 'Single Location' },
+        ],
         levels: [ //Linkage levels in Hierarchies & Connections level 1
             [{ attr: 'headQuarter', desc: 'HQ' }, {attr: 'parent', desc: 'parent' }],
             [{ attr: 'domesticUltimate', desc: 'dom ult' }],
@@ -813,24 +825,53 @@ class DplDBs {
         });
     }
 
+    get mostProminentFamTreeRole() {
+        if(!this.org?.corporateLinkage || objEmpty(this.org?.corporateLinkage)) { return null }
+
+        let famTreeRoles = this.org.corporateLinkage.familytreeRolesPlayed || [];
+
+        famTreeRoles = famTreeRoles.map(role => {
+                const idx = appConsts.corpLinkage.famTreeRoles.findIndex(constRole => constRole.code === role.dnbCode)
+
+                return { prio: idx > -1 ? idx : appConsts.corpLinkage.famTreeRoles.length, ...role }
+            })
+            .sort((role1, role2) => role1.prio - role2.prio);
+
+        return famTreeRoles[0].description;
+    }
+
+    hasFamTreeRole(dnbCode) {
+        if(!this.org?.corporateLinkage || objEmpty(this.org?.corporateLinkage)) {
+            return false
+        }
+
+        const famTreeRoles = this.org.corporateLinkage.familytreeRolesPlayed || [];
+
+        if(famTreeRoles.find(role => role.dnbCode === dnbCode)) { return true }
+
+        return false;
+    }
+
     //Method isGlobalUlt will return true if the duns requested is the global ultimate duns, false 
     //if it is not the global ultimate and null if no linkage information is available
     //This method is applicable on data block collections which contain Hierachies & Connections L1
     get isGlobalUlt() {
-        if(objEmpty(this.org?.corporateLinkage)) { return null }
+        return this.hasFamTreeRole(appConsts.corpLinkage.famTreeRoles.find(role => role.key === 'gblUlt').code); //12775 stands for Global Ultimate
 
-        if(this.org.corporateLinkage.familytreeRolesPlayed.find(role => role.dnbCode === 12775)) {
-            //functional equivalents to role.dnbCode === 12775 are
-            console.assert(this.map121.duns === this.org.corporateLinkage.globalUltimate.duns,
-                '🤔 global ult, inquiryDetail.duns should equal globalUltimate.duns');
+        //functional equivalents to role.dnbCode === 12775 are
+        console.assert(this.map121.duns === this.org.corporateLinkage.globalUltimate.duns,
+            '🤔 global ult, inquiryDetail.duns should equal globalUltimate.duns');
 
-            console.assert(this.org.corporateLinkage.hierarchyLevel === 1,
-                '🤔 global ult, corporateLinkage.hierarchyLevel should equal 1');
+        console.assert(this.org.corporateLinkage.hierarchyLevel === 1,
+            '🤔 global ult, corporateLinkage.hierarchyLevel should equal 1');
+    }
 
+    get isBranch() {
+        if(this.hasFamTreeRole(appConsts.corpLinkage.famTreeRoles.find(role => role.key === 'branch').code)) { //12769 stands for Branch
             return true;
         }
 
-        return false;
+        return this.hasFamTreeRole(appConsts.corpLinkage.famTreeRoles.find(role => role.key === 'branchDiv').code) //9140 stands for Branch/Division
     }
 
     //Method corpLinkageLevels will give access to the three levels of linkage available
