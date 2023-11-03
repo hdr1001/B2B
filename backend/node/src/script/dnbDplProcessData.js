@@ -55,7 +55,7 @@ function processDnbDplDB(jsonIn, bLabel) {
 
     //Primary name
     arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.primaryName) : oDpl.map121.primaryName);
-
+/*
     //Tradestyle name
     arrValues.push(bLabel ? new ElemLabel('tradestyle name') : oDpl.getTradeStyleAtIdx(0));
 
@@ -181,68 +181,30 @@ function processDnbDplDB(jsonIn, bLabel) {
 
     //Most prominent family tree role
     arrValues.push(bLabel ? new ElemLabel('Fam tree role') : oDpl.mostProminentFamTreeRole);
-
-    //Operating status
-    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.opStatus) : oDpl.map121.opStatus);
-
-    //SMB indicator
-    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.SMB) : oDpl.map121.SMB);
-/*
-
-    //Add company financials
-    arrValues = arrValues.concat( oDpl.latestFinsToArray(bLabel) );
-
-    //Retrieve corporate hierarchy information
+*/
+    //Linkage information
     arrValues = arrValues.concat( oDpl.corpLinkageLevelsToArray(
-        [ oDpl.consts.b2bLinkLevels.oneLevelUp ],
         [
-            oDpl.consts.corpLinkage.component.duns,
-            oDpl.consts.corpLinkage.component.primaryName,
-            oDpl.consts.corpLinkage.component.hq
+            oDpl.consts.b2bLinkLevel.oneLevelUp,
+            oDpl.consts.b2bLinkLevel.domUlt,
+            oDpl.consts.b2bLinkLevel.gblUlt,
         ],
-        [
-            oDpl.consts.addr.component.locality,
-            oDpl.consts.addr.component.countryISO
-        ],
-        bLabel
-    ));
-
-    arrValues = arrValues.concat( oDpl.corpLinkageLevelsToArray(
-        [ oDpl.consts.b2bLinkLevel.domUlt, oDpl.consts.b2bLinkLevel.gblUlt ],
         [
             oDpl.consts.corpLinkage.component.duns,
             oDpl.consts.corpLinkage.component.primaryName
         ],
         [
-            oDpl.consts.addr.component.customLine1,
+            oDpl.consts.addr.component.addrLine1,
+            oDpl.consts.addr.component.addrLine2,
             oDpl.consts.addr.component.locality,
-            oDpl.consts.addr.component.regionAbbr,
-            oDpl.consts.addr.component.postalCode,
             oDpl.consts.addr.component.countryISO
         ],
         bLabel
     ));
-/*
-    arrValues = arrValues.concat( oDpl.principalsContactsToArray(
-        3,
-        [
-            oDpl.consts.principalsContacts.component.type,
-            oDpl.consts.principalsContacts.component.customRegNumDuns,
-//            oDpl.consts.principalsContacts.component.givenName,
-//            oDpl.consts.principalsContacts.component.middleName,
-//            oDpl.consts.principalsContacts.component.familyName,
-            oDpl.consts.principalsContacts.component.fullName,
-            oDpl.consts.principalsContacts.component.gender,
-            oDpl.consts.principalsContacts.component.customMostSenior,
-            oDpl.consts.principalsContacts.component.customPosition0,
-            oDpl.consts.principalsContacts.component.customJobTitle0,
-            oDpl.consts.principalsContacts.component.customMgmtResponsibility0,
-            oDpl.consts.principalsContacts.component.assnStartDate,
-            oDpl.consts.principalsContacts.component.birthDate
-        ],
-        bLabel
-    ));
-*/
+
+    //Operating status
+    arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.opStatus) : oDpl.map121.opStatus);
+
     //Customer reference should be specified as a query parameter in the Direct+ request
     arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.custRef) : oDpl.map121.custRef);
 
