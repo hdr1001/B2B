@@ -45,13 +45,13 @@ const getObjAttrValue = (obj, component) =>
 const appConsts = {
     map121: { //label values 
         //inquiry detail
-        inqDuns: 'inquiry DUNS',
+        inqDuns: 'inq DUNS',
         tradeUp: 'trade up',
-        custRef: 'customer reference',
+        custRef: 'cust ref',
 
         //Common data-elements
         duns:        'DUNS',
-        primaryName: 'business name',
+        primaryName: 'bus nme',
         countryISO:  'country ISO',
 
         //Company information data-elements
@@ -60,6 +60,7 @@ const appConsts = {
         startDate:    'start date',
         SMB:          'entity size',
         defaultCurr:  'default currency',
+        marketable:   'marketable'
     },
     blockIDs: { //Parts of the blockIDs attribute
         key: 0,
@@ -75,59 +76,59 @@ const appConsts = {
         component: {
             //1-2-1 address object attribute mappings (max two levels deep!)
             //Structure (1) an array of attributes & (2) a component description 
-            addrLine1: { attrs: [ 'streetAddress', 'line1'], desc: 'addr line 1' },
-            addrLine2: { attrs: [ 'streetAddress', 'line2'], desc: 'addr line 2' },
+            addrLine1: { attrs: [ 'streetAddress', 'line1'], desc: 'line 1' },
+            addrLine2: { attrs: [ 'streetAddress', 'line2'], desc: 'line 2' },
             streetName: { attrs: ['streetName'], desc: 'street' },
             streetNumber: { attrs: [ 'streetNumber' ], desc: 'street nbr' },
-            locality: { attrs: [ 'addressLocality', 'name' ], desc: 'city' },
-            minorTownName: { attrs: [ 'minorTownName' ], desc: 'minor town name' },
-            postalCode: { attrs: [ 'postalCode' ], desc: 'postalcode' },
-            county: { attrs: [ 'addressCounty', 'name' ], desc: 'county' },
-            region: { attrs: [ 'addressRegion', 'name' ], desc: 'region' },
-            regionAbbr: { attrs: [ 'addressRegion', 'abbreviatedName' ], desc: 'region abbr' },
-            regionIsoSubName: { attrs: [ 'addressRegion', 'isoSubDivisionName' ], desc: 'region ISO name' },
-            regionIsoSubCode: { attrs: [ 'addressRegion', 'isoSubDivisionCode' ], desc: 'region ISO code' },
-            country: { attrs: [ 'addressCountry', 'name' ], desc: 'country' },
-            countryISO: { attrs: [ 'addressCountry', 'isoAlpha2Code' ], desc: 'country ISO' },
-            continent: { attrs: [ 'continentalRegion', 'name' ], desc: 'continent' },
+            locality: { attrs: [ 'addressLocality', 'name' ], desc: 'city nme' },
+            minorTownName: { attrs: [ 'minorTownName' ], desc: 'minor city nme' },
+            postalCode: { attrs: [ 'postalCode' ], desc: 'post cd' },
+            county: { attrs: [ 'addressCounty', 'name' ], desc: 'cnty nme' },
+            region: { attrs: [ 'addressRegion', 'name' ], desc: 'state prov nme' },
+            regionAbbr: { attrs: [ 'addressRegion', 'abbreviatedName' ], desc: 'state prov abbr' },
+            regionIsoSubName: { attrs: [ 'addressRegion', 'isoSubDivisionName' ], desc: 'state prov ISO nme' },
+            regionIsoSubCode: { attrs: [ 'addressRegion', 'isoSubDivisionCode' ], desc: 'state prov ISO cd' },
+            country: { attrs: [ 'addressCountry', 'name' ], desc: 'ctry nme' },
+            countryISO: { attrs: [ 'addressCountry', 'isoAlpha2Code' ], desc: 'ctry ISO' },
+            continent: { attrs: [ 'continentalRegion', 'name' ], desc: 'cont' },
             poBox: { attrs: [ 'postOfficeBox', 'postOfficeBoxNumber' ], desc: 'pobox' },
-            latitude: { attrs: [ 'latitude' ], desc: 'latitude' },
-            longitude: { attrs: [ 'longitude' ], desc: 'longitude' },
-            isRegisteredAddress: { attrs: [ 'isRegisteredAddress' ], desc: 'registered addr' },
-            isManufacturingLocation: { attrs: [ 'isManufacturingLocation' ], desc: 'mfg location' },
+            latitude: { attrs: [ 'latitude' ], desc: 'lat' },
+            longitude: { attrs: [ 'longitude' ], desc: 'long' },
+            isRegisteredAddress: { attrs: [ 'isRegisteredAddress' ], desc: 'reg ind' },
+            isManufacturingLocation: { attrs: [ 'isManufacturingLocation' ], desc: 'mfg loc' },
             
             //Custom, address component related, algorithms
             //Structure (1) algorithm ID & (2) custom component description 
-            customLine1: { custom: 'line1', desc: 'addr line 1' }
+            customLine1: { custom: 'line1', desc: 'line 1' }
         }
     },
     regNum: {
         component: {
-            num: {attr: 'registrationNumber', desc: 'registration number'},
-            type: {attr: 'typeDescription', desc: 'registration number type'},
+            num: {attr: 'registrationNumber', desc: 'value'},
+            type: {attr: 'typeDescription', desc: 'type'},
             vat: {attr: 'vat', desc: 'is VAT'} //Custom attribute
         }
     },
     tel: {
         component: {
-            num: {attr: 'telephoneNumber', desc: 'tel number'},
-            intAccess: {attr: 'isdCode', desc: 'int access code'},
+            num: {attr: 'telephoneNumber', desc: 'number'},
+            intAccess: {attr: 'isdCode', desc: 'int access cd'},
 
-            customIntAccess: { custom: 'intAccess', desc: 'int access code'}
+            customIntAccess: { custom: 'intAccess', desc: 'int access cd'}
         }
     },
     indCode: {
         type: {
             dnbIndCode: {code: 3599, desc: 'D&B Industry Code', descShort: 'D&B'},
             naics: {code: 30832, desc: 'NAICS Code', descShort: 'NAICS'},
-            sic87: {code: 399, desc: 'US 1987 SIC Code', descShort: 'SIC'},
+            sic87: {code: 399, desc: 'US 1987 SIC Code', descShort: 'SIC87'},
             naceRev2: {code: 29104, desc: 'NACE Revision 2', descShort: 'NACE'},
             hooversIndCode: {code: 25838, desc: 'D&B Hoovers Industry Code', descShort: 'Hoovers'},
             majorIndCat: {code: 24657, desc: 'Major Industry Category', descShort: 'major'}
         },
         component: {
-            code: {attr: 'code', desc: 'activity code'},
-            desc: {attr: 'description', desc: 'act code description'}
+            code: {attr: 'code', desc: 'act cd'},
+            desc: {attr: 'description', desc: 'act cd desc'}
         }
     },
     numEmpl: {
@@ -137,10 +138,10 @@ const appConsts = {
             consolidated: {code: 9067, prio: 3, desc: 'consolidated'}
         },
         component: {
-            value: {attr: 'value', desc: 'num of employees'},
+            value: {attr: 'value', desc: 'count'},
             date: {attr: 'employeeFiguresDate', desc: 'date reported'},
-            scope: {attr: 'informationScopeDescription', desc: 'num empl info scope'},
-            reliability: {attr: 'reliabilityDescription', desc: 'num empl reliability'}
+            scope: {attr: 'informationScopeDescription', desc: 'info scope'},
+            reliability: {attr: 'reliabilityDescription', desc: 'reliability'}
         }
     },
     principal: {
@@ -157,7 +158,7 @@ const appConsts = {
             assnStartDate: { attrs: [ 'associationStartDate' ], desc: 'assn start date'},
             birthDate: { attrs: [ 'birthDate' ], desc: 'birthdate'},
             respAreas: { attrs: [ 'responsibleAreas', 'description' ], desc: 'resp area'},
-            signingAuth: { attrs: [ 'isSigningAuthority' ], desc: 'signing authority'},
+            signingAuth: { attrs: [ 'isSigningAuthority' ], desc: 'signing auth'},
             bankruptcyHistory: { attrs: [ 'hasBankruptcyHistory' ], desc: 'has bankruptcy'},
             dsqDirector: { attrs: [ 'isDisqualifiedDirector' ], desc: 'disqualified'},
 
@@ -195,46 +196,46 @@ const appConsts = {
         latestYearlyRev: {
             objs: [ 'fins0', 'yearlyRevLocal', 'yearlyRevUSD' ],
             components: [
-                { obj: 'yearlyRevLocal', attr: 'value', desc: 'sales rev' },
-                { obj: 'yearlyRevLocal', attr: 'currency', desc: 'currency' },
-                { obj: 'yearlyRevUSD', attr: 'value', desc: 'sales rev usd' },
+                { obj: 'yearlyRevLocal', attr: 'value', desc: 'amt' },
+                { obj: 'yearlyRevLocal', attr: 'currency', desc: 'curr cd' },
+                { obj: 'yearlyRevUSD', attr: 'value', desc: 'USD' },
                 { obj: 'fins0', attr: 'unitCode', desc: 'units' },
-                { obj: 'fins0', attr: 'reliabilityDescription', desc: 'reliability (revenue)' },
-                { obj: 'fins0', attr: 'informationScopeDescription', desc: 'info scope (revenue)' },
+                { obj: 'fins0', attr: 'reliabilityDescription', desc: 'reliability' },
+                { obj: 'fins0', attr: 'informationScopeDescription', desc: 'info scope' },
                 { obj: 'fins0', attr: 'financialStatementToDate', desc: 'stmt to date' }
             ]
         }
     },
     corpLinkage: {
         famTreeRoles: [
-            { key: 'gblUlt', code: 12775, desc: 'Global Ultimate' },
-            { key: 'domUlt', code: 12774, desc: 'Domestic Ultimate' },
-            { key: 'parent', code: 12773, desc: 'Parent' },
-            { key: 'parentHQ', code: 9141, desc: 'Parent/Headquarters' },
-            { key: 'subsidiary', code: 9159, desc: 'Subsidiary' },
-            { key: 'HQ', code: 12771, desc: 'Headquarters' },
-            { key: 'branch', code: 12769, desc: 'Branch' },
-            { key: 'branchDiv', code: 9140, desc: 'Branch/Division' },
-            { key: 'division', code: 12770, desc: 'Division' },
-            { key: 'singleLoc', code: 9142, desc: 'Single Location' },
+            { key: 'gblUlt', code: 12775, desc: 'global ultimate' },
+            { key: 'domUlt', code: 12774, desc: 'domestic ultimate' },
+            { key: 'parent', code: 12773, desc: 'parent' },
+            { key: 'parentHQ', code: 9141, desc: 'parent/HQ' },
+            { key: 'subsidiary', code: 9159, desc: 'subsidiary' },
+            { key: 'HQ', code: 12771, desc: 'headquarters' },
+            { key: 'branch', code: 12769, desc: 'branch' },
+            { key: 'branchDiv', code: 9140, desc: 'branch/division' },
+            { key: 'division', code: 12770, desc: 'division' },
+            { key: 'singleLoc', code: 9142, desc: 'single location' },
         ],
         levels: [ //Linkage levels in Hierarchies & Connections level 1
             [{ attr: 'headQuarter', desc: 'HQ' }, {attr: 'parent', desc: 'parent' }],
-            [{ attr: 'domesticUltimate', desc: 'dom ult' }],
+            [{ attr: 'domesticUltimate', desc: 'domestic ult' }],
             [{ attr: 'globalUltimate', desc: 'global ult' }]
         ],
         component: {
             duns: { attr: 'duns', desc: 'DUNS' },
-            primaryName: { attr: 'primaryName', desc: 'name' },
+            primaryName: { attr: 'primaryName', desc: 'nme' },
             hq: { custom: 'hq', desc: 'HQ' },
         }        
     },
     b2bLinkLevel: {
-        oneLevelUp: { idx: 0, desc: 'hq/parent' },
+        oneLevelUp: { idx: 0, desc: 'hq prnt' },
         hq: { idx: 0, idxAttr: 0, desc: 'HQ' },
         parent: { idx: 0, idxAttr: 1, desc: 'parent' },
         domUlt: { idx: 1, desc: 'dom ult' },
-        gblUlt: { idx: 2, desc: 'global ult' },
+        gblUlt: { idx: 2, desc: 'gbl ult' },
     },
     reliability: { 
         code: {
@@ -322,6 +323,7 @@ class DplDBs {
                 startDate:    this.org?.startDate,
                 SMB:          this.org?.organizationSizeCategory?.description,
                 defaultCurr:  this.org?.defaultCurrency,
+                marketable:   this.org?.dunsControlStatus?.isMarketable,
             };
 
             //Add, where applicable, the vat attribute 
@@ -446,7 +448,7 @@ class DplDBs {
             for(let idxObj = 0; idxObj < numTels; idxObj++) {
                 arrTelComponents.forEach((telComponent, idxComponent) => {
                     if(bLabel) {
-                        arrRet[idxObj * arrTelComponents.length + idxComponent] = new ElemLabel(telComponent.desc, numTels > 1 ? idxObj + 1 : null)
+                        arrRet[idxObj * arrTelComponents.length + idxComponent] = new ElemLabel(telComponent.desc, numTels > 1 ? idxObj + 1 : null, 'tel')
                     }
                     else {
                         arrRet[idxObj * arrTelComponents.length + idxComponent] = getAttrValue(arrTels[idxObj], telComponent)
@@ -553,7 +555,7 @@ class DplDBs {
         if(bLabel) {
             for(let i = 0; i < numRegNums; i++) {
                 arrRegNumComponents.forEach((regNumComponent, idx) => {
-                    retArr[i * arrRegNumComponents.length + idx] = constructElemLabel(null, regNumComponent.desc, numRegNums > 1 ? i + 1 : null)
+                    retArr[i * arrRegNumComponents.length + idx] = new ElemLabel(regNumComponent.desc, numRegNums > 1 ? i + 1 : null, 'reg num')
                 })
             }
 
@@ -788,7 +790,7 @@ class DplDBs {
     //Get information from attribute financials in Company Information L2+
     latestYearlyRevToArray(bLabel) {
         if(bLabel) {
-            return appConsts.fin.latestYearlyRev.components.map(elem => constructElemLabel(null, elem.desc));
+            return appConsts.fin.latestYearlyRev.components.map(elem => new ElemLabel(elem.desc, null, 'yrly rev'));
         }
 
         const latestYearlyRevObjs = this.latestYearlyRevObjs;
@@ -858,7 +860,8 @@ class DplDBs {
     //if it is not the global ultimate and null if no linkage information is available
     //This method is applicable on data block collections which contain Hierachies & Connections L1
     get isGlobalUlt() {
-        return this.hasFamTreeRole(appConsts.corpLinkage.famTreeRoles.find(role => role.key === 'gblUlt').code); //12775 stands for Global Ultimate
+        //dnbCode 12775 stands for global ultimate
+        return this.hasFamTreeRole(appConsts.corpLinkage.famTreeRoles.find(role => role.key === 'gblUlt').code);
 
         //functional equivalents to role.dnbCode === 12775 are
         console.assert(this.map121.duns === this.org.corporateLinkage.globalUltimate.duns,
@@ -869,11 +872,18 @@ class DplDBs {
     }
 
     get isBranch() {
-        if(this.hasFamTreeRole(appConsts.corpLinkage.famTreeRoles.find(role => role.key === 'branch').code)) { //12769 stands for Branch
-            return true;
+        //dnbCode 12769 stands for branch
+        if(this.hasFamTreeRole(appConsts.corpLinkage.famTreeRoles.find(role => role.key === 'branch').code)) {
+            return true
         }
 
-        return this.hasFamTreeRole(appConsts.corpLinkage.famTreeRoles.find(role => role.key === 'branchDiv').code) //9140 stands for Branch/Division
+        //dnbCode 9140 stands for branch/division
+        return this.hasFamTreeRole(appConsts.corpLinkage.famTreeRoles.find(role => role.key === 'branchDiv').code);
+    }
+
+    get isSubsidiary() {
+        //dnbCode 9159 stands for subsidiary
+        return this.hasFamTreeRole(appConsts.corpLinkage.famTreeRoles.find(role => role.key === 'subsidiary').code)
     }
 
     //Method corpLinkageLevels will give access to the three levels of linkage available
@@ -959,7 +969,7 @@ class DplDBs {
         if(!b2bLinkLevels) { b2bLinkLevels = this.getB2bLinkLevels() }
 
         //In case no linkage available, just return an empty array
-        if(!bLabel && b2bLinkLevels.reduce((bEmpty, level) => bEmpty ? bEmpty : !level , false)) {
+        if(!bLabel && b2bLinkLevels.reduce((bEmpty, level) => bEmpty ? !level : bEmpty, true)) {
             return new Array(arrLinkLevels.length * (arrLinkLevelComponents.length + arrLinkLevelAddrComponents.length))
         }
 
@@ -970,10 +980,10 @@ class DplDBs {
             //Extract the attribute values requested from D+ object
             const getLinkLevelComponent = (retLLCs, linkLevelComponent) =>
                 retLLCs.concat( bLabel
-                    ? constructElemLabel(null, linkLevelComponent.desc)
+                    ? new ElemLabel(linkLevelComponent.desc, null, linkLevel.desc)
                     : linkLevelComponent.custom === 'hq'
-                        ? (lLvl.dplAttr === appConsts.corpLinkage.levels[0][0].attr ? linkLevelComponent.desc : null)
-                        : lLvl[linkLevelComponent.attr]
+                        ? (lLvl?.dplAttr === appConsts.corpLinkage.levels[0][0].attr ? linkLevelComponent.desc : null)
+                        : lLvl?.[linkLevelComponent.attr]
                 );
 
             return ret.concat(
@@ -981,7 +991,11 @@ class DplDBs {
                 arrLinkLevelComponents.reduce( getLinkLevelComponent, [] ),
 
                 //Get the address attribute values requested in arrLinkLevelAddrComponents
-                this.addrToArray( bLabel ? null : lLvl.primaryAddress, arrLinkLevelAddrComponents, bLabel )
+                this.addrToArray(
+                    bLabel ? null : lLvl?.primaryAddress,
+                    arrLinkLevelAddrComponents,
+                    bLabel && new ElemLabel(null, null, linkLevel.desc + ' addr')
+                )
             );
         }, []);
     }
