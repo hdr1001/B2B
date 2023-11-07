@@ -323,7 +323,7 @@ class DplDBs {
                 startDate:    this.org?.startDate,
                 SMB:          this.org?.organizationSizeCategory?.description,
                 defaultCurr:  this.org?.defaultCurrency,
-                marketable:   this.org?.dunsControlStatus?.isMarketable,
+                marketable:   this.org?.dunsControlStatus?.isMarketable
             };
 
             //Add, where applicable, the vat attribute 
@@ -415,20 +415,42 @@ class DplDBs {
         return '';
     }
 
-    getTradeStyleAtIdx(idx) {
-        let ret = null;
+    //Method tradeStylesToArray returns an array containing tradestyle names of a predefined
+    //length (numTradeStyles). tradeStyleNames objects are simple, they contain one component,
+    //name, and are sorted by priority. Tradestyles are available in data block Company Info 
+    //L1+.
+    //
+    //Two parameters
+    //1. numTradeStyles, specify the number of tradestyles to return
+    //2. bLabel, specify true for the element labels to be returned
+    tradeStylesToArray(numTradeStyles, bLabel) {
+        const arrRet = new Array(numTradeStyles);
 
-        const arrTradeStyles = this.org.tradeStyleNames;
-
-        if(arrTradeStyles && arrTradeStyles.length) {
-            arrTradeStyles.sort((ts1, ts2) => ts1.priority - ts2.priority);
-
-            return arrTradeStyles?.[idx]?.name;
+        if(bLabel) {
+            return arrRet.fill().map((elem, idx) => new ElemLabel('trdg style', numTradeStyles > 1 ? idx + 1 : null))
         }
 
-        return ret;
+        const arrTradeStyles = this.org.tradeStyleNames || [];
+
+        arrTradeStyles.sort((ts1, ts2) => ts1.priority - ts2.priority);
+
+        for(let idx = 0; idx < numTradeStyles && idx < arrTradeStyles.length; idx++) {
+            arrRet[idx] = arrTradeStyles[idx].name
+        }
+
+        return arrRet;
     }
 
+    //Method telsToArray returns an array containing telephone numbers of a predefined length
+    //(numTels * arrTelComponents.length). The components of telephone objects are defined in
+    //appConsts.tel.component. One custom component is available which adds a "+" to the int.
+    //country dial-In code. Most prominent data block containing an array of telephone numbers
+    //is Company Information L1+. 
+    //
+    //Three parameters
+    //1. numTels, specify the number of telephone numbers to return
+    //2. arrTelComponents, array of telephone number components (see appConsts.tel.component)
+    //3. bLabel, specify true for the element labels to be returned
     telsToArray(numTels, arrTelComponents, bLabel) {
         function getAttrValue(oTel, telComponent) {
             if(typeof oTel !== 'object' || objEmpty(oTel)) { return null }
@@ -460,6 +482,7 @@ class DplDBs {
         return arrRet;
     }
 
+    //Getter to mimic old-school D&B WorldBase Import/Export indicator
     get wbImpExpInd() {
         if(this.org.isImporter) {
             if(this.org.isExporter) {
@@ -846,7 +869,7 @@ class DplDBs {
 
     hasFamTreeRole(dnbCode) {
         if(!this.org?.corporateLinkage || objEmpty(this.org?.corporateLinkage)) {
-            return false
+            return null
         }
 
         const famTreeRoles = this.org.corporateLinkage.familytreeRolesPlayed || [];

@@ -57,7 +57,7 @@ function processDnbDplDB(jsonIn, bLabel) {
     arrValues.push(bLabel ? new ElemLabel(oDpl.consts.map121.primaryName) : oDpl.map121.primaryName);
 
     //Tradestyle name
-    arrValues.push(bLabel ? new ElemLabel('trdg style') : oDpl.getTradeStyleAtIdx(0));
+    arrValues = arrValues.concat( oDpl.tradeStylesToArray(1, bLabel) );
 
     //Primary address
     arrValues = arrValues.concat( oDpl.addrToArray(
@@ -262,7 +262,7 @@ fs.readdir('../io/out')
         //Process the files available in the specified directory
         arrFiles
             .filter(fn => fn.endsWith('.json'))
-            .filter(fn => fn.indexOf('1025_') > -1)
+            .filter(fn => fn.indexOf('1107_') > -1)
             .forEach(fn => 
                 readFileLimiter.removeTokens(1)
                     .then(() => fs.readFile(`../io/out/${fn}`))
