@@ -176,16 +176,6 @@ function getMatchRegNum(oDpl) {
 
 //Try to make a LEI match based on D&B provided registration number
 function leiMatchOnRegNum(jsonIn) {
-    let oDpl;
-
-    try {
-        oDpl = new DplDBs(jsonIn)
-    }
-    catch(err) {
-        console.error(err.message);
-        return;
-    }
-
     const leiMatch = {
         inqDuns: oDpl.map121.inqDuns,
         duns: oDpl.map121.duns,
@@ -272,12 +262,42 @@ fs.readdir('../io/out')
         arrFiles
             .filter(fn => fn.endsWith('.json'))
             .filter(fn => fn.indexOf('1108_') > -1)
-            .forEach(fn => 
+            .forEach(fn => {
+                const leiMatch = { fileName: fn };
+
                 readFileLimiter.removeTokens(1)
                     .then(() => fs.readFile(`../io/out/${fn}`))
-                    .then(leiMatchOnRegNum)
+                    .then(jsonIn => {
+                        try {
+                            leiMatch.dplDBs = new DplDBs(jsonIn)
+                        }
+                        catch(err) {
+                            console.error(err.message);
+                            return;
+                        }
+
+                        leiMatch.inqDuns = leiMatch.dplDBs.inqDuns;
+                        leiMatch.ctry = leiMatch.dplDBs.map121.countryISO;
+
+                        leiMatch.round1 = getMatchRegNum(leiMatch.dplDBs);
+
+                        leiMatch.round1.gleifFilterReq = new LeiFilter({
+                            'filter[entity.registeredAs]': leiMatch.round1.dnbRegNumToMatch,
+                            'filter[entity.legalAddress.country]': leiMatch.ctry
+                        });
+
+                        return gleifLimiter.removeTokens(1);
+                    })
+                    .then(() => leiMatch.round1.gleifFilterReq.execReq())
+                    .then(resp => {
+                        leiMatch.round1.resp = {};
+
+                        leiMatch.round1.resp.httpStatus = resp.httpStatus;
+
+                        console.log(leiMatch.round1.resp.httpStatus)
+                    })
                     .catch(err => console.error(err.message))
-            )
+            })
     })
     .catch(err => console.error(err.message))
 
