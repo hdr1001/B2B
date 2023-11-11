@@ -28,9 +28,22 @@ import { LeiFilter } from '../share/httpApiDefs.js';
 import { readFileLimiter } from '../share/limiters.js';
 import { gleifLimiter } from '../share/limiters.js';
 
+//Decoder object for decoding utf-8 data in a binary format
+import { dcdrUtf8, sDateIsoToYYYYMMDD } from '../share/utils.js';
+
 import { DplDBs } from '../share/dnbDplDBs.js';
 
 const nullUndefToEmptyStr = elem => elem === null || elem === undefined ? '' : elem;
+
+//Persist API responses
+const persistFile = true;   //Persist the response json as a file
+const outPath = '../io/out/';
+const sDate4 = sDateIsoToYYYYMMDD(new Date().toISOString(), 4)
+
+const writeFile = (fn, data) => 
+    fs.writeFile( `${outPath}lei_${sDate4}_${fn}.json`, data )
+        .then( /* console.log(`Wrote file ${fn} successfully`) */ )
+        .catch( err => console.error(err.message) );
 
 //Get the registration number to use in the LEi match
 function getMatchRegNum(oDpl) {
@@ -272,14 +285,17 @@ fs.readdir('../io/out')
                             leiMatch.dplDBs = new DplDBs(jsonIn)
                         }
                         catch(err) {
-                            console.error(err.message);
-                            return;
+                            throw new Error(`Unable to instantiate a D&B D+ data blocks object from file ${leiMatch.fileName}`);
                         }
 
-                        leiMatch.inqDuns = leiMatch.dplDBs.inqDuns;
+                        leiMatch.inqDuns = leiMatch.dplDBs.map121.inqDuns;
                         leiMatch.ctry = leiMatch.dplDBs.map121.countryISO;
 
                         leiMatch.round1 = getMatchRegNum(leiMatch.dplDBs);
+
+                        if(!leiMatch.round1.dnbRegNumToMatch) {                            
+                            return Promise.resolve()
+                        }
 
                         leiMatch.round1.gleifFilterReq = new LeiFilter({
                             'filter[entity.registeredAs]': leiMatch.round1.dnbRegNumToMatch,
@@ -288,16 +304,43 @@ fs.readdir('../io/out')
 
                         return gleifLimiter.removeTokens(1);
                     })
-                    .then(() => leiMatch.round1.gleifFilterReq.execReq())
+                    .then(() => {
+                        if(!leiMatch.round1.dnbRegNumToMatch) {
+                            return Promise.resolve();
+                        }
+
+                        return leiMatch.round1.gleifFilterReq.execReq();
+                    })
                     .then(resp => {
-                        leiMatch.round1.resp = {};
+                        if(leiMatch.round1.dnbRegNumToMatch) {
+                            leiMatch.round1.resp = {};
 
-                        leiMatch.round1.resp.httpStatus = resp.httpStatus;
+                            leiMatch.round1.resp.httpStatus = resp.httpStatus;
 
-                        console.log(leiMatch.round1.resp.httpStatus)
+                            if(persistFile) {
+                                writeFile(`${leiMatch.inqDuns}_${leiMatch.round1.dnbRegNumToMatch}_${resp.httpStatus}`,  dcdrUtf8.decode(resp.buffBody))
+                            }
+
+                            try {
+                                leiMatch.round1.leiResp = JSON.parse(resp.buffBody)
+                            }
+                            catch(err) {
+                                console.error(err.message);
+                                throw new Error(`Unable to instantiate a LEI object from API response`);
+                            }
+
+                            if(leiMatch.round1.leiResp?.data?.[0]) {
+                                leiMatch.lei = leiMatch.round1.leiResp.data[0].id;
+                                leiMatch.resolved = 1;
+                            }
+
+                            console.log(leiMatch.ctry, leiMatch.inqDuns, leiMatch.round1.resp.httpStatus, leiMatch.lei, leiMatch.resolved)
+                        }
+                        else {
+                            console.log(leiMatch.ctry, leiMatch.inqDuns)
+                        }
                     })
                     .catch(err => console.error(err.message))
             })
     })
     .catch(err => console.error(err.message))
-
