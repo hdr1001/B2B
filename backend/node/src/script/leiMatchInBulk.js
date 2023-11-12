@@ -334,7 +334,28 @@ fs.readdir('../io/out')
                                 leiMatch.resolved = 1;
                             }
 
-                            console.log(leiMatch.ctry, leiMatch.inqDuns, leiMatch.round1.resp.httpStatus, leiMatch.lei, leiMatch.resolved)
+                            let arrValues = [];
+
+                            arrValues.push(leiMatch.inqDuns);
+                            arrValues.push(leiMatch.dplDBs.map121.duns);
+                            arrValues.push(leiMatch.dplDBs.map121.primaryName);
+                            arrValues = arrValues.concat(
+                                leiMatch.dplDBs.addrToArray(
+                                    leiMatch.dplDBs.org?.primaryAddress,
+                                    [
+                                        leiMatch.dplDBs.consts.addr.component.customLine1,
+                                        leiMatch.dplDBs.consts.addr.component.addrLine2,
+                                        leiMatch.dplDBs.consts.addr.component.locality,
+                                        leiMatch.dplDBs.consts.addr.component.postalCode,
+                                        leiMatch.dplDBs.consts.addr.component.regionAbbr,
+                                        leiMatch.dplDBs.consts.addr.component.countryISO
+                                    ]
+                                ),
+                            );
+                            arrValues.push(leiMatch.dplDBs.org?.registeredDetails?.legalForm?.dnbCode);
+                            arrValues.push(leiMatch.lei);
+        
+                            console.log( arrValues.map(nullUndefToEmptyStr).join('|') );
                         }
                         else {
                             console.log(leiMatch.ctry, leiMatch.inqDuns)
