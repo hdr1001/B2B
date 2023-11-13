@@ -36,7 +36,7 @@ import { DplDBs } from '../share/dnbDplDBs.js';
 const nullUndefToEmptyStr = elem => elem === null || elem === undefined ? '' : elem;
 
 //Persist API responses
-const persistFile = true;   //Persist the response json as a file
+const persistFile = false;   //Persist the response json as a file
 const outPath = '../io/out/';
 const sDate4 = sDateIsoToYYYYMMDD(new Date().toISOString(), 4)
 
@@ -46,13 +46,18 @@ const writeFile = (fn, data) =>
         .catch( err => console.error(err.message) );
 
 //Get the registration number to use in the LEi match
-function getMatchRegNum(oDpl) {
+function getMatchRegNum(oDpl, round) {
     const ret = { dnbRegNum: '', dnbRegNumToMatch: '' };
 
     if(!(oDpl.org?.registrationNumbers && oDpl.org.registrationNumbers.length)) {
         return ret
     }
 
+    const ctry = oDpl.map121.countryISO.toLowerCase();
+
+    if(round === 2 && !['be', 'ch', 'no'].includes(ctry)) {
+        return ret
+    }
     const arrDplRegNums = oDpl.org.registrationNumbers;
 
     const arrPreferredRegNums = arrDplRegNums.filter(oRegNum => oRegNum.isPreferredRegistrationNumber);
@@ -64,7 +69,7 @@ function getMatchRegNum(oDpl) {
         ret.dnbRegNum = arrDplRegNums[0].registrationNumber
     }
 
-    switch (oDpl.map121.countryISO.toLowerCase()) {
+    switch(ctry) {
         case 'at':
             const atTrRegnum = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 1336);
 
@@ -77,22 +82,23 @@ function getMatchRegNum(oDpl) {
         case 'be':
             const enterpriseRegnum = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 800);
          
-            if(enterpriseRegnum.length && enterpriseRegnum[0].registrationNumber.length === 10) {
-                ret.dnbRegNumToMatch = enterpriseRegnum[0].registrationNumber.slice(0, 4);
-                ret.dnbRegNumToMatch += '.' + enterpriseRegnum[0].registrationNumber.slice(4, 7);
-                ret.dnbRegNumToMatch += '.' + enterpriseRegnum[0].registrationNumber.slice(-3);
-            }
-
-            /* if(round === 2) {
+            if(round === 2) {
                 if(enterpriseRegnum.length) { ret.dnbRegNumToMatch = enterpriseRegnum[0].registrationNumber }
-            } */
+            }
+            else {
+                if(enterpriseRegnum.length && enterpriseRegnum[0].registrationNumber.length === 10) {
+                    ret.dnbRegNumToMatch = enterpriseRegnum[0].registrationNumber.slice(0, 4);
+                    ret.dnbRegNumToMatch += '.' + enterpriseRegnum[0].registrationNumber.slice(4, 7);
+                    ret.dnbRegNumToMatch += '.' + enterpriseRegnum[0].registrationNumber.slice(-3);
+                }
+            }
 
             break;
 
         case 'ch':
-            /* if(round === 2) {
+            if(round === 2) {
                 ret.dnbRegNumToMatch = ret.dnbRegNum.replace(/[^a-z0-9]/gi, '')
-            } */
+            }
 
             break;
 
@@ -141,15 +147,16 @@ function getMatchRegNum(oDpl) {
         case 'no': //this is just 50/50 when executing a gleif search
             const noEnterpriseRegNum = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 1699);
 
-            if(noEnterpriseRegNum.length && noEnterpriseRegNum[0].registrationNumber.length === 9) {
-                ret.dnbRegNumToMatch = noEnterpriseRegNum[0].registrationNumber.slice(0, 3);
-                ret.dnbRegNumToMatch += ' ' + noEnterpriseRegNum[0].registrationNumber.slice(3, 6);
-                ret.dnbRegNumToMatch += ' ' + noEnterpriseRegNum[0].registrationNumber.slice(-3);
+            if(round === 2) {
+                if(noEnterpriseRegNum.length && noEnterpriseRegNum.length !== 9) { ret.dnbRegNumToMatch = noEnterpriseRegNum }
             }
-
-            /*if(round === 2) {
-                if(noEnterpriseRegNum.length) { ret.dnbRegNumToMatch = noEnterpriseRegNum }
-            } */
+            else {
+                if(noEnterpriseRegNum.length && noEnterpriseRegNum[0].registrationNumber.length === 9) {
+                    ret.dnbRegNumToMatch = noEnterpriseRegNum[0].registrationNumber.slice(0, 3);
+                    ret.dnbRegNumToMatch += ' ' + noEnterpriseRegNum[0].registrationNumber.slice(3, 6);
+                    ret.dnbRegNumToMatch += ' ' + noEnterpriseRegNum[0].registrationNumber.slice(-3);
+                }
+            }
 
             break;
         
@@ -187,87 +194,6 @@ function getMatchRegNum(oDpl) {
     return ret;
 }
 
-//Try to make a LEI match based on D&B provided registration number
-function leiMatchOnRegNum(jsonIn) {
-    const leiMatch = {
-        inqDuns: oDpl.map121.inqDuns,
-        duns: oDpl.map121.duns,
-        primaryName: oDpl.map121.primaryName,
-        addr1: oDpl.org?.primaryAddress?.streetAddress?.line1,
-        addr2: oDpl.org?.primaryAddress?.streetAddress?.line2,
-        city: oDpl.org?.primaryAddress?.addressLocality?.name,
-        postalCode: oDpl.org?.primaryAddress?.postalCode,
-        ctry: oDpl.map121.countryISO,
-        legalForm: oDpl.org?.registeredDetails?.legalForm?.dnbCode,
-
-        round1: { //Match on D&B registration number
-            ...getMatchRegNum(oDpl)
-        }
-    };
-
-    const gleifFilterReq = new LeiFilter({
-        'filter[entity.registeredAs]': leiMatch.round1.dnbRegNumToMatch,
-        //'filter[entity.legalName]': leiMatch.primaryName,
-        'filter[entity.legalAddress.country]': leiMatch.ctry
-    })
-
-    if(leiMatch.round1.dnbRegNumToMatch) {
-        gleifLimiter.removeTokens(1)
-            .then(() => gleifFilterReq.execReq())
-            .then(resp => {
-                leiMatch.round1.resp = {};
-
-                leiMatch.round1.resp.httpStatus = resp.httpStatus;
-
-                if(resp.httpStatus >= 200 || resp.httpStatus < 300) { //HTTP okay
-                    try {
-                        leiMatch.round1.resp.leiRec = JSON.parse(resp.buffBody);
-
-                        const arrValues = [];
-
-                        //D&B values
-                        arrValues.push(leiMatch.inqDuns);
-                        arrValues.push(leiMatch.duns);
-                        arrValues.push(leiMatch.primaryName);
-                        arrValues.push(leiMatch.addr1);
-                        arrValues.push(leiMatch.addr2);
-                        arrValues.push(leiMatch.city);
-                        arrValues.push(leiMatch.postalCode);
-                        arrValues.push(leiMatch.ctry);
-                        arrValues.push(leiMatch.legalForm);
-                        arrValues.push(leiMatch?.round1?.dnbRegNum);
-                        arrValues.push(leiMatch?.round1?.dnbRegNumToMatch);
-                
-                        //Gleif values
-                        const data0 = leiMatch.round1.resp.leiRec.data[0];
-
-                        arrValues.push(data0?.id);
-                        arrValues.push(data0?.attributes?.entity?.legalName?.name);
-                        arrValues.push(data0?.attributes?.entity?.legalAddress?.addressLines?.[0]);
-                        arrValues.push(data0?.attributes?.entity?.legalAddress?.addressLines?.[1]);
-                        arrValues.push(data0?.attributes?.entity?.legalAddress?.city);
-                        arrValues.push(data0?.attributes?.entity?.legalAddress?.region);
-                        arrValues.push(data0?.attributes?.entity?.legalAddress?.country);
-                        arrValues.push(data0?.attributes?.entity?.legalAddress?.postalCode);
-                        arrValues.push(data0?.attributes?.entity?.registeredAs);
-                        arrValues.push(data0?.attributes?.entity?.category);
-                        arrValues.push(data0?.attributes?.entity?.legalForm?.id);
-
-                        console.log(arrValues.map(nullUndefToEmptyStr).join('|'));
-                    }
-                    catch(err) {
-
-                    }
-                }
-                else { //HTTP error
-                }
-            })
-    }
-    else {
-
-    }
-}
-
 //Read the D&B Direct+ JSON data
 fs.readdir('../io/out')
     .then(arrFiles => {
@@ -275,93 +201,136 @@ fs.readdir('../io/out')
         arrFiles
             .filter(fn => fn.endsWith('.json'))
             .filter(fn => fn.indexOf('1108_') > -1)
-            .forEach(fn => {
-                const leiMatch = { fileName: fn };
+            .forEach(fn => { //Process the identified D&B data block files
 
-                readFileLimiter.removeTokens(1)
-                    .then(() => fs.readFile(`../io/out/${fn}`))
-                    .then(jsonIn => {
+                //Function for compiling the output of the procedure
+                function generateOutput() {
+                    let arrValues = [];
+
+                    //D&B values
+                    arrValues.push(leiMatch.inqDuns);
+                    arrValues.push(leiMatch.dplDBs.map121.duns);
+                    arrValues.push(leiMatch.dplDBs.map121.primaryName);
+                    arrValues = arrValues.concat(
+                        leiMatch.dplDBs.addrToArray(
+                            leiMatch.dplDBs.org?.primaryAddress,
+                            [
+                                leiMatch.dplDBs.consts.addr.component.customLine1,
+                                leiMatch.dplDBs.consts.addr.component.addrLine2,
+                                leiMatch.dplDBs.consts.addr.component.postalCode,
+                                leiMatch.dplDBs.consts.addr.component.locality,
+                                leiMatch.dplDBs.consts.addr.component.regionAbbr,
+                                leiMatch.dplDBs.consts.addr.component.countryISO
+                            ]
+                        ),
+                    );
+                    arrValues.push(leiMatch?.round1?.dnbRegNum);
+                    arrValues.push(leiMatch.dplDBs.org?.registeredDetails?.legalForm?.dnbCode);
+
+                    //Gleif values
+                    const data0 = leiMatch.round1.leiResp?.data?.[0];
+
+                    arrValues.push(leiMatch.lei);
+                    arrValues.push(data0?.attributes?.entity?.legalName?.name);
+                    arrValues.push(data0?.attributes?.entity?.legalAddress?.addressLines?.[0]);
+                    arrValues.push(data0?.attributes?.entity?.legalAddress?.addressLines?.[1]);
+                    arrValues.push(data0?.attributes?.entity?.legalAddress?.postalCode);
+                    arrValues.push(data0?.attributes?.entity?.legalAddress?.city);
+                    arrValues.push(data0?.attributes?.entity?.legalAddress?.region);
+                    arrValues.push(data0?.attributes?.entity?.legalAddress?.country);
+                    arrValues.push(data0?.attributes?.entity?.registeredAs);
+                    arrValues.push(data0?.attributes?.entity?.category);
+                    arrValues.push(data0?.attributes?.entity?.legalForm?.id);
+                
+                    //Round 1 results
+                    arrValues.push(leiMatch?.round1?.resp?.httpStatus);
+                    arrValues.push(leiMatch?.resolved);
+
+                    console.log( arrValues.map(nullUndefToEmptyStr).join('|') );
+
+                    return;
+                }
+
+                //Process the D&B D+ data block in JSON format and prepare the LEI match
+                function prepareLeiMatch(jsonIn) {
+                    try {
+                        leiMatch.dplDBs = new DplDBs(jsonIn)
+                    }
+                    catch(err) {
+                        throw new Error(`Unable to instantiate a D&B D+ data blocks object from file ${leiMatch.fileName}`);
+                    }
+
+                    //Store a couple of high level LEI match parameters
+                    leiMatch.inqDuns = leiMatch.dplDBs.map121.inqDuns;
+                    leiMatch.ctry = leiMatch.dplDBs.map121.countryISO;
+
+                    leiMatch.round1 = getMatchRegNum(leiMatch.dplDBs);
+
+                    //Round one match is a registration number match, no ID ➡️ no match
+                    if(!leiMatch.round1.dnbRegNumToMatch) {                
+                        return Promise.resolve()
+                    }
+
+                    //Instantiate a new LEI filter request for registration number matching
+                    leiMatch.round1.gleifFilterReq = new LeiFilter({
+                        'filter[entity.registeredAs]': leiMatch.round1.dnbRegNumToMatch,
+                        'filter[entity.legalAddress.country]': leiMatch.ctry
+                    });
+
+                    return gleifLimiter.removeTokens(1); //Throttle the Gleif requests
+                }
+
+                //Execute the LEI request in case a registration number is available
+                function execLeiMatch() {
+                    //No ID ➡️ no match
+                    if(!leiMatch.round1.dnbRegNumToMatch) {
+                        return Promise.resolve();
+                    }
+
+                    //Fire off the prepared match request
+                    return leiMatch.round1.gleifFilterReq.execReq();
+                }
+
+                //Process the LEI match response
+                function processLeiMatchResp(resp) {
+                    if(leiMatch.round1.dnbRegNumToMatch) { //Registration number match was executed
+                        //Store a couple of high level round 1 LEI match parameters
+                        leiMatch.round1.resp = {};
+
+                        leiMatch.round1.resp.httpStatus = resp.httpStatus;
+
+                        if(persistFile) {
+                            writeFile(`${leiMatch.inqDuns}_${leiMatch.round1.dnbRegNumToMatch}_${resp.httpStatus}`,  dcdrUtf8.decode(resp.buffBody))
+                        }
+
+                        //Parse the Gleif response
                         try {
-                            leiMatch.dplDBs = new DplDBs(jsonIn)
+                            leiMatch.round1.leiResp = JSON.parse(resp.buffBody)
                         }
                         catch(err) {
-                            throw new Error(`Unable to instantiate a D&B D+ data blocks object from file ${leiMatch.fileName}`);
+                            console.error(err.message);
+                            throw new Error(`Unable to instantiate a LEI object from API response`);
                         }
 
-                        leiMatch.inqDuns = leiMatch.dplDBs.map121.inqDuns;
-                        leiMatch.ctry = leiMatch.dplDBs.map121.countryISO;
-
-                        leiMatch.round1 = getMatchRegNum(leiMatch.dplDBs);
-
-                        if(!leiMatch.round1.dnbRegNumToMatch) {                            
-                            return Promise.resolve()
+                        if(leiMatch.round1.leiResp?.data?.[0]) { //LEI match in round 1
+                            leiMatch.lei = leiMatch.round1.leiResp.data[0].id;
+                            leiMatch.resolved = 1;
                         }
+                    }
 
-                        leiMatch.round1.gleifFilterReq = new LeiFilter({
-                            'filter[entity.registeredAs]': leiMatch.round1.dnbRegNumToMatch,
-                            'filter[entity.legalAddress.country]': leiMatch.ctry
-                        });
+                    generateOutput();
+                }
 
-                        return gleifLimiter.removeTokens(1);
-                    })
-                    .then(() => {
-                        if(!leiMatch.round1.dnbRegNumToMatch) {
-                            return Promise.resolve();
-                        }
+                //Object for keeping track of data across multiple async calls
+                const leiMatch = { fileName: fn };
 
-                        return leiMatch.round1.gleifFilterReq.execReq();
-                    })
-                    .then(resp => {
-                        if(leiMatch.round1.dnbRegNumToMatch) {
-                            leiMatch.round1.resp = {};
-
-                            leiMatch.round1.resp.httpStatus = resp.httpStatus;
-
-                            if(persistFile) {
-                                writeFile(`${leiMatch.inqDuns}_${leiMatch.round1.dnbRegNumToMatch}_${resp.httpStatus}`,  dcdrUtf8.decode(resp.buffBody))
-                            }
-
-                            try {
-                                leiMatch.round1.leiResp = JSON.parse(resp.buffBody)
-                            }
-                            catch(err) {
-                                console.error(err.message);
-                                throw new Error(`Unable to instantiate a LEI object from API response`);
-                            }
-
-                            if(leiMatch.round1.leiResp?.data?.[0]) {
-                                leiMatch.lei = leiMatch.round1.leiResp.data[0].id;
-                                leiMatch.resolved = 1;
-                            }
-
-                            let arrValues = [];
-
-                            arrValues.push(leiMatch.inqDuns);
-                            arrValues.push(leiMatch.dplDBs.map121.duns);
-                            arrValues.push(leiMatch.dplDBs.map121.primaryName);
-                            arrValues = arrValues.concat(
-                                leiMatch.dplDBs.addrToArray(
-                                    leiMatch.dplDBs.org?.primaryAddress,
-                                    [
-                                        leiMatch.dplDBs.consts.addr.component.customLine1,
-                                        leiMatch.dplDBs.consts.addr.component.addrLine2,
-                                        leiMatch.dplDBs.consts.addr.component.locality,
-                                        leiMatch.dplDBs.consts.addr.component.postalCode,
-                                        leiMatch.dplDBs.consts.addr.component.regionAbbr,
-                                        leiMatch.dplDBs.consts.addr.component.countryISO
-                                    ]
-                                ),
-                            );
-                            arrValues.push(leiMatch.dplDBs.org?.registeredDetails?.legalForm?.dnbCode);
-                            arrValues.push(leiMatch.lei);
-        
-                            console.log( arrValues.map(nullUndefToEmptyStr).join('|') );
-                        }
-                        else {
-                            console.log(leiMatch.ctry, leiMatch.inqDuns)
-                        }
-                    })
-                    .catch(err => console.error(err.message))
+                //Main application logic
+                readFileLimiter.removeTokens(1)                   //Throttle the reading of files
+                    .then( () => fs.readFile(`../io/out/${fn}`) ) //Read the JSON file containing the data blocks & prepare the match request
+                    .then( prepareLeiMatch )                      //Respect the rate limits dictated by the API
+                    .then( execLeiMatch )                         //Request the filtered LEI match
+                    .then( processLeiMatchResp )                  //Handle the API response
+                    .catch( err => console.error(err.message) )
             })
     })
     .catch(err => console.error(err.message))
