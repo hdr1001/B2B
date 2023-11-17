@@ -31,6 +31,8 @@ import { gleifLimiter } from '../share/limiters.js';
 //Decoder object for decoding utf-8 data in a binary format
 import { dcdrUtf8, sDateIsoToYYYYMMDD } from '../share/utils.js';
 
+import { jaroWrinker } from '../share/jaroWrinker.js';
+
 import { DplDBs } from '../share/dnbDplDBs.js';
 
 const nullUndefToEmptyStr = elem => elem === null || elem === undefined ? '' : elem;
@@ -80,6 +82,20 @@ function getMatchRegNum(oDpl, stage) {
 
             if(atTrRegnum.length && atTrRegnum[0].registrationNumber.slice(0, 2) === 'FN') {
                 ret.dnbRegNumToMatch = atTrRegnum[0].registrationNumber.slice(2)
+            }
+
+            break;
+
+        case 'au':
+            const auRegnums = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 1335);
+
+            if(auRegnums.length && auRegnums[0].registrationNumber.length === 9) {
+                ret.dnbRegNumToMatch = auRegnums[0].registrationNumber.slice(0, 3);
+                ret.dnbRegNumToMatch += ' ' + auRegnums[0].registrationNumber.slice(3, 6);
+                ret.dnbRegNumToMatch += ' ' + auRegnums[0].registrationNumber.slice(-3);
+            }
+            else {
+                ret.dnbRegNumToMatch = auRegnums[0].registrationNumber
             }
 
             break;
@@ -261,6 +277,10 @@ fs.readdir('../io/out')
                     arrValues.push(leiMatch.stages[idMatch2]?.resp?.httpStatus);
                     arrValues.push(leiMatch.stages[nameMatch]?.resp?.httpStatus);
                     arrValues.push(leiMatch?.resolved);
+
+                    if(leiMatch.dplDBs.map121.primaryName && data0?.attributes?.entity?.legalName?.name) {
+                        arrValues.push(jaroWrinker(leiMatch.dplDBs.map121.primaryName, data0?.attributes?.entity?.legalName?.name));
+                    }
 
                     console.log( arrValues.map(nullUndefToEmptyStr).join('|') );
 
