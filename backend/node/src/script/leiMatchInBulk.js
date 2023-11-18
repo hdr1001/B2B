@@ -54,19 +54,20 @@ const nameMatch = 2;
 
 //Get the registration number to use in the LEi match
 function getMatchRegNum(oDpl, stage) {
+    //Return an object
     const ret = { dnbRegNum: '', dnbRegNumToMatch: '' };
 
-    if(!(oDpl.org?.registrationNumbers && oDpl.org.registrationNumbers.length)) {
-        return ret
-    }
+    const arrDplRegNums = oDpl.org.registrationNumbers;
+
+    //Just return the default values if no registration number is available
+    if(!(arrDplRegNums && arrDplRegNums.length)) { return ret }
 
     const ctry = oDpl.map121.countryISO.toLowerCase();
 
-    if(stage === idMatch2 && !['be', 'ch', 'no'].includes(ctry)) {
-        return ret
-    }
-    const arrDplRegNums = oDpl.org.registrationNumbers;
+    //Stage 2 is only applicable for a limited number of countries
+    if(stage === idMatch2 && !['be', 'ch', 'no'].includes(ctry)) { return ret }
 
+    //By default try to match the preferred registration number
     const arrPreferredRegNums = arrDplRegNums.filter(oRegNum => oRegNum.isPreferredRegistrationNumber);
 
     if(arrPreferredRegNums.length) {
@@ -78,39 +79,41 @@ function getMatchRegNum(oDpl, stage) {
 
     switch(ctry) {
         case 'at':
-            const atTrRegnum = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 1336);
+            const atRegNums = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 1336);
 
-            if(atTrRegnum.length && atTrRegnum[0].registrationNumber.slice(0, 2) === 'FN') {
-                ret.dnbRegNumToMatch = atTrRegnum[0].registrationNumber.slice(2)
+            if(atRegNums.length && atRegNums[0].registrationNumber.slice(0, 2) === 'FN') {
+                ret.dnbRegNumToMatch = atRegNums[0].registrationNumber.slice(2)
             }
 
             break;
 
         case 'au':
-            const auRegnums = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 1335);
+            const auRegNums = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 1335);
 
-            if(auRegnums.length && auRegnums[0].registrationNumber.length === 9) {
-                ret.dnbRegNumToMatch = auRegnums[0].registrationNumber.slice(0, 3);
-                ret.dnbRegNumToMatch += ' ' + auRegnums[0].registrationNumber.slice(3, 6);
-                ret.dnbRegNumToMatch += ' ' + auRegnums[0].registrationNumber.slice(-3);
-            }
-            else {
-                ret.dnbRegNumToMatch = auRegnums[0].registrationNumber
+            if(auRegNums.length) {
+                if(auRegNums[0].registrationNumber.length === 9) {
+                    ret.dnbRegNumToMatch = auRegNums[0].registrationNumber.slice(0, 3);
+                    ret.dnbRegNumToMatch += ' ' + auRegNums[0].registrationNumber.slice(3, 6);
+                    ret.dnbRegNumToMatch += ' ' + auRegNums[0].registrationNumber.slice(-3);
+                }
+                else {
+                    ret.dnbRegNumToMatch = auRegNums[0].registrationNumber
+                }
             }
 
             break;
 
         case 'be':
-            const enterpriseRegnum = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 800);
+            const beRegNums = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 800);
          
             if(stage === idMatch2) {
-                if(enterpriseRegnum.length) { ret.dnbRegNumToMatch = enterpriseRegnum[0].registrationNumber }
+                if(beRegNums.length) { ret.dnbRegNumToMatch = beRegNums[0].registrationNumber }
             }
             else {
-                if(enterpriseRegnum.length && enterpriseRegnum[0].registrationNumber.length === 10) {
-                    ret.dnbRegNumToMatch = enterpriseRegnum[0].registrationNumber.slice(0, 4);
-                    ret.dnbRegNumToMatch += '.' + enterpriseRegnum[0].registrationNumber.slice(4, 7);
-                    ret.dnbRegNumToMatch += '.' + enterpriseRegnum[0].registrationNumber.slice(-3);
+                if(beRegNums.length && beRegNums[0].registrationNumber.length === 10) {
+                    ret.dnbRegNumToMatch = beRegNums[0].registrationNumber.slice(0, 4);
+                    ret.dnbRegNumToMatch += '.' + beRegNums[0].registrationNumber.slice(4, 7);
+                    ret.dnbRegNumToMatch += '.' + beRegNums[0].registrationNumber.slice(-3);
                 }
             }
 
@@ -129,71 +132,75 @@ function getMatchRegNum(oDpl, stage) {
             break;
 
         case 'fi':
-            const fiChRegnum = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 553);
+            const fiRegNums = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 553);
 
-            if(fiChRegnum.length) { ret.dnbRegNumToMatch = fiChRegnum[0].registrationNumber.replace(/(.)(?=.$)/, '$1-'); }
+            if(fiRegNums.length) { ret.dnbRegNumToMatch = fiRegNums[0].registrationNumber.replace(/(.)(?=.$)/, '$1-'); }
             
             break;
 
         case 'fr':
-            const sirenRegnum = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 2078);
+            const frRegNums = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 2078); //Siren
 
-            if(sirenRegnum.length) { ret.dnbRegNumToMatch = sirenRegnum[0].registrationNumber }
+            if(frRegNums.length) { ret.dnbRegNumToMatch = frRegNums[0].registrationNumber }
             
             break;
 
         case 'gr':
-            const grCocRegnum = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 14246);
+            const grRegNums = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 14246);
 
-            if(grCocRegnum.length === 12) {
-                ret.dnbRegNumToMatch = grCocRegnum[0].registrationNumber
-            }
-            else {
-                ret.dnbRegNumToMatch = '000000000000'.slice(0, 12 - grCocRegnum[0].registrationNumber.length) + grCocRegnum[0].registrationNumber
+            if(grRegNums.length) {
+                if(grRegNums[0].registrationNumber.length === 12) {
+                    ret.dnbRegNumToMatch = grRegNums[0].registrationNumber
+                }
+                else {
+                    ret.dnbRegNumToMatch = '000000000000'.slice(0, 12 - grRegNums[0].registrationNumber.length) + grRegNums[0].registrationNumber
+                }
             }
             
             break;
 
         case 'hu':
-            const huRegnum = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 1359);
+            const huRegNums = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 1359);
 
-            if(huRegnum.length) {
-                ret.dnbRegNumToMatch = huRegnum[0].registrationNumber.slice(0, 2);
-                ret.dnbRegNumToMatch += "-" + huRegnum[0].registrationNumber.slice(2, 4);
-                ret.dnbRegNumToMatch += "-" + huRegnum[0].registrationNumber.slice(4);
+            if(huRegNums.length) {
+                if(huRegNums[0].registrationNumber.length > 4) {
+                    ret.dnbRegNumToMatch = huRegNums[0].registrationNumber.slice(0, 2);
+                    ret.dnbRegNumToMatch += "-" + huRegNums[0].registrationNumber.slice(2, 4);
+                    ret.dnbRegNumToMatch += "-" + huRegNums[0].registrationNumber.slice(4);
+                }
             }
             
             break;
     
         case 'no': //this is just 50/50 when executing a gleif search
-            const noEnterpriseRegNum = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 1699);
+            const noRegNums = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 1699);
 
-            if(stage === idMatch2) {
-                if(noEnterpriseRegNum.length && noEnterpriseRegNum[0].registrationNumber.length !== 9) {
-                    ret.dnbRegNumToMatch = noEnterpriseRegNum[0].registrationNumber
+            if(noRegNums.length) {
+                if(stage === idMatch2) {
+                    ret.dnbRegNumToMatch = noRegNums[0].registrationNumber
                 }
-            }
-            else {
-                if(noEnterpriseRegNum.length && noEnterpriseRegNum[0].registrationNumber.length === 9) {
-                    ret.dnbRegNumToMatch = noEnterpriseRegNum[0].registrationNumber.slice(0, 3);
-                    ret.dnbRegNumToMatch += ' ' + noEnterpriseRegNum[0].registrationNumber.slice(3, 6);
-                    ret.dnbRegNumToMatch += ' ' + noEnterpriseRegNum[0].registrationNumber.slice(-3);
+                else {
+                    if(noRegNums[0].registrationNumber.length === 9) {
+                        ret.dnbRegNumToMatch = noRegNums[0].registrationNumber.slice(0, 3);
+                        ret.dnbRegNumToMatch += ' ' + noRegNums[0].registrationNumber.slice(3, 6);
+                        ret.dnbRegNumToMatch += ' ' + noRegNums[0].registrationNumber.slice(-3);
+                    }
                 }
             }
 
             break;
         
         case 'pl':
-            const plCcRegnum = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 18519);
+            const plRegNums = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 18519);
 
-            if(plCcRegnum.length) { ret.dnbRegNumToMatch = plCcRegnum[0].registrationNumber }
+            if(plRegNums.length) { ret.dnbRegNumToMatch = plRegNums[0].registrationNumber }
             
             break;
 
         case 'ro': //this is just 50/50 when executing a gleif search
-            const roRegnum = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 1436);
+            const roRegNums = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 1436);
 
-            if(roRegnum.length) { ret.dnbRegNumToMatch = roRegnum[0].registrationNumber }
+            if(roRegNums.length) { ret.dnbRegNumToMatch = roRegNums[0].registrationNumber }
             
             break;
 
@@ -205,9 +212,9 @@ function getMatchRegNum(oDpl, stage) {
             break;
 
         case 'si':
-            const siRegnum = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 9409);
+            const siRegNums = arrDplRegNums.filter(oRegNum => oRegNum.typeDnBCode === 9409);
 
-            if(siRegnum.length) { ret.dnbRegNumToMatch = siRegnum[0].registrationNumber + '000' }
+            if(siRegNums.length) { ret.dnbRegNumToMatch = siRegNums[0].registrationNumber + '000' }
             
             break;
     }
@@ -223,7 +230,7 @@ fs.readdir('../io/out')
         //Process the files available in the specified directory
         arrFiles
             .filter(fn => fn.endsWith('.json'))
-            .filter(fn => fn.indexOf('dnb_dpl_1114_ci_L1') > -1)
+            .filter(fn => fn.indexOf('dnb_dpl_1118_ci_L') > -1)
             .forEach(fn => { //Process the identified D&B data block files
 
                 //Function for compiling the output of the procedure
