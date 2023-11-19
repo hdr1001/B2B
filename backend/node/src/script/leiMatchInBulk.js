@@ -52,6 +52,54 @@ const idMatch1  = 0;
 const idMatch2  = 1;
 const nameMatch = 2;
 
+//LEI match output
+const leiMatchOut = {
+    inqDuns: { idx: 0, desc: 'd&b inq DUNS' },
+    duns: { idx: 1, desc: 'd&b duns' },
+    primaryName: { idx: 2, desc: 'd&b bus nme' },
+    addrLine1: { idx: 3, desc: 'd&b line 1' },
+    addrLine2: { idx: 4, desc: 'd&b line 2' },
+    postalCode: { idx: 5, desc: 'd&b post cd' },
+    locality: { idx: 6, desc: 'd&b city nme' },
+    regionAbbr: { idx: 7, desc: 'd&b state prov abbr' },
+    country: { idx: 8, desc: 'd&b ctry ISO' },
+    legalForm: { idx: 9, desc: 'd&b legal form' },
+
+    lei: { idx: 10, desc: 'LEI' },
+    leiLegalName: { idx: 11, desc: 'lei bus nme' },
+    leiAddrLine1: { idx: 12, desc: 'lei line 1' },
+    leiAddrLine2: { idx: 13, desc: 'lei line 2' },
+    leiPostalCode: { idx: 14, desc: 'lei post cd' },
+    leiCity: { idx: 15, desc: 'lei city nme' },
+    leiRegionAbbr: { idx: 16, desc: 'lei state prov abbr' },
+    leiCountry: { idx: 17, desc: 'lei ctry ISO' },
+    leiRegAs: { idx: 18, desc: 'lei reg num' },
+    leiCat: { idx: 19, desc: 'lei category' },
+    leiLegalForm: { idx: 20, desc: 'lei legal form' },
+
+    dnbRegNum0: { idx: 21, desc: 'd&b reg num 0' },
+    dnbRegNumToMatch0: { idx: 22, desc: 'd&b reg num to match 0' },
+    dnbRegNum1: { idx: 23, desc: 'd&b reg num 1' },
+    dnbRegNumToMatch1: { idx: 24, desc: 'd&b reg num to match 1' },
+
+    httpStatus0: { idx: 25, desc: 'HTTP status 0' },
+    httpStatus1: { idx: 26, desc: 'HTTP status 1' },
+    httpStatus2: { idx: 27, desc: 'HTTP status 2' },
+    stageResolved: { idx: 28, desc: 'stage resolved' },
+
+    qltNameMatch: { idx: 29, desc: 'quality name match' },
+    qltCityMatch: { idx: 30, desc: 'quality city match' }
+}
+
+//Get header for LEI matching outpu
+function getLeiMatchHeader() {
+    const keys = Object.keys(leiMatchOut);
+
+    return keys.map(key => leiMatchOut[key])
+        .sort((elemOut1, elemOut2) => elemOut1.idx - elemOut2.idx)
+        .map(elemOut => elemOut.desc)
+}
+
 //Get the registration number to use in the LEi match
 function getMatchRegNum(oDpl, stage) {
     //Return an object
@@ -224,6 +272,8 @@ function getMatchRegNum(oDpl, stage) {
     return ret;
 }
 
+console.log( getLeiMatchHeader().map(nullUndefToEmptyStr).join('|') );
+
 //Read the D&B Direct+ JSON data
 fs.readdir('../io/out')
     .then(arrFiles => {
@@ -235,12 +285,13 @@ fs.readdir('../io/out')
 
                 //Function for compiling the output of the procedure
                 function generateOutput() {
-                    let arrValues = [];
+                    let arrValues = new Array(3);
 
                     //D&B values
-                    arrValues.push(leiMatch.inqDuns);
-                    arrValues.push(leiMatch.dplDBs.map121.duns);
-                    arrValues.push(leiMatch.dplDBs.map121.primaryName);
+                    arrValues[leiMatchOut.inqDuns.idx] = leiMatch.inqDuns;
+                    arrValues[leiMatchOut.duns.idx] = leiMatch.dplDBs.map121.duns;
+                    arrValues[leiMatchOut.primaryName.idx] = leiMatch.dplDBs.map121.primaryName;
+
                     arrValues = arrValues.concat(
                         leiMatch.dplDBs.addrToArray(
                             leiMatch.dplDBs.org?.primaryAddress,
@@ -254,7 +305,10 @@ fs.readdir('../io/out')
                             ]
                         ),
                     );
-                    arrValues.push(leiMatch.dplDBs.org?.registeredDetails?.legalForm?.dnbCode);
+
+                    arrValues = arrValues.concat( new Array(22) );
+
+                    arrValues[leiMatchOut.legalForm.idx] = leiMatch.dplDBs.org?.registeredDetails?.legalForm?.dnbCode;
 
                     //Gleif values
                     let data0 = null;
@@ -263,30 +317,43 @@ fs.readdir('../io/out')
                         data0 = leiMatch.stages[leiMatch.resolved]?.resp?.leiResp?.data?.[0];
                     }
 
-                    arrValues.push(leiMatch.lei);
-                    arrValues.push(data0?.attributes?.entity?.legalName?.name);
-                    arrValues.push(data0?.attributes?.entity?.legalAddress?.addressLines?.[0]);
-                    arrValues.push(data0?.attributes?.entity?.legalAddress?.addressLines?.[1]);
-                    arrValues.push(data0?.attributes?.entity?.legalAddress?.postalCode);
-                    arrValues.push(data0?.attributes?.entity?.legalAddress?.city);
-                    arrValues.push(data0?.attributes?.entity?.legalAddress?.region);
-                    arrValues.push(data0?.attributes?.entity?.legalAddress?.country);
-                    arrValues.push(data0?.attributes?.entity?.registeredAs);
-                    arrValues.push(data0?.attributes?.entity?.category);
-                    arrValues.push(data0?.attributes?.entity?.legalForm?.id);
+                    arrValues[leiMatchOut.lei.idx] = leiMatch.lei;
+                    arrValues[leiMatchOut.leiLegalName.idx] = data0?.attributes?.entity?.legalName?.name;
+                    arrValues[leiMatchOut.leiAddrLine1.idx] = data0?.attributes?.entity?.legalAddress?.addressLines?.[0];
+                    arrValues[leiMatchOut.leiAddrLine2.idx] = data0?.attributes?.entity?.legalAddress?.addressLines?.[1];
+                    arrValues[leiMatchOut.leiPostalCode.idx] = data0?.attributes?.entity?.legalAddress?.postalCode;
+                    arrValues[leiMatchOut.leiCity.idx] = data0?.attributes?.entity?.legalAddress?.city;
+                    arrValues[leiMatchOut.leiRegionAbbr.idx] = data0?.attributes?.entity?.legalAddress?.region;
+                    arrValues[leiMatchOut.leiCountry.idx] = data0?.attributes?.entity?.legalAddress?.country;
+                    arrValues[leiMatchOut.leiRegAs.idx] = data0?.attributes?.entity?.registeredAs;
+                    arrValues[leiMatchOut.leiCat.idx] = data0?.attributes?.entity?.category;
+                    arrValues[leiMatchOut.leiLegalForm.idx] = data0?.attributes?.entity?.legalForm?.id;
                 
                     //The inputs & results of the different match stages
-                    arrValues.push(leiMatch.stages[idMatch1]?.dnbRegNum);
-                    arrValues.push(leiMatch.stages[idMatch1]?.dnbRegNumToMatch);
-                    arrValues.push(leiMatch.stages[idMatch1]?.resp?.httpStatus);
-                    arrValues.push(leiMatch.stages[idMatch2]?.dnbRegNum);
-                    arrValues.push(leiMatch.stages[idMatch2]?.dnbRegNumToMatch);
-                    arrValues.push(leiMatch.stages[idMatch2]?.resp?.httpStatus);
-                    arrValues.push(leiMatch.stages[nameMatch]?.resp?.httpStatus);
-                    arrValues.push(leiMatch?.resolved);
+                    arrValues[leiMatchOut.dnbRegNum0.idx] = leiMatch.stages[idMatch1]?.dnbRegNum;
+                    arrValues[leiMatchOut.dnbRegNumToMatch0.idx] = leiMatch.stages[idMatch1]?.dnbRegNumToMatch;
+                    arrValues[leiMatchOut.dnbRegNum1.idx] = leiMatch.stages[idMatch2]?.dnbRegNum;
+                    arrValues[leiMatchOut.dnbRegNumToMatch1.idx] = leiMatch.stages[idMatch2]?.dnbRegNumToMatch;
 
-                    if(leiMatch.dplDBs.map121.primaryName && data0?.attributes?.entity?.legalName?.name) {
-                        arrValues.push(jaroWrinker(leiMatch.dplDBs.map121.primaryName, data0?.attributes?.entity?.legalName?.name));
+                    arrValues[leiMatchOut.httpStatus0.idx] = leiMatch.stages[idMatch1]?.resp?.httpStatus;
+                    arrValues[leiMatchOut.httpStatus1.idx] = leiMatch.stages[idMatch2]?.resp?.httpStatus;
+                    arrValues[leiMatchOut.httpStatus2.idx] = leiMatch.stages[nameMatch]?.resp?.httpStatus;
+                    arrValues[leiMatchOut.stageResolved.idx] = leiMatch?.resolved;
+
+                    //Match quality information
+                    if(arrValues[leiMatchOut.primaryName.idx] && arrValues[leiMatchOut.leiLegalName.idx]) {
+                        arrValues[leiMatchOut.qltNameMatch.idx] = Math.floor(jaroWrinker(arrValues[leiMatchOut.primaryName.idx], arrValues[leiMatchOut.leiLegalName.idx]) * 100);
+                    }
+                    else {
+                        arrValues[leiMatchOut.qltNameMatch.idx] = null;
+                    }
+
+                    //Verify the city name
+                    if(arrValues[leiMatchOut.locality.idx] && arrValues[leiMatchOut.leiCity.idx]) {
+                        arrValues[leiMatchOut.qltCityMatch.idx] = Math.floor(jaroWrinker(arrValues[leiMatchOut.locality.idx], arrValues[leiMatchOut.leiCity.idx]) * 100);
+                    }
+                    else {
+                        arrValues[leiMatchOut.qltCityMatch.idx] = null;
                     }
 
                     console.log( arrValues.map(nullUndefToEmptyStr).join('|') );
