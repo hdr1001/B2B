@@ -87,8 +87,9 @@ const leiMatchOut = {
     httpStatus2: { idx: 27, desc: 'HTTP status 2' },
     stageResolved: { idx: 28, desc: 'stage resolved' },
 
-    qltNameMatch: { idx: 29, desc: 'quality name match' },
-    qltCityMatch: { idx: 30, desc: 'quality city match' }
+    qltRegNumMatch: { idx: 29, desc: 'quality reg num match' },
+    qltNameMatch: { idx: 30, desc: 'quality name match' },
+    qltCityMatch: { idx: 31, desc: 'quality city match' }
 }
 
 //Get header for LEI matching outpu
@@ -283,6 +284,47 @@ fs.readdir('../io/out')
             .filter(fn => fn.indexOf('dnb_dpl_1118_ci_L') > -1)
             .forEach(fn => { //Process the identified D&B data block files
 
+                //Is a match an ID match
+                function qltRegNumMatch() {
+                    if(leiMatch.resolved === idMatch1 || leiMatch.resolved === idMatch2 ) {
+                        return 100
+                    }
+
+                    if(leiMatch.resolved === nameMatch) {
+                        if(leiMatch.dplDBs.map121.countryISO.toLowerCase() === 'de') {
+                            if(Array.isArray(leiMatch.dplDBs.org.registrationNumbers)) {
+                                const ihkRegNums = leiMatch.dplDBs.org.registrationNumbers.filter(oRegNum => oRegNum.typeDnBCode === 6862);
+
+                                if(ihkRegNums.length) {
+                                    const ihkRegNum = ihkRegNums[0].registrationNumber;
+
+                                    const firstAlphaChar = ihkRegNum.search(/[A-Z]/i);
+
+                                    if(firstAlphaChar > -1) {
+                                        //const districtCourt = ihkRegNum.slice(0, firstAlphaChar); //Not used by Gleif
+
+                                        const legalFormInd = ihkRegNum.slice(firstAlphaChar, firstAlphaChar + 1);
+
+                                        let regNumID = ihkRegNum.slice(firstAlphaChar + 1);
+
+                                        const secondAlphaChar = regNumID.search(/[A-Z]/i);
+
+                                        if(secondAlphaChar > -1) {
+                                            regNumID = regNumID.slice(0, secondAlphaChar) + ' ' + regNumID.slice(secondAlphaChar);
+                                        }
+
+                                        if('HR' + legalFormInd + ' ' + regNumID === leiMatch.stages[nameMatch]?.resp?.leiResp?.data?.[0]?.attributes?.entity?.registeredAs) {
+                                            return 100;
+                                        }
+                                    }
+                                }
+                            }
+                        } //Country DE
+                    }
+
+                    return null;
+                }
+
                 //Function for compiling the output of the procedure
                 function generateOutput() {
                     let arrValues = new Array(3);
@@ -306,7 +348,7 @@ fs.readdir('../io/out')
                         ),
                     );
 
-                    arrValues = arrValues.concat( new Array(22) );
+                    arrValues = arrValues.concat( new Array(23) );
 
                     arrValues[leiMatchOut.legalForm.idx] = leiMatch.dplDBs.org?.registeredDetails?.legalForm?.dnbCode;
 
@@ -340,7 +382,10 @@ fs.readdir('../io/out')
                     arrValues[leiMatchOut.httpStatus2.idx] = leiMatch.stages[nameMatch]?.resp?.httpStatus;
                     arrValues[leiMatchOut.stageResolved.idx] = leiMatch?.resolved;
 
-                    //Match quality information
+                    //Match quality information, first identify ID matches
+                    arrValues[leiMatchOut.qltRegNumMatch.idx] = qltRegNumMatch();
+
+                    //Verify the business name
                     if(arrValues[leiMatchOut.primaryName.idx] && arrValues[leiMatchOut.leiLegalName.idx]) {
                         arrValues[leiMatchOut.qltNameMatch.idx] = Math.floor(jaroWrinker(arrValues[leiMatchOut.primaryName.idx], arrValues[leiMatchOut.leiLegalName.idx]) * 100);
                     }
