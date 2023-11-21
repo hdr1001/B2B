@@ -3,18 +3,43 @@ Repo containing the code I developed as it relates to B2B API's, UI's, data proc
 
 ## Content
 1. [Introduction](#introduction)
-2. [GitHub repo](#github-repo)
-3. [1st Node.js script](#first-nodejs-script)
-4. [Testing fetch to consume GLEIF data](#testing-fetch-to-consume-gleif-data)
-5. [Added rate limiter](#added-rate-limiter)
-6. [Fetch a D&B Direct+ token](#using-fetch-to-retrieve-a-db-direct-token)
-7. [D&B Direct+ data blocks](#project-now-supports-db-data-blocks)
-8. [Module https](#module-https)
-9. [Module run-func](#module-run-func)
-10. [Script to generate a D&B Direct+ token](#script-for-generating-a-db-direct-token)
+2. [How to get things up-n-running](#how-to-get-things-up-n-running)
+3. [Script to generate a D&B Direct+ token](#script-for-generating-a-db-direct-token)
+4. [GitHub repo](#github-repo)
+5. [1st Node.js script](#first-nodejs-script)
+6. [Testing fetch to consume GLEIF data](#testing-fetch-to-consume-gleif-data)
+7. [Added rate limiter](#added-rate-limiter)
+8. [Fetch a D&B Direct+ token](#using-fetch-to-retrieve-a-db-direct-token)
+9. [D&B Direct+ data blocks](#project-now-supports-db-data-blocks)
+10. [Module https](#module-https)
+11. [Module run-func](#module-run-func)
 
 ## Introduction
 In this repository I want to bring together all the B2B (D&B, GLEIF, ...) code I have developed over time and expand from there. Initially the most important sources will be the following GitHub repositories: [API Hub - Request, Persist & Respond (v4)](https://github.com/hdr1001/api_hub_rpr_v4) and [D&B Direct+ utilities (v3)](https://github.com/hdr1001/dnbDplUtilities_v3).
+
+## How to get things up-n-running
+The backend scripts in this repository are meant to be run in a [Node.js](https://nodejs.org/en/about) environment. So, the first step to get things off the ground is to have access to a computer with an operational Node.js JavaScript runtime. Alternatively, it is of course possible to install Node.js. To accomplish this I usually follow [these instructions](https://github.com/nodesource/distributions#ubuntu-versions). Currently (november 2023) my personal development environment is Windows 11 WSL (v2) running Ubuntu (22.04.02 LTS) and Node v18.18.2. To get started with the code I select a clean working directory (for example ~/dev) and [clone](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) this [GitHub repository](https://github.com/hdr1001/B2B.git) to that directory. Next I make the directory B2B/backend/node my current directory ```cd B2B/backend/node``` and copy file dotEnv to .env ```cp dotEnv .env```. The necessary environment variables (think [D&B Direct+ credentials](https://directplus.documentation.dnb.com/html/pages/Authentication.html)) can now be set in file .env. Lastly the install of the project dependencies is required: ```npm install```. That's it! Scripts can now be executed:
+
+![npm run thumbsUp][def00017]
+
+## Script for generating a D&B Direct+ token
+
+A valid authentication token is required in order to request D&B Direct+ data. The script [dnbDplAuthToken.js](https://bit.ly/3PAR8AO) is an implementation of the relevant [Direct+ endpoint](https://bit.ly/3s1wApw). It can be invoked as follows:
+
+![npm run dplAuthToken][def00015]
+
+The script fetches a new token and, depending on the invocation, can:
+
+1. echo the API response to the terminal (set the 1st parameter to true),
+2. write the API response to a file (set the 2nd parameter to true),
+3. propagate the new token throughout the application (set the 3rd parameter to true),
+4. use either v2 or v3 of the endpoint.
+
+The run script in [package.json](https://bit.ly/3RlrYYu) makes sure that a valid token is available for any scripts which will be run after this script.
+
+![npm run script dplAuthToken][def00016]
+
+A D&B Direct+ token is valid for 24 hours.
 
 ## GitHub repo
 I created the GitHub [B2B repo](https://github.com/hdr1001/B2B) in my browser:
@@ -83,25 +108,6 @@ Works like a charm:
 
 ![script executed 👍🏻][def00014]
 
-## Script for generating a D&B Direct+ token
-
-A valid authentication token is required in order to request D&B Direct+ data. The script [dnbDplAuthToken.js](https://bit.ly/3PAR8AO) is an implementation of the relevant [Direct+ endpoint](https://bit.ly/3s1wApw). It can be invoked as follows:
-
-![npm run dplAuthToken][def00015]
-
-The script fetches a new token and, depending on the invocation, can:
-
-1. echo the API response to the terminal (set the 1st parameter to true),
-2. write the API response to a file (set the 2nd parameter to true),
-3. propagate the new token throughout the application (set the 3rd parameter to true),
-4. use either v2 or v3 of the endpoint.
-
-The run script in [package.json](https://bit.ly/3RlrYYu) makes sure that a valid token is available for any scripts which will be run after this script.
-
-![npm run script dplAuthToken][def00016]
-
-A D&B Direct+ token is valid for 24 hours.
-
 [def00001]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110659&authkey=%21ANInHYJzHrgtSIY&width=999999&height=660
 [def00002]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110658&authkey=%21AOiUWHnoJaWzcLc&width=999999&height=448
 [def00003]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110660&authkey=%21ABbXt4yOUaQh_eA&width=384&height=999999
@@ -118,3 +124,4 @@ A D&B Direct+ token is valid for 24 hours.
 [def00014]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110763&authkey=%21ABl4jQgE87lULvE&width=660
 [def00015]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110850&authkey=%21AJdOzhczKn34nWk&width=660
 [def00016]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110851&authkey=%21ABVY-Fbx_S9DHp8&width=660
+[def00017]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2111129&authkey=%21AECbPtNwxy3snHc&width=517&height=456
