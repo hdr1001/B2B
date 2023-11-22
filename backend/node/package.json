@@ -9,6 +9,7 @@
     "getListOfKeys": "node ./src/script/getListOfKeys",
     "dplProcessData": "node ./src/script/dnbDplProcessData",
     "leiMatchInBulk": "node ./src/script/leiMatchInBulk",
+    "chunks": "node ./src/script/test/chunks",
     "fetch": "node ./src/script/test/fetch",
     "https": "node ./src/script/test/https",
     "thumbsUp": "node ./src/script/test/thumbsUp",
