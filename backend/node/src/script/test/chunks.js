@@ -20,33 +20,81 @@
 //
 // *********************************************************************
 
-function doWork() {
-    return new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 2000)))
+//Set the number of work items to be processed
+const numWorkItems = 260;
+
+//Create an array for storing the work items
+const arrWorkItems = new Array(numWorkItems);
+
+//Fill arrWorkItems with work item objects
+for(let i = 0; i < numWorkItems; i++) {
+    arrWorkItems[ i ] = { item:`item ${i}`, stage: 'created' };
 }
 
-const job = [];
+//Initialize the array to divvy up arrWorkItems & set the chunck size
+const arrChunks = [], chunkSize = 50;
 
-for(let i = 0; i < 5; i++) {
-    job.push([ i, [] ]);
+//Divvy up arrWorkItems
+for(let i = 0; i < numWorkItems; i += chunkSize) {
+    arrChunks.push(arrWorkItems.slice(i, i + chunkSize));
+}
 
-    for(let j = 0; j < 50; j++) {
-        job[ i ][ 1 ].push( { workItem:`item ${j} of chunk ${i + 1}`, status: 'In progress' } )
+//Simulate some work being done
+function doWork(workItem) {
+    const rnd = Math.random();
+
+    //Simulate an error condition
+    if(rnd > 0.95) {
+        workItem.stage = 'rejected';
+        return Promise.reject(new Error(`No worries ➡️ it's just that rnd > 0.95, item = ${workItem.item}`));
     }
+
+    //Set the resolve delay in milliseconds
+    const msDelay = Math.floor(rnd * 3000);
+
+    //Resolve the promise after a short delay
+    return new Promise(
+        resolve => {
+            setTimeout(() => {
+                    workItem.stage = 'done';
+                    resolve(workItem);
+                },
+                msDelay
+            )
+        }
+    )
 }
 
-//Asynchronous function for processing job chunks
-async function process(arr) {
-    return Promise.all(arr.map( elem => doWork().then( () => elem.status = 'done' ) ))
+//Asynchronous function for processing a chunk of work items
+async function processChunk(arrChunk) {
+    return Promise.allSettled(
+        arrChunk.map(
+            workItem => { 
+                workItem.stage = 'processing';
+                return doWork(workItem) 
+                /*
+                    .then( workItem => { console.log(workItem.stage); return workItem })
+                    .catch( err => { console.error(err); throw err })
+                */
+            }
+        )
+    );
 }
 
-//Process the array of arrays one array at a time
-for(const [idx0, arrChunk] of job.entries()) {
-    await process( arrChunk[1] ); //One array at a time
+//Process the array of work item chunks one chunk at a time
+for(const [ idx, arrChunk ] of arrChunks.entries()) {
+    const arrSettled = await processChunk( arrChunk ); //One array chunk at a time
 
-    console.log(`Round ${idx0 + 1}`);
+    //List the processing results
+    console.log(`Chunk ${idx + 1}`);
 
-    arrChunk[1].forEach(elem => {
-        console.log(`${elem.workItem} now has status ${elem.status}`);
+    arrSettled.forEach(elem => {
+        if(elem.value) {
+            console.log(`Work ${elem.value.item} has status ${elem.status} with stage ${elem.value.stage}`)
+        }
+        else {
+            console.log(elem.reason)
+        }
     });
 
     console.log('');
