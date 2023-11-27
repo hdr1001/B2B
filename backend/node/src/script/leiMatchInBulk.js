@@ -405,6 +405,29 @@ async function processChunk(arrChunk) {
                 //Object for keeping track of data across multiple async calls
                 const leiMatch = { fileName: fn, currentStage: idMatch1 };
 
+                //Determine if the next stage needs to be executed
+                function execMatchStage(stage) {
+                    //Skip the match stage if match was already made in a previous stage
+                    if(Number.isInteger(leiMatch?.resolved)) {
+                        return false
+                    }
+
+                    //Skip the match stage if the relevant information is not available
+                    if(stage === idMatch1 && !leiMatch.stages[idMatch1].dnbRegNumToMatch) {
+                        return false
+                    }
+
+                    if(stage === idMatch2 && !leiMatch.stages[idMatch2].dnbRegNumToMatch) {
+                        return false
+                    }
+
+                    if(stage === nameMatch && !leiMatch.dplDBs.map121.primaryName) {
+                        return false
+                    }
+
+                    return true;
+                }
+
                 //Process the D&B D+ data block in JSON format and prepare the LEI match
                 function prepareLeiMatch(jsonIn) {
                     try {
@@ -440,17 +463,14 @@ async function processChunk(arrChunk) {
                         'filter[entity.legalAddress.country]': leiMatch.ctry
                     });
 
-                    //Round one match is a registration number match, no ID ➡️ no ID matches
-                    if(!leiMatch.stages[idMatch1].dnbRegNumToMatch) { leiMatch.currentStage = nameMatch }
+                    if(!execMatchStage(leiMatch.currentStage)) { return Promise.resolve(null) }
 
                     return gleifLimiter.removeTokens(1); //Throttle the Gleif requests
                 }
 
                 //Execute the LEI request in case a registration number is available
-                function execLeiMatch() {
-                    if(leiMatch.currentStage === idMatch2 && !leiMatch.stages[idMatch2].dnbRegNumToMatch) {
-                        return Promise.resolve(null);
-                    }
+                function execLeiMatch(execReq) {
+                    if(execReq === null) { return Promise.resolve(null) }
 
                     //Fire off the prepared match request
                     return leiMatch.stages[leiMatch.currentStage].gleifFilterReq.execReq();
@@ -468,7 +488,7 @@ async function processChunk(arrChunk) {
                             }
                         }
 
-                        //Store a couple of high level round 1 LEI match parameters
+                        //Store a couple of high level LEI match parameters
                         leiMatch.stages[leiMatch.currentStage].resp = {};
 
                         leiMatch.stages[leiMatch.currentStage].resp.httpStatus = resp.httpStatus;
@@ -488,25 +508,23 @@ async function processChunk(arrChunk) {
                         }
                     }
 
-                    if(leiMatch.currentStage < nameMatch && !Number.isInteger(leiMatch?.resolved)) {
-                        leiMatch.currentStage++;
+                    if(leiMatch.currentStage === nameMatch) { return leiMatch } //No more next stage, done
 
-                        gleifLimiter.removeTokens(1)
-                            .then( execLeiMatch )
-                            .then( processLeiMatchResp )
+                    if(!execMatchStage(++leiMatch.currentStage)) { return Promise.resolve(null) }
 
-                        return;
-                    }
-
-                    return leiMatch;
-                }
+                    return gleifLimiter.removeTokens(1); //Throttle the Gleif requests
+               }
 
                 //Main application logic
                 return readFileLimiter.removeTokens(1)            //Throttle the reading of files
                     .then( () => fs.readFile(`../io/out/${fn}`) ) //Read the JSON file containing the data blocks & prepare the match request
                     .then( prepareLeiMatch )                      //Respect the rate limits dictated by the API
-                    .then( execLeiMatch )                         //Request the filtered LEI match
-                    .then( processLeiMatchResp  )                 //Handle the API response
+                    .then( execLeiMatch )                         //Request the filtered LEI match on the 1st registration number
+                    .then( processLeiMatchResp )                  //Handle the API response
+                    .then( execLeiMatch )                         //Request the filtered LEI match on the 2nd registration number
+                    .then( processLeiMatchResp )                  //Handle the API response
+                    .then( execLeiMatch )                         //Request the filtered LEI match on the company name
+                    .then( processLeiMatchResp )                  //Handle the API response
                     .catch( err => console.error(err.message) );
             }
         )
@@ -514,6 +532,9 @@ async function processChunk(arrChunk) {
 }
 
 async function processChunks(arrChunks) {
+    //Generate a header for the output
+    console.log( getLeiMatchHeader().map(nullUndefToEmptyStr).join('|') );
+
     //Process the array of work item chunks one chunk at a time
     for(const [ idx, arrChunk ] of arrChunks.entries()) {
         const arrSettled = await processChunk( arrChunk ); //One array chunk at a time
@@ -531,8 +552,6 @@ async function processChunks(arrChunks) {
         });
     }
 }
-
-console.log( getLeiMatchHeader().map(nullUndefToEmptyStr).join('|') );
 
 //Read the D&B Direct+ JSON data
 fs.readdir('../io/out')
