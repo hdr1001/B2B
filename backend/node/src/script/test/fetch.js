@@ -21,7 +21,7 @@
 // *********************************************************************
 
 //Import the API definitions
-import { LeiFilter, LeiReq, DnbDplAuth, DnbDplDBs } from '../../share/apiDefs.js';
+import { LeiFilter, LeiReq, DnbDplAuth, DnbDplDBs, DnbDplIDR } from '../../share/apiDefs.js';
 
 //Import rate limiter
 import { gleifLimiter } from '../../share/limiters.js';
@@ -95,7 +95,25 @@ fetch(dnbDplAuth.getReq())
                     })
                     .then(dnbRec => evaluateDplRec(dplReq, dnbRec))
                     .catch(err => console.error('D&B Direct+ API data fetch error: ', err))
-            )
+            );
+
+            const dplIdrReqs = [
+                new DnbDplIDR( { name: 'de librije', addressLocality: 'Zwolle', countryISOAlpha2Code: 'NL' } )
+            ]
+
+            dplIdrReqs.forEach(dplIdrReq => 
+                fetch(dplIdrReq.getReq())
+                    .then(resp => {
+                        if (resp.ok) {
+                            return resp.json();
+                        }
+                        else {
+                            throw new Error(`Fetch response not okay, HTTP status: ${resp.statusText}`);
+                        }
+                    })
+                    .then(dnbIdrRslt => evaluateDplRec(dplIdrReq, dnbIdrRslt))
+                    .catch(err => console.error('D&B Direct+ API data fetch error: ', err))
+            );
         }
         else {
             console.log('❌ D&B Direct+ authorization request')
@@ -140,7 +158,15 @@ function evaluateDplRec(dnbReq, dnbRec) {
             console.log(`✅ D+ data blocks request, retrieved ➡️ ${dnbRec?.organization?.primaryName}`);
             return;
         }
+    }
 
+    if(dnbReq.def.endpoint === 'idr') {
+        const numCandidates = dnbRec?.candidatesMatchedQuantity;
+
+        if(numCandidates > 0) {
+            console.log(`✅ D+ IDentity Resolution request, retrieved ➡️ ${numCandidates} match candidates`);
+            return;
+        }
     }
 
     //🤔

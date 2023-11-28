@@ -153,6 +153,17 @@ const apiEndpoint = {
                     }
                 )
             }
+        },
+
+        idr: { //D&B Direct+ IDentity Resolution
+            getReq: function() {
+                return new Request(
+                    `${apiEndpoint.dnbDpl.baseURL}${this.path}?${new URLSearchParams({ ...this.qryParameters })}`,
+                    {
+                        headers: api.dnbDpl.headers,
+                    }
+                )
+            }
         }
     }
 };
@@ -241,11 +252,24 @@ class DnbDplBenOwner { //Get a D&B D+ beneficial owner
     getReq = apiEndpoint.dnbDpl.benOwner.getReq;
 }
 
+class DnbDplIDR {
+    constructor(qryParameters) {
+        this.qryParameters = qryParameters;
+    }
+
+    def = { api: 'dnbDpl', endpoint: 'idr' };
+
+    path = 'v1/match/cleanseMatch';
+
+    getReq = apiEndpoint.dnbDpl.idr.getReq;
+}
+
 export {
     LeiReq,
     LeiFilter,
     DnbDplAuth,
     DnbDplDBs,
     DnbDplFamTree,
-    DnbDplBenOwner
+    DnbDplBenOwner,
+    DnbDplIDR
 };

@@ -1,6 +1,6 @@
 // *********************************************************************
 //
-// Read an input file into a two dimensional array of keys
+// Read an input file into an array of arrays of keys
 // JavaScript code file: readInputFileKeys.js
 //
 // Copyright 2023 Hans de Rooij
