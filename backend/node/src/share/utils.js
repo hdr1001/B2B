@@ -27,6 +27,9 @@ import { promises as fs } from 'fs';
 //A decoder takes a stream of bytes as input & emits a stream of code points
 const dcdrUtf8 = new TextDecoder('utf-8');
 
+//A unique string ID generator
+import { customAlphabet } from 'nanoid';
+
 //Update a key value in the .env file
 //Source: https://stackoverflow.com/questions/64996008/update-attributes-in-env-file-in-node-js
 function setEnvValue(key, value) {
@@ -103,12 +106,17 @@ function objEmpty(obj) {
 function isNumber(value) {
     return typeof value === 'number' && isFinite(value);
 }
-  
+
+//No dashes or underscores therefore use a a custom alphabet
+const custAlphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+const nanoid = customAlphabet(custAlphabet, 6); //Six characters should do
+
 export {
     dcdrUtf8,
     setEnvValue,
     cleanDUNS,
     sDateIsoToYYYYMMDD,
     objEmpty,
-    isNumber
+    isNumber,
+    nanoid
 };

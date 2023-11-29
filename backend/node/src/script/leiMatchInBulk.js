@@ -397,8 +397,8 @@ function generateOutput(leiMatch) {
     return;
 }
 
-//Asynchronous function for processing a chunk of work items
-async function processChunk(arrChunk) {
+//Function for processing a batch of Data Block files
+function processChunk(arrChunk) {
     return Promise.allSettled(
         arrChunk.map(
             fn => { 

@@ -26,7 +26,7 @@ import { readFileSync } from 'fs';
 function readInputFileAttrs(
         file = 'idr.txt', //Name and parh to the input file
         splitOn = '|',     //Attribute delimiter
-        arrChunkSize = 50  //Size of the second dimension of the array
+        chunkSize = 50  //Size of the second dimension of the array
     ) {
         let arrIn;
  
@@ -46,13 +46,22 @@ function readInputFileAttrs(
             .map(row => row.split(splitOn));
 
         //Split the rows into a header (arrIn) & input rows (arrRows)
-        const arrRows = arrIn.splice(1);
+        let arrRows = arrIn.splice(1);
 
         //Return an array of request objects
-        return arrRows.map(elem => elem.reduce(
-            (obj, currValue, idx) => { obj[arrIn[0][idx]] = currValue; return obj },
-            {},
-        ));
+        arrRows = arrRows.map(elem => elem.reduce(
+                (obj, currValue, idx) => { obj[arrIn[0][idx]] = currValue; return obj },
+                {},
+            ));
+
+        const arrRet = [];
+
+        //Divvy up the array containing the request objects
+        for(let i = 0; i < arrRows.length; i += chunkSize) {
+            arrRet.push(arrRows.slice(i, i + chunkSize));
+        }
+
+        return arrRet;
 }
 
 export { readInputFileAttrs };

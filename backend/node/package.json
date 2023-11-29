@@ -8,11 +8,13 @@
     "dplAuthToken": "run-func ./src/script/dnbDplAuthToken.js dplAuthToken \"\" \"\" true",
     "getListOfKeys": "node ./src/script/getListOfKeys",
     "dplProcessData": "node ./src/script/dnbDplProcessData",
+    "dplIdrInBulk": "node ./src/script/dnbDplIdrInBulk",
     "leiMatchInBulk": "node ./src/script/leiMatchInBulk",
     "chunks": "node ./src/script/test/chunks",
     "fetch": "node ./src/script/test/fetch",
     "https": "node ./src/script/test/https",
     "thumbsUp": "node ./src/script/test/thumbsUp",
+    "nanoid": "node ./src/script/test/nanoid",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -27,6 +29,7 @@
     "dotenv": "^16.3.1",
     "limiter": "^2.0.1",
     "n-readlines": "^1.0.1",
+    "nanoid": "^5.0.3",
     "pg": "^8.11.3",
     "run-func": "^3.0.0"
   }
