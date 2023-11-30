@@ -20,28 +20,50 @@
 //
 // *********************************************************************
 
-import { nanoid } from "../share/utils.js";
+import { dcdrUtf8, sDateIsoToYYYYMMDD, nanoid } from "../share/utils.js";
+
+import { dnbDplLimiter } from '../share/limiters.js';
 
 import { DnbDplIDR } from "../share/apiDefs.js";
 
 import { readInputFileAttrs } from "../share/readInputFileAttrs.js";
 
+//Import the file system for persisting API responses
+import { promises as fs } from 'fs';
+
+//Current month day is made part of the file name
+const monthDay = sDateIsoToYYYYMMDD(new Date().toISOString(), 4);
+
 function processChunk(arrChunk) {
     return Promise.allSettled(
-        arrChunk.map( idrParams => fetch(
-                new DnbDplIDR(idrParams).getReq()
-            )
-            .then(resp => {
-                if (resp.ok) {
-                    return resp.json();
-                }
-                else {
-                    throw new Error(`Fetch response not okay, HTTP status: ${resp.statusText}`);
-                }
-            })
-            .then(dnbIdrRslt => dnbIdrRslt?.matchCandidates?.[0]?.organization?.duns)
+        arrChunk.map(
+            idrParams => {
+                //Object for keeping track of data across multiple async calls
+                const idrRslts = { idrParams };
+
+                //Logic for processing an IDR request
+                return dnbDplLimiter.removeTokens(1)                //Throttle the D+ API requests
+                    .then(() => 
+                        fetch(new DnbDplIDR(idrParams).getReq())    //Fire off the requests
+                    )
+                    .then(resp => {
+                        idrRslts.httpStatus = resp.status;
+
+                        return resp.arrayBuffer();                  //Retrieve the array buffer of the HTTP response
+                    })
+                    .then(arrBuff => {
+                        const fID = idrRslts.idrParams.customerReference5 || nanoid();
+                        const fn = `../io/out/dnb_dpl_idr_${monthDay}_${fID}_${idrRslts.httpStatus}.json`;
+
+                        idrRslts.fn = fn;
+
+                        return fs.writeFile( fn, dcdrUtf8.decode(arrBuff) ); //Write the file
+                    })
+                    .then(() => idrRslts)
+                    .catch( err => console.error(err.message) );
+            }
         )
-    );
+    )
 }
 
 async function processChunks(arrChunks) {
@@ -54,10 +76,10 @@ async function processChunks(arrChunks) {
 
         arrSettled.forEach(elem => {
             if(elem.value) {
-                console.log(`name ${elem.value} ${nanoid()}`)
+                console.log(`Successfully wrote file ${elem.value.fn}`)
             }
             else {
-                console.log(elem.reason)
+                console.error(elem.reason)
             }
         });
 
