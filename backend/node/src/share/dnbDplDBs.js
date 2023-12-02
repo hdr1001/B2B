@@ -24,22 +24,13 @@ import {
     sDateIsoToYYYYMMDD,
     objEmpty,
     isNumber
-} from "./utils.js";
+} from './utils.js';
 
-import { regNumTypeIsVAT } from "./sharedRefTables.js";
+import { getObjAttrValue, addressToArray } from './dnbDplCommon.js';
 
-import { ElemLabel, constructElemLabel } from "./elemLabel.js";
+import { ElemLabel, constructElemLabel } from './elemLabel.js';
 
-const isObject = obj => typeof obj === 'object' && obj !== null;
-
-const getObjAttrValue = (obj, component) => 
-    isObject(obj)
-        ? component.attrs.length === 1
-            ? obj[component.attrs[0]]
-            : component.attrs.length === 2 && isObject(obj[component.attrs[0]])
-                ? obj[component.attrs[0]][component.attrs[1]]
-                : null
-        : null
+import { regNumTypeIsVAT } from './sharedRefTables.js';
 
 //Application constants
 const appConsts = {
@@ -283,7 +274,7 @@ class DplDBs {
 
             //The parsed object should have an organization node
             if(!this.dplDBs.organization) {
-                throw('Constructor parameter is valid JSON but not a collection of D&B Direct+ data blocks')
+                throw new Error('Constructor parameter is valid JSON but not a collection of D&B Direct+ data blocks')
             }
 
             //Create a shortcut to the organization attribute
@@ -293,8 +284,8 @@ class DplDBs {
         //A D&B Direct+ collection of data blocks can be passed in, as an object, to the constructor as well
         if(typeof inp === 'object' && !Buffer.isBuffer(inp)) {
             //The object passed in to the constructor should have an organization node
-            if(inp.organization) {
-                throw('The constructor parameter is an object but not a collection of D&B Direct+ data blocks')
+            if(!inp.organization) {
+                throw new Error('The constructor parameter is an object but not a collection of D&B Direct+ data blocks')
             }
 
             //Store a reference to the object passed in to the constructor
@@ -502,65 +493,7 @@ class DplDBs {
 
     //Method addrToArray will convert D&B Direct+ address objects (primary, registered, ...)
     //to an array of a specified length (= arrAddrComponents.length).
-    //This method is applicable to data blocks Company Information L1+ and Hierarchies & 
-    //Connections L1
-    //
-    //Three parameters
-    //1. A reference to a Direct+ address object
-    //2. An array of address object attributes or the outcome of a custom algorithm can be 
-    //   returned (options: oDpl.consts.addr.component)
-    //3. Specify boolean value true for the element labels to be returned
-    addrToArray(addr, arrAddrComponents, elemLabel) {
-        //Return the address attribute value for a specific address object attribute or
-        //invoke a custom, address related, algorithm
-        function getAttrValue(oAddr, addrComponent) {
-            if(typeof oAddr !== 'object' || objEmpty(oAddr)) {
-                return null
-            }
-
-            //Custom address component algorithms
-            if(addrComponent.custom === 'line1') { //Custom algorithm named line1
-                //This algorithm goes the extra mile to insure data for line 1
-                if(oAddr?.streetAddress?.line1) { return oAddr.streetAddress.line1 }
-
-                let ret;
-
-                if(oAddr?.streetName) { ret = addr.streetName }
-
-                if(oAddr?.streetNumber) {
-                    if(ret) {
-                        ret += ' ' + oAddr.streetNumber
-                    }
-                    else {
-                        ret = oAddr.streetNumber
-                    }
-                }
-
-                if(ret) { return ret }
-
-                if(oAddr?.postOfficeBox && oAddr?.postOfficeBox?.postOfficeBoxNumber) {
-                    if(oAddr?.postOfficeBox?.typeDescription) {
-                        return `Pobox ${oAddr.postOfficeBox.postOfficeBoxNumber}`
-                    }
-                    else {
-                        return oAddr.postOfficeBox.postOfficeBoxNumber
-                    }
-                }
-
-                return null;
-            }
-
-            //From here on out straight-up address object attribute values are returned.
-            //These values are mapped 1-2-1 but, at most, two levels deep.
-            return getObjAttrValue(oAddr, addrComponent)
-        }
-
-        //Use map to return a new array of labels or attribute values
-        return arrAddrComponents.map(addrComponent => elemLabel 
-            ? constructElemLabel(elemLabel, addrComponent.desc)
-            : getAttrValue(addr, addrComponent)
-        )
-    }
+    addrToArray = addressToArray;
 
     //Method regNumsToArray will convert D&B Direct+ registration number objects (organization.registrationNumbers)
     //to an array of a specified length (= numRegNums * arrRegNumComponents.length).
