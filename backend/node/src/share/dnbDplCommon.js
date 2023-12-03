@@ -25,16 +25,23 @@ import { objEmpty } from "./utils.js";
 
 import { constructElemLabel } from "./elemLabel.js";
 
+//Test if a variable is an object ➡️ null doesn't qualify!
 const isObject = obj => typeof obj === 'object' && obj !== null;
 
-const getObjAttrValue = (obj, component) => 
-    isObject(obj)
-        ? component.attrs.length === 1
-            ? obj[component.attrs[0]]
-            : component.attrs.length === 2 && isObject(obj[component.attrs[0]])
-                ? obj[component.attrs[0]][component.attrs[1]]
-                : null
-        : null
+//Recursively get to an attribute value
+const getObjAttrValue = (obj, component) => {
+    function getNextObjAttrValue(obj, component) {
+        if(!isObject(obj)) { return null }
+
+        if(idx === component.attrs.length - 1)  { return obj[component.attrs[idx]] }
+
+        return getNextObjAttrValue( obj[component.attrs[idx++]], component );
+    }
+
+    let idx = 0;
+
+    return getNextObjAttrValue(obj, component);
+}
 
 //Method addressToArray will convert D&B Direct+ address objects (primary, registered,
 //...) to an array of a specified length (= arrAddrComponents.length).

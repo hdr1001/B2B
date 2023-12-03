@@ -22,6 +22,8 @@
 
 import { getObjAttrValue } from '../share/dnbDplCommon.js';
 
+import { ElemLabel } from './elemLabel.js';
+
 //Application constants
 const appConsts = {
     inq: {
@@ -45,13 +47,13 @@ const appConsts = {
     }
 };
 
-//D&B Direct+ Data Blocks JavaScript object wrapper
-class DplMCs {
+//D&B Direct+ IDentity Resolution JavaScript object wrapper
+class DplIDR {
     constructor(inp) {
-        //Parse the JSON passed in as a string
+        //Parse the JSON passed in as a string/buffer
         if((typeof inp === 'string' || Buffer.isBuffer(inp)) && inp.length) {
             try {
-                this.dplMCs = JSON.parse(inp)
+                this.idr = JSON.parse(inp)
             }
             catch(err) {
                 console.error(err.message);
@@ -59,12 +61,12 @@ class DplMCs {
             }
 
             //The parsed object should have a matchCandidates node
-            if(!this?.dplMCs?.matchCandidates) {
+            if(!this?.idr?.matchCandidates) {
                 throw new Error('Constructor parameter is valid JSON but not a D&B Direct+ IDR response')
             }
 
             //Create a shortcut to the organization attribute
-            this.mcs = this.dplMCs.matchCandidates;
+            this.mcs = this.idr.matchCandidates;
         }
 
         //A D&B Direct+ collection of data blocks can be passed in, as an object, to the constructor as well
@@ -75,18 +77,18 @@ class DplMCs {
             }
 
             //Store a reference to the object passed in to the constructor
-            this.dplMCs = inp;
+            this.idr = inp;
 
             //Create a shortcut to the organization attribute
             this.mcs = inp.matchCandidates;
         }
 
-        if(this.dplMCs) {
+        if(this.idr) {
             //One-to-one mappings
             this.map121 = { //The actual directly mapped values
-                inq:           this.dplMCs?.inquiryDetail,             // inquiry detail
-                numCandidates: this.dplMCs?.candidatesMatchedQuantity, // number of match candidates returned
-                matchType:     this.dplMCs?.matchDataCriteria,         // match algorithm used
+                inq:           this.idr?.inquiryDetail,             // inquiry detail
+                numCandidates: this.idr?.candidatesMatchedQuantity, // number of match candidates returned
+                matchType:     this.idr?.matchDataCriteria,         // match algorithm used
             };
         }
     }
@@ -94,9 +96,42 @@ class DplMCs {
     //Expose the application constants through the class interface
     get consts() { return appConsts }
 
+    //It is possible to specify up to 5 request references. These references are passed back in the response
+    custRefToArray(numCustRefs, bLabel) {
+        const arrRet = new Array(numCustRefs);
+
+        if(bLabel) { //Code for generating the array header
+            for(let i = 0; i < numCustRefs; i++) {
+                arrRet[i] = new ElemLabel('cust ref', numCustRefs > 1 ? i + 1 : null)
+            }
+
+            return arrRet;
+        }
+
+        //No references in the response, pass back the empty array
+        if(!this.map121.inq?.customerReference || this.map121.inq.customerReference.length === 0) { return retArr }
+
+        //Add the references to the return array
+        for(let i = 0; i < numCustRefs; i++) {
+            arrRet[i] = this.map121.inq.customerReference[i]
+        }
+
+        return arrRet;
+    }
+
+    //Echo the search criteria (i.e. inquiry details) specified
     inqToArray(arrInqComponents, bLabel) {
         const arrRet = new Array(arrInqComponents.length);
 
+        if(bLabel) { //Code for generating the inquiry details header
+            for(let i = 0; i < arrInqComponents.length; i++) {
+                arrRet[i] = new ElemLabel(arrInqComponents[i].desc)
+            }
+
+            return arrRet;
+        }
+
+        //Add the inquiry details to the return array
         arrInqComponents.forEach((inqComponent, idxComponent) => {
             arrRet[idxComponent] = getObjAttrValue(this.map121.inq, inqComponent)
         });
@@ -105,4 +140,4 @@ class DplMCs {
     }
 }
 
-export { DplMCs };
+export { DplIDR };
