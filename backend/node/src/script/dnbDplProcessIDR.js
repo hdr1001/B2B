@@ -67,6 +67,16 @@ function processDnbDplIDR(jsonIn, bLabel) {
     //Return the type of match that was executed (nat ID/name & addr/...)
     arrValues.push(bLabel ? new ElemLabel('match type') : oDpl.map121.matchType);
 
+    arrValues.push(bLabel ? new ElemLabel('sequence num') : oDpl.mcs[0] ? oDpl.mcs[0].seqNum : null);
+
+    arrValues.push(bLabel ? new ElemLabel('duns') : oDpl.mcs[0] ? oDpl.mcs[0].duns : null);
+
+    arrValues.push(bLabel ? new ElemLabel('bus name') : oDpl.mcs[0] ? oDpl.mcs[0].name : null);
+
+    arrValues.push(bLabel ? new ElemLabel('trade style') : oDpl.mcs[0] ? oDpl.mcs[0].tradeStyle : null);
+
+    arrValues.push(bLabel ? new ElemLabel('tel') : oDpl.mcs[0] ? oDpl.mcs[0].tel : null);
+
     console.log( arrValues.map(nullUndefToEmptyStr).join('|') );
 }
 

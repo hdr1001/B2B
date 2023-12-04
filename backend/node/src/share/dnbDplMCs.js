@@ -64,9 +64,6 @@ class DplIDR {
             if(!this?.idr?.matchCandidates) {
                 throw new Error('Constructor parameter is valid JSON but not a D&B Direct+ IDR response')
             }
-
-            //Create a shortcut to the organization attribute
-            this.mcs = this.idr.matchCandidates;
         }
 
         //A D&B Direct+ collection of data blocks can be passed in, as an object, to the constructor as well
@@ -78,9 +75,6 @@ class DplIDR {
 
             //Store a reference to the object passed in to the constructor
             this.idr = inp;
-
-            //Create a shortcut to the organization attribute
-            this.mcs = inp.matchCandidates;
         }
 
         if(this.idr) {
@@ -91,6 +85,19 @@ class DplIDR {
                 matchType:     this.idr?.matchDataCriteria,         // match algorithm used
             };
         }
+
+        this.mcs = this.idr.matchCandidates
+            .sort((mc1, mc2) => mc1.displaySequence -  mc2.displaySequence)
+            .map(mc => {
+                const newObj = Object.create(dplMc);
+
+                newObj.mc = mc;
+                newObj.mc.org = mc?.organization;
+                newObj.mc.qlty = mc?.matchQualityInformation;
+
+                return newObj;
+            }
+        )
     }
 
     //Expose the application constants through the class interface
@@ -138,6 +145,18 @@ class DplIDR {
 
         return arrRet;
     }
+}
+
+const dplMc = {
+    get seqNum() { return this.mc.displaySequence },
+
+    get duns() { return this.mc?.org?.duns },
+
+    get name() { return this.mc?.org?.primaryName },
+
+    get tradeStyle() { return this.mc?.org?.tradeStyleNames?.[0]?.name },
+
+    get tel() { return this.mc?.org?.telephone?.[0]?.telephoneNumber },
 }
 
 export { DplIDR };
