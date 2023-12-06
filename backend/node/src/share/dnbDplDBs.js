@@ -26,7 +26,7 @@ import {
     isNumber
 } from './utils.js';
 
-import { getObjAttrValue, addressToArray } from './dnbDplCommon.js';
+import { getObjAttrValue, addr, addressToArray } from './dnbDplCommon.js';
 
 import { ElemLabel, constructElemLabel } from './elemLabel.js';
 
@@ -58,41 +58,7 @@ const appConsts = {
         level: 1,
         ver: 2
     },
-    addr: { //Address parts
-        type: {
-            primary: {attr: 'primaryAddress', desc: 'Primary address'},
-            registered: {attr: 'registeredAddress', desc: 'Registered address'},
-            mailing: {attr: 'mailingAddress', desc: 'Mailing address'}
-        },
-        component: {
-            //1-2-1 address object attribute mappings (max two levels deep!)
-            //Structure (1) an array of attributes & (2) a component description 
-            addrLine1: { attrs: [ 'streetAddress', 'line1'], desc: 'line 1' },
-            addrLine2: { attrs: [ 'streetAddress', 'line2'], desc: 'line 2' },
-            streetName: { attrs: ['streetName'], desc: 'street' },
-            streetNumber: { attrs: [ 'streetNumber' ], desc: 'street nbr' },
-            locality: { attrs: [ 'addressLocality', 'name' ], desc: 'city nme' },
-            minorTownName: { attrs: [ 'minorTownName' ], desc: 'minor city nme' },
-            postalCode: { attrs: [ 'postalCode' ], desc: 'post cd' },
-            county: { attrs: [ 'addressCounty', 'name' ], desc: 'cnty nme' },
-            region: { attrs: [ 'addressRegion', 'name' ], desc: 'state prov nme' },
-            regionAbbr: { attrs: [ 'addressRegion', 'abbreviatedName' ], desc: 'state prov abbr' },
-            regionIsoSubName: { attrs: [ 'addressRegion', 'isoSubDivisionName' ], desc: 'state prov ISO nme' },
-            regionIsoSubCode: { attrs: [ 'addressRegion', 'isoSubDivisionCode' ], desc: 'state prov ISO cd' },
-            country: { attrs: [ 'addressCountry', 'name' ], desc: 'ctry nme' },
-            countryISO: { attrs: [ 'addressCountry', 'isoAlpha2Code' ], desc: 'ctry ISO' },
-            continent: { attrs: [ 'continentalRegion', 'name' ], desc: 'cont' },
-            poBox: { attrs: [ 'postOfficeBox', 'postOfficeBoxNumber' ], desc: 'pobox' },
-            latitude: { attrs: [ 'latitude' ], desc: 'lat' },
-            longitude: { attrs: [ 'longitude' ], desc: 'long' },
-            isRegisteredAddress: { attrs: [ 'isRegisteredAddress' ], desc: 'reg ind' },
-            isManufacturingLocation: { attrs: [ 'isManufacturingLocation' ], desc: 'mfg loc' },
-            
-            //Custom, address component related, algorithms
-            //Structure (1) algorithm ID & (2) custom component description 
-            customLine1: { custom: 'line1', desc: 'line 1' }
-        }
-    },
+    addr: addr, //Address related constants
     regNum: {
         component: {
             num: {attr: 'registrationNumber', desc: 'value'},

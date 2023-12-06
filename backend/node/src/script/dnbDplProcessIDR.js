@@ -75,7 +75,31 @@ function processDnbDplIDR(jsonIn, bLabel) {
 
     arrValues.push(bLabel ? new ElemLabel('trade style') : oDpl.mcs[0] ? oDpl.mcs[0].tradeStyle : null);
 
+    arrValues = arrValues.concat( oDpl.mcs[0].addrToArray(
+        oDpl.mcs[0]?.org?.primaryAddress,
+        [
+            oDpl.consts.addr.component.addrLine1,
+            oDpl.consts.addr.component.addrLine2,
+            oDpl.consts.addr.component.locality,
+            oDpl.consts.addr.component.postalCode,
+            oDpl.consts.addr.component.regionAbbr,
+            oDpl.consts.addr.component.countryISO
+        ],
+        bLabel && new ElemLabel(null, null, 'addr')
+    ));
+
+    arrValues = arrValues.concat( oDpl.mcs[0].addrToArray(
+        oDpl.mcs[0]?.org?.mailingAddress,
+        [
+            oDpl.consts.addr.component.addrLine1,
+            oDpl.consts.addr.component.locality,
+        ],
+        bLabel && new ElemLabel(null, null, 'mail addr')
+    ));
+
     arrValues.push(bLabel ? new ElemLabel('tel') : oDpl.mcs[0] ? oDpl.mcs[0].tel : null);
+
+    arrValues.push(bLabel ? new ElemLabel('status') : oDpl.mcs[0] ? oDpl.mcs[0].status : null);
 
     console.log( arrValues.map(nullUndefToEmptyStr).join('|') );
 }

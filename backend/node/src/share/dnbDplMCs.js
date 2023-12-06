@@ -20,7 +20,7 @@
 //
 // *********************************************************************
 
-import { getObjAttrValue } from '../share/dnbDplCommon.js';
+import { getObjAttrValue, addr, addressToArray } from '../share/dnbDplCommon.js';
 
 import { ElemLabel } from './elemLabel.js';
 
@@ -44,7 +44,8 @@ const appConsts = {
             custBillEndt: { attrs: ['customerBillingEndorsement'], desc: 'cust bill endt' },
             inLanguage: { attrs: ['inLanguage'], desc: 'language' }
         }
-    }
+    },
+    addr: addr //Address related constants
 };
 
 //D&B Direct+ IDentity Resolution JavaScript object wrapper
@@ -92,8 +93,8 @@ class DplIDR {
                 const newObj = Object.create(dplMc);
 
                 newObj.mc = mc;
-                newObj.mc.org = mc?.organization;
-                newObj.mc.qlty = mc?.matchQualityInformation;
+                newObj.org = mc?.organization;
+                newObj.qlty = mc?.matchQualityInformation;
 
                 return newObj;
             }
@@ -150,13 +151,17 @@ class DplIDR {
 const dplMc = {
     get seqNum() { return this.mc.displaySequence },
 
-    get duns() { return this.mc?.org?.duns },
+    get duns() { return this.org?.duns },
 
-    get name() { return this.mc?.org?.primaryName },
+    get name() { return this.org?.primaryName },
 
-    get tradeStyle() { return this.mc?.org?.tradeStyleNames?.[0]?.name },
+    get tradeStyle() { return this.org?.tradeStyleNames?.[0]?.name },
 
-    get tel() { return this.mc?.org?.telephone?.[0]?.telephoneNumber },
+    addrToArray: addressToArray,
+
+    get tel() { return this.org?.telephone?.[0]?.telephoneNumber },
+
+    get status() { return this.org?.dunsControlStatus?.operatingStatus?.description }
 }
 
 export { DplIDR };
