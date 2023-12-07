@@ -85,20 +85,24 @@ class DplIDR {
                 numCandidates: this.idr?.candidatesMatchedQuantity, // number of match candidates returned
                 matchType:     this.idr?.matchDataCriteria,         // match algorithm used
             };
-        }
 
-        this.mcs = this.idr.matchCandidates
-            .sort((mc1, mc2) => mc1.displaySequence -  mc2.displaySequence)
-            .map(mc => {
-                const newObj = Object.create(dplMc);
+            if(this.idr.matchCandidates) {
+                this.mcs = this.idr.matchCandidates
+                    .sort((mc1, mc2) => mc1.displaySequence -  mc2.displaySequence)
+                    .map(mc => {
+                        const newObj = Object.create(dplMc);
 
-                newObj.mc = mc;
-                newObj.org = mc?.organization;
-                newObj.qlty = mc?.matchQualityInformation;
+                        newObj.mc = mc;
+                        newObj.org = mc?.organization;
+                        newObj.qlty = mc?.matchQualityInformation;
 
-                return newObj;
+                        return newObj;
+                    })
             }
-        )
+            else {
+                this.mcs = []
+            }
+        }
     }
 
     //Expose the application constants through the class interface
@@ -161,7 +165,23 @@ const dplMc = {
 
     get tel() { return this.org?.telephone?.[0]?.telephoneNumber },
 
-    get status() { return this.org?.dunsControlStatus?.operatingStatus?.description }
+    get regNum() { return this.org?.registrationNumbers?.[0]?.registrationNumber },
+
+    get ceo() { return this.org?.mostSeniorPrincipals?.[0]?.fullName },
+
+    get isStandalone() { return this.org?.isStandalone },
+
+    get famTreeRole() { return this.org?.corporateLinkage?.familytreeRolesPlayed?.[0].description },
+
+    get status() { return this.org?.dunsControlStatus?.operatingStatus?.description },
+
+    get matchGrade() { return this.qlty?.matchGrade },
+
+    get confCode() { return this.qlty?.confidenceCode },
+
+    get mdp() { return this.qlty?.matchDataProfile },
+
+    get nameScore() { return this.qlty?.nameMatchScore } 
 }
 
 export { DplIDR };

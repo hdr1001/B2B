@@ -99,12 +99,28 @@ function processDnbDplIDR(jsonIn, bLabel) {
 
     arrValues.push(bLabel ? new ElemLabel('tel') : oDpl.mcs[0] ? oDpl.mcs[0].tel : null);
 
+    arrValues.push(bLabel ? new ElemLabel('reg num') : oDpl.mcs[0] ? oDpl.mcs[0].regNum : null);
+
+    arrValues.push(bLabel ? new ElemLabel('ceo') : oDpl.mcs[0] ? oDpl.mcs[0].ceo : null);
+
+    arrValues.push(bLabel ? new ElemLabel('standalone') : oDpl.mcs[0] ? oDpl.mcs[0].isStandalone : null);
+
+    arrValues.push(bLabel ? new ElemLabel('fam tree rol') : oDpl.mcs[0] ? oDpl.mcs[0].famTreeRole : null);
+
     arrValues.push(bLabel ? new ElemLabel('status') : oDpl.mcs[0] ? oDpl.mcs[0].status : null);
+
+    arrValues.push(bLabel ? new ElemLabel('match grade') : oDpl.mcs[0] ? oDpl.mcs[0].matchGrade : null);
+
+    arrValues.push(bLabel ? new ElemLabel('conf code') : oDpl.mcs[0] ? oDpl.mcs[0].confCode : null);
+
+    arrValues.push(bLabel ? new ElemLabel('match data profile') : oDpl.mcs[0] ? oDpl.mcs[0].mdp : null);
+
+    arrValues.push(bLabel ? new ElemLabel('name score') : oDpl.mcs[0] ? oDpl.mcs[0].nameScore : null);
 
     console.log( arrValues.map(nullUndefToEmptyStr).join('|') );
 }
 
-let listHeader = true;
+let listHeader = false;
 
 //Read the D&B Direct+ IDentity Resolution JSON responses
 fs.readdir('../io/out')
