@@ -150,6 +150,8 @@ class DplIDR {
 
         return arrRet;
     }
+
+    addrToArray = addressToArray;
 }
 
 const dplMc = {
@@ -160,8 +162,6 @@ const dplMc = {
     get name() { return this.org?.primaryName },
 
     get tradeStyle() { return this.org?.tradeStyleNames?.[0]?.name },
-
-    addrToArray: addressToArray,
 
     get tel() { return this.org?.telephone?.[0]?.telephoneNumber },
 

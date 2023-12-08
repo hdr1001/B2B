@@ -30,6 +30,8 @@ import { ElemLabel } from '../share/elemLabel.js';
 
 const nullUndefToEmptyStr = elem => elem === null || elem === undefined ? '' : elem;
 
+let inqComponents, primaryAddrComponents, mailAddrComponents;
+
 //Process an D&B Direct+ IDentity Resolution response
 function processDnbDplIDR(jsonIn, bLabel) {
     let oDpl;
@@ -42,14 +44,8 @@ function processDnbDplIDR(jsonIn, bLabel) {
         return;
     }
 
-    let arrValues = [];
-
-    //Include the request reference(s) in the output
-    arrValues = arrValues.concat( oDpl.custRefToArray(1, bLabel) );
-
-    //Echo the specified search criteria (i.e. inquiry details)
-    arrValues = arrValues.concat( oDpl.inqToArray(
-        [
+    if(oDpl && !inqComponents) {
+        inqComponents = [
             oDpl.consts.inq.component.name,
             oDpl.consts.inq.component.addrLine1,
             oDpl.consts.inq.component.addrLine2,
@@ -57,9 +53,30 @@ function processDnbDplIDR(jsonIn, bLabel) {
             oDpl.consts.inq.component.locality,
             oDpl.consts.inq.component.countryISO,
             oDpl.consts.inq.component.regNum
-        ],
-        bLabel
-    ));
+        ];
+        
+        primaryAddrComponents = [
+            oDpl.consts.addr.component.addrLine1,
+            oDpl.consts.addr.component.addrLine2,
+            oDpl.consts.addr.component.locality,
+            oDpl.consts.addr.component.postalCode,
+            oDpl.consts.addr.component.regionAbbr,
+            oDpl.consts.addr.component.countryISO
+        ];
+        
+        mailAddrComponents = [
+            oDpl.consts.addr.component.addrLine1,
+            oDpl.consts.addr.component.locality
+        ];
+    }
+    
+    let arrValues = [];
+
+    //Include the request reference(s) in the output
+    arrValues = arrValues.concat( oDpl.custRefToArray(1, bLabel) );
+
+    //Echo the specified search criteria (i.e. inquiry details)
+    arrValues = arrValues.concat( oDpl.inqToArray( inqComponents, bLabel ));
 
     //Add the number a match candidates generated to the output
     arrValues.push(bLabel ? new ElemLabel('number candidates') : oDpl.map121.numCandidates);
@@ -75,27 +92,19 @@ function processDnbDplIDR(jsonIn, bLabel) {
 
     arrValues.push(bLabel ? new ElemLabel('trade style') : oDpl.mcs[0] ? oDpl.mcs[0].tradeStyle : null);
 
-    arrValues = arrValues.concat( oDpl.mcs[0].addrToArray(
-        oDpl.mcs[0]?.org?.primaryAddress,
-        [
-            oDpl.consts.addr.component.addrLine1,
-            oDpl.consts.addr.component.addrLine2,
-            oDpl.consts.addr.component.locality,
-            oDpl.consts.addr.component.postalCode,
-            oDpl.consts.addr.component.regionAbbr,
-            oDpl.consts.addr.component.countryISO
-        ],
-        bLabel && new ElemLabel(null, null, 'addr')
-    ));
-
-    arrValues = arrValues.concat( oDpl.mcs[0].addrToArray(
-        oDpl.mcs[0]?.org?.mailingAddress,
-        [
-            oDpl.consts.addr.component.addrLine1,
-            oDpl.consts.addr.component.locality,
-        ],
-        bLabel && new ElemLabel(null, null, 'mail addr')
-    ));
+    if(bLabel) {
+        arrValues = arrValues.concat( oDpl.addrToArray( null, primaryAddrComponents,  new ElemLabel(null, null, 'addr') ));
+    
+        arrValues = arrValues.concat( oDpl.addrToArray( null, mailAddrComponents,  new ElemLabel(null, null, 'mail addr') ));
+    }
+    else if(oDpl.mcs?.[0]) {
+        arrValues = arrValues.concat( oDpl.addrToArray( oDpl.mcs?.[0]?.org?.primaryAddress, primaryAddrComponents ));
+    
+        arrValues = arrValues.concat( oDpl.addrToArray( oDpl.mcs?.[0]?.org?.mailingAddress, mailAddrComponents ));
+    }
+    else {
+        arrValues = arrValues.concat( new Array( primaryAddrComponents.length + mailAddrComponents.length ) )
+    }
 
     arrValues.push(bLabel ? new ElemLabel('tel') : oDpl.mcs[0] ? oDpl.mcs[0].tel : null);
 
@@ -120,7 +129,7 @@ function processDnbDplIDR(jsonIn, bLabel) {
     console.log( arrValues.map(nullUndefToEmptyStr).join('|') );
 }
 
-let listHeader = false;
+let listHeader = true;
 
 //Read the D&B Direct+ IDentity Resolution JSON responses
 fs.readdir('../io/out')
