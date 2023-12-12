@@ -30,6 +30,8 @@ import { ElemLabel } from '../share/elemLabel.js';
 
 const nullUndefToEmptyStr = elem => elem === null || elem === undefined ? '' : elem;
 
+const listNumCand = 3;
+
 let inqComponents, primaryAddrComponents, mailAddrComponents;
 
 //Process an D&B Direct+ IDentity Resolution response
@@ -84,47 +86,70 @@ function processDnbDplIDR(jsonIn, bLabel) {
     //Return the type of match that was executed (nat ID/name & addr/...)
     arrValues.push(bLabel ? new ElemLabel('match type') : oDpl.map121.matchType);
 
-    arrValues.push(bLabel ? new ElemLabel('sequence num') : oDpl.mcs[0] ? oDpl.mcs[0].seqNum : null);
+    //List the candidates
+    for(let i = 0; (bLabel || i < oDpl?.mcs?.length) && i < listNumCand; i++) {
+        //Candidate sequence number
+        arrValues.push(bLabel ? new ElemLabel('sequence num', i + 1) : oDpl.mcs[i].seqNum );
 
-    arrValues.push(bLabel ? new ElemLabel('duns') : oDpl.mcs[0] ? oDpl.mcs[0].duns : null);
+        //Candidate DUNS
+        arrValues.push(bLabel ? new ElemLabel('duns', i + 1) : oDpl.mcs[i].duns );
 
-    arrValues.push(bLabel ? new ElemLabel('bus name') : oDpl.mcs[0] ? oDpl.mcs[0].name : null);
-
-    arrValues.push(bLabel ? new ElemLabel('trade style') : oDpl.mcs[0] ? oDpl.mcs[0].tradeStyle : null);
-
-    if(bLabel) {
-        arrValues = arrValues.concat( oDpl.addrToArray( null, primaryAddrComponents,  new ElemLabel(null, null, 'addr') ));
+        //Primary name of the candidate
+        arrValues.push(bLabel ? new ElemLabel('bus name', i + 1) : oDpl.mcs[i].name );
     
-        arrValues = arrValues.concat( oDpl.addrToArray( null, mailAddrComponents,  new ElemLabel(null, null, 'mail addr') ));
-    }
-    else if(oDpl.mcs?.[0]) {
-        arrValues = arrValues.concat( oDpl.addrToArray( oDpl.mcs?.[0]?.org?.primaryAddress, primaryAddrComponents ));
+        //Tradestyle name of the candidate
+        arrValues.push(bLabel ? new ElemLabel('trade style', i + 1) : oDpl.mcs[i].tradeStyle );
+
+        //Address information
+        if(bLabel) {
+            //Candidate primary address labels
+            arrValues = arrValues.concat( oDpl.addrToArray( null, primaryAddrComponents,  new ElemLabel(null, i + 1, 'addr') ));
+        
+            //Candidate mail address labels
+            arrValues = arrValues.concat( oDpl.addrToArray( null, mailAddrComponents,  new ElemLabel(null, i + 1, 'mail addr') ));
+        }
+        else if(oDpl.mcs[i]) {
+            //Candidate primary address components
+            arrValues = arrValues.concat( oDpl.addrToArray( oDpl.mcs[i]?.org?.primaryAddress, primaryAddrComponents ));
+        
+            //Candidate mail address components
+            arrValues = arrValues.concat( oDpl.addrToArray( oDpl.mcs[i]?.org?.mailingAddress, mailAddrComponents ));
+        }
+        else {
+            //Fill in the blanks
+            arrValues = arrValues.concat( new Array( primaryAddrComponents.length + mailAddrComponents.length ) )
+        }
     
-        arrValues = arrValues.concat( oDpl.addrToArray( oDpl.mcs?.[0]?.org?.mailingAddress, mailAddrComponents ));
+        //Candidate telephone number
+        arrValues.push(bLabel ? new ElemLabel('tel', i + 1) : oDpl.mcs[i].tel );
+    
+        //Candidate registration number
+        arrValues.push(bLabel ? new ElemLabel('reg num', i + 1) : oDpl.mcs[i].regNum );
+    
+        //Candidate chief exec
+        arrValues.push(bLabel ? new ElemLabel('ceo', i + 1) : oDpl.mcs[i].ceo );
+    
+        //Is the candidate standalone
+        arrValues.push(bLabel ? new ElemLabel('standalone', i + 1) : oDpl.mcs[i].isStandalone );
+    
+        //The candidate's family tree role
+        arrValues.push(bLabel ? new ElemLabel('fam tree rol', i + 1) : oDpl.mcs[i].famTreeRole );
+    
+        //The candidate's operating status
+        arrValues.push(bLabel ? new ElemLabel('status', i + 1) : oDpl.mcs[i].status );
+    
+        //Match quality information, MatchGrade
+        arrValues.push(bLabel ? new ElemLabel('match grade', i + 1) : oDpl.mcs[i].matchGrade );
+    
+        //Match quality information, confidence code
+        arrValues.push(bLabel ? new ElemLabel('conf code', i + 1) : oDpl.mcs[i].confCode );
+    
+        //Match quality information, match data profile
+        arrValues.push(bLabel ? new ElemLabel('match data profile', i + 1) : oDpl.mcs[i].mdp );
+    
+        //Match quality information, match name score
+        arrValues.push(bLabel ? new ElemLabel('name score', i + 1) : oDpl.mcs[i].nameScore );
     }
-    else {
-        arrValues = arrValues.concat( new Array( primaryAddrComponents.length + mailAddrComponents.length ) )
-    }
-
-    arrValues.push(bLabel ? new ElemLabel('tel') : oDpl.mcs[0] ? oDpl.mcs[0].tel : null);
-
-    arrValues.push(bLabel ? new ElemLabel('reg num') : oDpl.mcs[0] ? oDpl.mcs[0].regNum : null);
-
-    arrValues.push(bLabel ? new ElemLabel('ceo') : oDpl.mcs[0] ? oDpl.mcs[0].ceo : null);
-
-    arrValues.push(bLabel ? new ElemLabel('standalone') : oDpl.mcs[0] ? oDpl.mcs[0].isStandalone : null);
-
-    arrValues.push(bLabel ? new ElemLabel('fam tree rol') : oDpl.mcs[0] ? oDpl.mcs[0].famTreeRole : null);
-
-    arrValues.push(bLabel ? new ElemLabel('status') : oDpl.mcs[0] ? oDpl.mcs[0].status : null);
-
-    arrValues.push(bLabel ? new ElemLabel('match grade') : oDpl.mcs[0] ? oDpl.mcs[0].matchGrade : null);
-
-    arrValues.push(bLabel ? new ElemLabel('conf code') : oDpl.mcs[0] ? oDpl.mcs[0].confCode : null);
-
-    arrValues.push(bLabel ? new ElemLabel('match data profile') : oDpl.mcs[0] ? oDpl.mcs[0].mdp : null);
-
-    arrValues.push(bLabel ? new ElemLabel('name score') : oDpl.mcs[0] ? oDpl.mcs[0].nameScore : null);
 
     console.log( arrValues.map(nullUndefToEmptyStr).join('|') );
 }
@@ -140,7 +165,7 @@ fs.readdir('../io/out')
         //Process the files available in the specified directory
         arrFiles
             .filter(fn => fn.endsWith('.json'))
-            .filter(fn => fn.indexOf('dnb_dpl_idr_1130_batch1') > -1)
+            .filter(fn => fn.indexOf('dnb_dpl_idr_1130_batch3') > -1)
             .forEach(fn => 
                 readFileLimiter.removeTokens(1)
                     .then(() => fs.readFile(`../io/out/${fn}`))
