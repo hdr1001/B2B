@@ -50,7 +50,7 @@ A D&B Direct+ token is valid for 24 hours.
 
 Script [getListOfKeys](https://github.com/hdr1001/B2B/blob/main/backend/node/src/script/getListOfKeys.js) can be used to request [GLEIF data](https://bit.ly/45mRwbt), [D&B standard Data Blocks](http://bit.ly/2QfLWWW), [D&B full family trees](http://bit.ly/2Nb4q9J) and [D&B beneficial ownership data](https://directplus.documentation.dnb.com/html/pages/ResolvedNetworkInsightsAPIs.html) in bulk. The script can be configured by setting variables in code. The download of LEI records is simple. Obviously a set of LEI keys is the starting point of the process. In the default configuation these keys should be stored, one LEI per line, in a file named LEI.txt in directory B2B/backend/io/in. The output of the script will be written to directory B2B/backend/io/out. Set global variable ```api``` in script getListOfKeys to ```gleif``` to request LEI records. Additional configuration can be done in the ```if(api === 'gleif')``` block but the defaults should work just fine. Execute, from directory /backend/node, the command ```npm run getListOfKeys``` and the bodies of the API responses should appear as JSON files in the output directory. Please note that the input file will be processed in chunks of 50 records at a time.
 
-![getListOfKeys][def00018]
+[![Watch the video](https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2111265&authkey=%21AHmImbCwYaNWiBI&width=660)](https://youtu.be/YcGABRiwMU8)
 
 ## GitHub repo
 I created the GitHub [B2B repo](https://github.com/hdr1001/B2B) in my browser:
@@ -136,4 +136,3 @@ Works like a charm:
 [def00015]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110850&authkey=%21AJdOzhczKn34nWk&width=660
 [def00016]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110851&authkey=%21ABVY-Fbx_S9DHp8&width=660
 [def00017]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2111129&authkey=%21AECbPtNwxy3snHc&width=517&height=456
-[def00018]: https://1drv.ms/v/s!AoB95U3PbXtz134OYp7QKnUXGmkJ?e=mWZeem
