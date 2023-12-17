@@ -1,18 +1,23 @@
 # B2B
 Repo containing the code I developed as it relates to B2B API's, UI's, data processing, etc.
 
-## Content
+## General
 1. [Introduction](#introduction)
 2. [How to get things up-n-running](#how-to-get-things-up-n-running)
+
+## Main scripts
 3. [Script to generate a D&B Direct+ token](#script-for-generating-a-db-direct-token)
-4. [GitHub repo](#github-repo)
-5. [1st Node.js script](#first-nodejs-script)
-6. [Testing fetch to consume GLEIF data](#testing-fetch-to-consume-gleif-data)
-7. [Added rate limiter](#added-rate-limiter)
-8. [Fetch a D&B Direct+ token](#using-fetch-to-retrieve-a-db-direct-token)
-9. [D&B Direct+ data blocks](#project-now-supports-db-data-blocks)
-10. [Module https](#module-https)
-11. [Module run-func](#module-run-func)
+4. [Request (key based) B2B data in bulk](#Request-(key-based)-B2B-data-in-bulk)
+
+## Miscellaneous
+5. [GitHub repo](#github-repo)
+6. [1st Node.js script](#first-nodejs-script)
+7. [Testing fetch to consume GLEIF data](#testing-fetch-to-consume-gleif-data)
+8. [Added rate limiter](#added-rate-limiter)
+9. [Fetch a D&B Direct+ token](#using-fetch-to-retrieve-a-db-direct-token)
+10. [D&B Direct+ data blocks](#project-now-supports-db-data-blocks)
+11. [Module https](#module-https)
+12. [Module run-func](#module-run-func)
 
 ## Introduction
 In this repository I want to bring together all the B2B (D&B, GLEIF, ...) code I have developed over time and expand from there. Initially the most important sources will be the following GitHub repositories: [API Hub - Request, Persist & Respond (v4)](https://github.com/hdr1001/api_hub_rpr_v4) and [D&B Direct+ utilities (v3)](https://github.com/hdr1001/dnbDplUtilities_v3).
@@ -40,6 +45,12 @@ The run script in [package.json](https://bit.ly/3RlrYYu) makes sure that a valid
 ![npm run script dplAuthToken][def00016]
 
 A D&B Direct+ token is valid for 24 hours.
+
+## Request (key-based) B2B data in bulk
+
+Script [getListOfKeys](https://github.com/hdr1001/B2B/blob/main/backend/node/src/script/getListOfKeys.js) can be used to request [GLEIF data](https://bit.ly/45mRwbt), [D&B standard Data Blocks](http://bit.ly/2QfLWWW), [D&B full family trees](http://bit.ly/2Nb4q9J) and [D&B beneficial ownership data](https://directplus.documentation.dnb.com/html/pages/ResolvedNetworkInsightsAPIs.html) in bulk. The script can be configured by setting variables in code. The download of LEI records is simple. Obviously a set of LEI keys is the starting point of the process. In the default configuation these keys should be stored, one LEI per line, in a file named LEI.txt in directory B2B/backend/io/in. The output of the script will be written to directory B2B/backend/io/out. Set global variable ```api``` in script getListOfKeys to ```gleif``` to request LEI records. Additional configuration can be done in the ```if(api === 'gleif')``` block but the defaults should work just fine. Execute, from directory /backend/node, the command ```npm run getListOfKeys``` and the bodies of the API responses should appear as JSON files in the output directory. Please note that the input file will be processed in chunks of 50 records at a time.
+
+![getListOfKeys][def00018]
 
 ## GitHub repo
 I created the GitHub [B2B repo](https://github.com/hdr1001/B2B) in my browser:
@@ -125,3 +136,4 @@ Works like a charm:
 [def00015]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110850&authkey=%21AJdOzhczKn34nWk&width=660
 [def00016]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2110851&authkey=%21ABVY-Fbx_S9DHp8&width=660
 [def00017]: https://onedrive.live.com/embed?resid=737B6DCF4DE57D80%2111129&authkey=%21AECbPtNwxy3snHc&width=517&height=456
+[def00018]: https://1drv.ms/v/s!AoB95U3PbXtz134OYp7QKnUXGmkJ?e=mWZeem
