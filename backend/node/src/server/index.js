@@ -31,7 +31,7 @@ const port = process.env.API_SERVER_PORT || 8080; //Server port
 app.use('/hub', hub); //Base URL
 
 app.use((req, resp) => { //An HTTP request catch-all
-    const err = new ApiHubErr(ahErrCode.unableToLocate, `Requested: ${req.path}`);
+    const err = new ApiHubErr(ahErrCode.get('unableToLocate'), `Requested: ${req.path}`);
 
     resp.status(err.httpStatus.code).json( err );
 });

@@ -28,41 +28,30 @@ const httpStatus = {
     genericErr: { description: 'Server Error', code: 500 }
 };
  
-//Error specifics
-const ahErrors = [
-    { errDesc: 'Error occurred in API HUB', httpStatus: httpStatus.genericErr },
-    { errDesc: 'Unable to locate the requested resource', httpStatus: httpStatus.notFound },
-    { errDesc: 'Invalid parameter', httpStatus: httpStatus.notFound },
-    { errDesc: 'External API returned an error', httpStatus: httpStatus.genericErr },
-    { errDesc: 'External API returned an HTTP error status', httpStatus: httpStatus.genericErr },
-    { errDesc: 'Semantically erroneous request', httpStatus: httpStatus.unprocessableEntity },
-    { errDesc: 'Server error', httpStatus: httpStatus.genericErr }
-];
-
 //API Hub errors
-const ahErrCode = {
-    generic: 0,
-    unableToLocate: 1,
-    invalidParameter: 2,
-    extnlApiErr: 3,
-    httpErrReturn: 4,
-    semanticError: 5,
-    serverError: 6
-};
+const ahErrCode = new Map([
+    [ 'generic', { code: 0, desc: 'Error occurred in API HUB', httpStatus: httpStatus.genericErr } ],
+    [ 'unableToLocate', { code: 1, desc: 'Unable to locate the requested resource', httpStatus: httpStatus.notFound } ],
+    [ 'invalidParameter', { code: 2, desc: 'Invalid parameter', httpStatus: httpStatus.notFound } ],
+    [ 'extnlApiErr', { code: 3, desc: 'External API returned an error', httpStatus: httpStatus.genericErr } ],
+    [ 'httpErrReturn', { code: 4, desc: 'External API returned an HTTP error status', httpStatus: httpStatus.genericErr } ],
+    [ 'semanticError', { code: 5, desc: 'Semantically erroneous request', httpStatus: httpStatus.unprocessableEntity } ],
+    [ 'serverError', { code: 6, desc: 'Server error', httpStatus: httpStatus.genericErr } ]
+]);
 
 //API Hub custom error class
 class ApiHubErr extends Error {
     constructor(errCode, addtlErrMsg) {
         super();
 
-        this.hubErrorCode = errCode;
-        this.message = ahErrors[errCode].errDesc
+        this.hubErrorCode = errCode.code;
+        this.message = errCode.desc
 
         if(addtlErrMsg) {
             this.addtlMessage = addtlErrMsg
         }
 
-        this.httpStatus = ahErrors[errCode].httpStatus;
+        this.httpStatus = errCode.httpStatus;
     }
 }
 
