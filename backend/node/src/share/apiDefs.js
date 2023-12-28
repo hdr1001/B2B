@@ -32,9 +32,27 @@ const baseURL = url => `${url.scheme}://${url.domainSub}.${url.domain}.${url.dom
 //Shared HTTP headers
 const sharedHeaders = { 'Content-Type': 'application/json' };
 
+//API providers
+const apiProvider = {
+    gleif: {
+        fullName: 'Global Legal Entity Identifier Foundation',
+        acronym: 'GLEIF',
+        url: 'https://www.gleif.org',
+        key: 'lei',
+        apis: ['lei']
+    },
+    dnb: {
+        fullName: 'Dun & Bradstreet',
+        acronym: 'D&B',
+        url: 'https://www.dnb.com',
+        key: 'duns',
+        apis: ['dpl']
+    }
+}
+
 //Supported APIs
 const api = {
-    gleif: {
+    lei: {
         url: {
             scheme: 'https',
             domainSub: 'api',
@@ -49,7 +67,7 @@ const api = {
         leiPageSizeNum: { 'page[size]': 10, 'page[number]': 1 }
     },
 
-    dnbDpl: ({
+    dpl: ({
         url: ({
             scheme: 'https',
             domainSub: 'plus',
@@ -66,29 +84,29 @@ const api = {
 
 //Supported endpoints for APIs listed above
 const apiEndpoint = {
-    gleif: {
-        baseURL: baseURL(api.gleif.url),
+    lei: {
+        baseURL: baseURL(api.lei.url),
 
         leiRecs: { //LEI records (https://bit.ly/45mRwbt)
             getReq: function() {
                 let qryString = '';
 
                 if(this.qryParameters) {
-                    qryString = new URLSearchParams({ ...this.qryParameters, ...api.gleif.leiPageSizeNum })
+                    qryString = new URLSearchParams({ ...this.qryParameters, ...api.lei.leiPageSizeNum })
                 }
 
                 return new Request(
-                    `${apiEndpoint.gleif.baseURL}${this.path}${this.resource ? `/${this.resource}` : '?'}${qryString}`,
+                    `${apiEndpoint.lei.baseURL}${this.path}${this.resource ? `/${this.resource}` : '?'}${qryString}`,
                     {
-                        headers: api.gleif.headers
+                        headers: api.lei.headers
                     }
                 );
             }
         }
     },
 
-    dnbDpl: {
-        baseURL: baseURL(api.dnbDpl.url),
+    dpl: {
+        baseURL: baseURL(api.dpl.url),
 
         auth: { //D&B Direct+ generate auth token
             getReq: function() {
@@ -109,7 +127,7 @@ const apiEndpoint = {
                 if(!sBody) { throw new Error(`Invalid version specified (${this.path.slice(0, 2)}) for D&B Direct+ authentication token`)}
 
                 return new Request (
-                    `${apiEndpoint.dnbDpl.baseURL}${this.path}`,
+                    `${apiEndpoint.dpl.baseURL}${this.path}`,
                     {
                         method: 'POST',
                         headers: {
@@ -125,9 +143,9 @@ const apiEndpoint = {
         dbs: { //D&B Direct+ data blocks
             getReq: function() {
                 return new Request(
-                    `${apiEndpoint.dnbDpl.baseURL}${this.path}${this.resource}?${new URLSearchParams({ ...this.qryParameters })}`,
+                    `${apiEndpoint.dpl.baseURL}${this.path}${this.resource}?${new URLSearchParams({ ...this.qryParameters })}`,
                     {
-                        headers: api.dnbDpl.headers,
+                        headers: api.dpl.headers,
                     }
                 )
             }
@@ -136,9 +154,9 @@ const apiEndpoint = {
         famTree: { //D&B Direct+ family tree
             getReq: function() {
                 return new Request(
-                    `${apiEndpoint.dnbDpl.baseURL}${this.path}${this.resource}?${new URLSearchParams({ ...this.qryParameters })}`,
+                    `${apiEndpoint.dpl.baseURL}${this.path}${this.resource}?${new URLSearchParams({ ...this.qryParameters })}`,
                     {
-                        headers: api.dnbDpl.headers,
+                        headers: api.dpl.headers,
                     }
                 )
             }
@@ -147,9 +165,9 @@ const apiEndpoint = {
         benOwner: { //D&B Direct+ beneficial owner
             getReq: function() {
                 return new Request(
-                    `${apiEndpoint.dnbDpl.baseURL}${this.path}?${new URLSearchParams({ duns: this.duns, ...this.qryParameters })}`,
+                    `${apiEndpoint.dpl.baseURL}${this.path}?${new URLSearchParams({ duns: this.duns, ...this.qryParameters })}`,
                     {
-                        headers: api.dnbDpl.headers,
+                        headers: api.dpl.headers,
                     }
                 )
             }
@@ -158,9 +176,9 @@ const apiEndpoint = {
         idr: { //D&B Direct+ IDentity Resolution
             getReq: function() {
                 return new Request(
-                    `${apiEndpoint.dnbDpl.baseURL}${this.path}?${new URLSearchParams({ ...this.qryParameters })}`,
+                    `${apiEndpoint.dpl.baseURL}${this.path}?${new URLSearchParams({ ...this.qryParameters })}`,
                     {
-                        headers: api.dnbDpl.headers,
+                        headers: api.dpl.headers,
                     }
                 )
             }
@@ -173,11 +191,11 @@ class LeiReq { //Get LEI record by ID
         this.resource = resource;        
     }
 
-    def = { api: 'gleif', endpoint: 'leiRecs' };
+    def = { api: 'lei', endpoint: 'leiRecs' };
 
     path = 'api/v1/lei-records';
 
-    getReq = apiEndpoint.gleif.leiRecs.getReq;
+    getReq = apiEndpoint.lei.leiRecs.getReq;
 }
 
 class LeiFilter { //Get LEI record using filters
@@ -185,11 +203,11 @@ class LeiFilter { //Get LEI record using filters
         this.qryParameters = qryParameters;
     }
 
-    def = { api: 'gleif', endpoint: 'leiRecs' };
+    def = { api: 'lei', endpoint: 'leiRecs' };
 
     path = 'api/v1/lei-records';
 
-    getReq = apiEndpoint.gleif.leiRecs.getReq;
+    getReq = apiEndpoint.lei.leiRecs.getReq;
 }
 
 class DnbDplAuth { //Get D&B D+ access token
@@ -197,16 +215,16 @@ class DnbDplAuth { //Get D&B D+ access token
         this.path = `${version}/token`;
     }
 
-    def = { api: 'dnbDpl', endpoint: 'auth' };
+    def = { api: 'dpl', endpoint: 'auth' };
 
-    getReq = apiEndpoint.dnbDpl.auth.getReq;
+    getReq = apiEndpoint.dpl.auth.getReq;
 
     //Propagate the token acquired
     updToken = accessToken => {
         process.env.DNB_DPL_TOKEN = accessToken; //Propagate to the environment
 
         //Update the HTTP authorization header
-        api.dnbDpl.headers.Authorization = `Bearer ${process.env.DNB_DPL_TOKEN}`;
+        api.dpl.headers.Authorization = `Bearer ${process.env.DNB_DPL_TOKEN}`;
 
         //Write the new token to the .env file
         setEnvValue('DNB_DPL_TOKEN', '\"' + accessToken + '\"');
@@ -219,11 +237,11 @@ class DnbDplDBs { //Get D&B D+ data blocks
         this.qryParameters = qryParameters;
     }
 
-    def = { api: 'dnbDpl', endpoint: 'dbs' };
+    def = { api: 'dpl', endpoint: 'dbs' };
 
     path = 'v1/data/duns/';
 
-    getReq = apiEndpoint.dnbDpl.dbs.getReq;
+    getReq = apiEndpoint.dpl.dbs.getReq;
 }
 
 class DnbDplFamTree { //Get a D&B D+ corporate structure
@@ -232,11 +250,11 @@ class DnbDplFamTree { //Get a D&B D+ corporate structure
         this.qryParameters = qryParameters;
     }
 
-    def = { api: 'dnbDpl', endpoint: 'famTree' };
+    def = { api: 'dpl', endpoint: 'famTree' };
 
     path = 'v1/familyTree/';
 
-    getReq = apiEndpoint.dnbDpl.famTree.getReq;
+    getReq = apiEndpoint.dpl.famTree.getReq;
 }
 
 class DnbDplBenOwner { //Get a D&B D+ beneficial owner
@@ -245,11 +263,11 @@ class DnbDplBenOwner { //Get a D&B D+ beneficial owner
         this.qryParameters = qryParameters;
     }
 
-    def = { api: 'dnbDpl', endpoint: 'benOwner' };
+    def = { api: 'dpl', endpoint: 'benOwner' };
 
     path = 'v1/beneficialowner';
 
-    getReq = apiEndpoint.dnbDpl.benOwner.getReq;
+    getReq = apiEndpoint.dpl.benOwner.getReq;
 }
 
 class DnbDplIDR {
@@ -257,14 +275,15 @@ class DnbDplIDR {
         this.qryParameters = qryParameters;
     }
 
-    def = { api: 'dnbDpl', endpoint: 'idr' };
+    def = { api: 'dpl', endpoint: 'idr' };
 
     path = 'v1/match/cleanseMatch';
 
-    getReq = apiEndpoint.dnbDpl.idr.getReq;
+    getReq = apiEndpoint.dpl.idr.getReq;
 }
 
 export {
+    apiProvider,
     LeiReq,
     LeiFilter,
     DnbDplAuth,

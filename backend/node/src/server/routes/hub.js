@@ -22,16 +22,36 @@
 
 import express from 'express';
 
+import { apiProvider } from '../../share/apiDefs.js';
+
+import gleif from './gleif.js';
+
 const router = express.Router();
 
+//Add about endpoint
 router.get('/about', (req, resp) => 
-   resp.json({
-         description: 'API Hub for requesting, persisting & passing on 3rd party API data (v5)',
-         gitRepository: 'https://github.com/hdr1001/B2B',
-         license: 'Apache license, v2.0',
-         licenseDetails: 'http://www.apache.org/licenses/LICENSE-2.0',
-         copyright: 'Hans de Rooij, 2023'
-   })
+    resp.json({
+        description: 'API Hub for requesting, persisting & passing on 3rd party API data (v5)',
+        gitRepository: 'https://github.com/hdr1001/B2B',
+        license: 'Apache license, v2.0',
+        licenseDetails: 'http://www.apache.org/licenses/LICENSE-2.0',
+        copyright: 'Hans de Rooij, 2023'
+    })
 );
+
+//Add provider endpoints
+Object.keys(apiProvider).forEach(key => {
+    router.get(`/${key}`, (req, resp) => resp.json( apiProvider[key] ));
+
+    apiProvider[key].apis.forEach(api => {
+        if(api === 'lei') {
+            router.use(`/${key}/lei`, gleif);
+        }
+    
+        if(key === 'dpl') {
+    
+        }
+    })
+});
 
 export default router;

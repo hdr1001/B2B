@@ -80,6 +80,28 @@ function cleanDUNS(inDUNS) {
     return '000000000'.slice(0, 9 - outDUNS.length) + outDUNS;
 }
 
+//Check LEI as issued by GLEIF
+function isValidLei(sKey) {
+    let m = 0, charCode;
+
+    for(let i = 0; i < sKey.length; i++) {
+        charCode = sKey.charCodeAt(i);
+
+        if(charCode >= 48 && charCode <= 57) {
+            m = (m * 10 + charCode - 48) % 97 
+        }
+        else if(charCode >= 65 && charCode <= 90) {
+            m = (m * 100 + charCode - 55) % 97 
+        }
+        else {
+            console.log(`Unexpected character at ${i}`);
+            return false;
+        }
+    }
+
+    return m === 1;
+} 
+
 //ISO 8601 UTC Z date/time string to YYYYMMDD or YYMMDD
 function sDateIsoToYYYYMMDD (sDateIso, length = 8) {
     return sDateIso.split('T')[0].replace(/-/g,"").slice(length * -1)
@@ -115,6 +137,7 @@ export {
     dcdrUtf8,
     setEnvValue,
     cleanDUNS,
+    isValidLei,
     sDateIsoToYYYYMMDD,
     objEmpty,
     isNumber,
