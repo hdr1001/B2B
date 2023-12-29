@@ -35,7 +35,7 @@ router.get('/filter', (req, resp) => {
 
 router.get('/:key', (req, resp) => {
     if(!isValidLei(req.params.key)) {
-        const err = new ApiHubErr(ahErrCode.get('invalidParameter'), `LEI ${req.params.key} is not valid' `);
+        const err = new ApiHubErr('invalidParameter', `LEI ${req.params.key} is not valid' `);
 
         resp.status(err.httpStatus.code).json( err );
 
@@ -55,7 +55,7 @@ router.get('/:key', (req, resp) => {
             return leiResp.arrayBuffer()
         } )
         .then( buff => ahReqPersistResp(req, resp, leiTransaction, buff) )
-        .catch( err => console.log(err) );
+        .catch( err => ahReqPersistResp(req, resp, leiTransaction, null) );
 });
  
 export default router;

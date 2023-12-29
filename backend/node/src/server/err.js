@@ -20,6 +20,8 @@
 //
 // *********************************************************************
 
+import { isObject } from "../share/utils.js";
+
 //HTTP status codes
 const httpStatus = {
     okay: { description: 'Request succeeded', code: 200 },
@@ -41,17 +43,40 @@ const ahErrCode = new Map([
 
 //API Hub custom error class
 class ApiHubErr extends Error {
-    constructor(errCode, addtlErrMsg) {
+    constructor(errCode, addtlErrMsg, extnlApiStatus, extnlApiBody) {
         super();
 
-        this.hubErrorCode = errCode.code;
-        this.message = errCode.desc
+        const ahErr = ahErrCode.get(errCode) || ahErrCode.get('generic');
+
+        this.hubErrorCode = ahErr.code;
+        this.message = ahErr.desc
 
         if(addtlErrMsg) {
             this.addtlMessage = addtlErrMsg
         }
 
-        this.httpStatus = errCode.httpStatus;
+        this.httpStatus = ahErr.httpStatus;
+
+        if(extnlApiStatus || extnlApiBody) {
+            this.externalApi = {};
+
+            if(extnlApiStatus) { this.externalApi.httpStatusCode = extnlApiStatus }
+
+            if(extnlApiBody) {
+                if(typeof extnlApiBody === 'string') {
+                    try {
+                        this.externalApi.body = JSON.parse(extnlApiBody)
+                    }
+                    catch(err) {
+                        this.externalApi.body = extnlApiBody
+                    }
+                }
+
+                if(isObject(extnlApiBody)) {
+                    this.externalApi.body = extnlApiBody
+                }
+            }
+        }
     }
 }
 

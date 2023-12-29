@@ -21,12 +21,9 @@
 //
 // *********************************************************************
 
-import { objEmpty } from "./utils.js";
+import { objEmpty, isObject } from "./utils.js";
 
 import { constructElemLabel } from "./elemLabel.js";
-
-//Test if a variable is an object ➡️ null doesn't qualify!
-const isObject = obj => typeof obj === 'object' && obj !== null;
 
 const addr = { //Address parts
     type: {

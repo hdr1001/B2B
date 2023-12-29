@@ -124,6 +124,9 @@ function objEmpty(obj) {
     return false;
 }
 
+//Test if a variable is an object ➡️ null doesn't qualify!
+const isObject = obj => typeof obj === 'object' && obj !== null;
+
 //Does a value represent a valid number
 function isNumber(value) {
     return typeof value === 'number' && isFinite(value);
@@ -140,6 +143,7 @@ export {
     isValidLei,
     sDateIsoToYYYYMMDD,
     objEmpty,
+    isObject,
     isNumber,
     nanoid
 };
