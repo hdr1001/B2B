@@ -23,11 +23,39 @@
 import express from 'express';
 
 import { isValidLei } from '../../share/utils.js';
+import { LeiReq } from "../../share/apiDefs.js";
+import ahReqPersistResp from '../utils.js';
+import { ahErrCode, ApiHubErr } from '../err.js';
 
 const router = express.Router();
 
+router.get('/filter', (req, resp) => {
+    resp.json( { endpoint: 'filter' } )
+});
+
 router.get('/:key', (req, resp) => {
-    resp.json( { valid: isValidLei(req.params.key) } )
+    if(!isValidLei(req.params.key)) {
+        const err = new ApiHubErr(ahErrCode.get('invalidParameter'), `LEI ${req.params.key} is not valid' `);
+
+        resp.status(err.httpStatus.code).json( err );
+
+        return;
+    }
+
+    const leiTransaction = { 
+        req: new LeiReq(req.params.key),
+        tsReq: Date.now()
+    };
+
+    fetch(leiTransaction.req.getReq())
+        .then( leiResp => {
+            leiTransaction.resp = leiResp;
+            leiTransaction.tsResp = Date.now();
+
+            return leiResp.arrayBuffer()
+        } )
+        .then( buff => ahReqPersistResp(req, resp, leiTransaction, buff) )
+        .catch( err => console.log(err) );
 });
  
 export default router;

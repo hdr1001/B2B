@@ -56,6 +56,7 @@ class ApiHubErr extends Error {
 }
 
 export {
+    httpStatus,
     ahErrCode,
     ApiHubErr
 }
