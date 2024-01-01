@@ -33,21 +33,42 @@ const baseURL = url => `${url.scheme}://${url.domainSub}.${url.domain}.${url.dom
 const sharedHeaders = { 'Content-Type': 'application/json' };
 
 //API providers
-const apiProvider = {
-    gleif: {
-        fullName: 'Global Legal Entity Identifier Foundation',
-        acronym: 'GLEIF',
-        url: 'https://www.gleif.org',
-        key: 'lei',
-        apis: ['lei']
-    },
-    dnb: {
-        fullName: 'Dun & Bradstreet',
-        acronym: 'D&B',
-        url: 'https://www.dnb.com',
-        key: 'duns',
-        apis: ['dpl']
+const apiProvider = new Map([
+    ['gleif', { fullName: 'Global Legal Entity Identifier Foundation', acronym: 'GLEIF', url: 'https://www.gleif.org', key: 'lei', apis: ['lei'] }],
+    ['dnb', { fullName: 'Dun & Bradstreet', acronym: 'D&B', url: 'https://www.dnb.com', key: 'duns', apis: ['dpl'] }]
+]);
+
+//Parse the API & its provider out of an Express request object baseUrl
+apiProvider.baseUrlProviderApi = function(baseUrl) {
+    const providers = this.keys();
+
+    let ret = {}, idxProvider, idxApi;
+
+    for(let provider of providers) {
+        idxProvider = baseUrl.indexOf(provider);
+
+        if(idxProvider > -1) {
+            ret.provider = provider; 
+            break;
+        }
     }
+
+    if(idxProvider === -1) { return null }
+
+    const apis = this.get(ret.provider).apis;
+
+    for(let api of apis) {
+        idxApi = baseUrl.indexOf(api, idxProvider + ret.provider.length);
+
+        if(idxApi > -1) {
+            ret.api = api; 
+            break;
+        }
+    }
+
+    if(idxApi === -1) { return null }
+
+    return ret;
 }
 
 //Supported APIs

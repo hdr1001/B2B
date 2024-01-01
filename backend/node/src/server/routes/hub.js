@@ -40,10 +40,10 @@ router.get('/about', (req, resp) =>
 );
 
 //Add provider endpoints
-Object.keys(apiProvider).forEach(key => {
-    router.get(`/${key}`, (req, resp) => resp.json( apiProvider[key] ));
+apiProvider.forEach((provider, key) => {
+    router.get(`/${key}`, (req, resp) => resp.json( provider ));
 
-    apiProvider[key].apis.forEach(api => {
+    provider.apis.forEach(api => {
         if(api === 'lei') {
             router.use(`/${key}/lei`, gleif);
         }
