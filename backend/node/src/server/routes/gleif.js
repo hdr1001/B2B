@@ -41,7 +41,11 @@ router.get('/:key', (req, resp) => {
         return;
     }
 
-    ahReqPersistResp(req, resp)
+    //Transaction parameters
+    const transaction = { provider: 'gleif', api: 'lei' };
+
+    //Let the API Hub do its thing
+    ahReqPersistResp(req, resp, transaction)
 });
  
 export default router;

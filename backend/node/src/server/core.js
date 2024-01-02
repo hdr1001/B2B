@@ -21,90 +21,96 @@
 // *********************************************************************
 
 import { dcdrUtf8 } from '../share/utils.js';
-import { apiProvider, LeiReq } from "../share/apiDefs.js";
+import { LeiReq } from "../share/apiDefs.js";
 import db from './pg.js';
 import { ApiHubErr, httpStatus } from './err.js';
 
-//Encapsulation of the HTTP transaction
-function httpReqResp(req, resp, apiTransaction) {
-    apiTransaction.tsReq = Date.now();
+export default function ahReqPersistResp(req, resp, transaction) {
+    let sSql;
 
-    fetch(apiTransaction.req.getReq())
+    if(transaction.provider === 'gleif') {
+        if(transaction.api === 'lei') {
+            sSql = 'SELECT lei AS key, product, tsz, http_status FROM products_gleif WHERE lei = $1;'
+
+            transaction.req = new LeiReq(req.params.key);
+        }
+    }
+
+    //Don't deliver from the database if forceNew query parameter is set to true
+    const bForceNew = req.query?.forceNew && req.query.forceNew.toLowerCase() === 'true';
+
+    //If not forceNew and data available from database, deliver from stock
+    (bForceNew ? Promise.resolve(null) : db.query( sSql, [ req.params.key ]))
+        .then(dbQry => {
+            if(dbQry) { //bForceNew === false
+                if(dbQry.rows.length && dbQry.rows[0].product) { //Requested key available on the database
+                    resp
+                        .setHeader('X-B2BAH-Cache', true)
+                        .setHeader('X-B2BAH-Obtained-At', new Date(dbQry.rows[0].tsz).toISOString())
+            
+                        .json(dbQry.rows[0].product);
+        
+                    throw new Error( //Skip the rest of the then chain
+                        `Request for key ${req.params.key} delivered from the database`,
+                        { cause: 'breakThenChain' }
+                    );
+                }
+            }
+
+            transaction.tsReq = Date.now(); //Timestamp the HTTP request
+
+            return fetch(transaction.req.getReq()) //Request date from external API
+        })
         .then(leiResp => {
-            apiTransaction.resp = leiResp;
-            apiTransaction.tsResp = Date.now();
+            transaction.tsResp = Date.now(); //Timestamp the receipt of the HTTP response
 
-            return leiResp.arrayBuffer()
-        } )
+            transaction.resp = leiResp;
+
+            return leiResp.arrayBuffer();
+        })
         .then(buff => {
             //A bit of reporting about the external API transaction
-            let msg = `Request for key ${apiTransaction.key} returned with HTTP status code ${apiTransaction?.resp?.status}`;
+            let msg = `Request for key ${req.params.key} returned with HTTP status code ${transaction?.resp?.status}`;
 
-            if(apiTransaction?.tsResp && apiTransaction?.tsReq) {
-                msg += ` (${apiTransaction.tsResp - apiTransaction.tsReq} ms)`
+            if(transaction?.tsResp && transaction?.tsReq) {
+                msg += ` (${transaction.tsResp - transaction.tsReq} ms)`
             }
         
             console.log(msg);
 
             //Decode the array buffer returned to a string
-            apiTransaction.strBody = buff ? dcdrUtf8.decode(buff) : null;
+            transaction.strBody = buff ? dcdrUtf8.decode(buff) : null;
         
             //Happy flow
-            if(apiTransaction?.resp.ok) {
+            if(transaction?.resp.ok) {
                 resp
                     .setHeader('X-B2BAH-Cache', false)
-                    .setHeader('X-B2BAH-API-HTTP-Status', apiTransaction.resp.status)
-                    .setHeader('X-B2BAH-Obtained-At', new Date(apiTransaction.tsResp).toISOString())
+                    .setHeader('X-B2BAH-API-HTTP-Status', transaction.resp.status)
+                    .setHeader('X-B2BAH-Obtained-At', new Date(transaction.tsResp).toISOString())
         
                     .set('Content-Type', 'application/json')
         
                     .status(httpStatus.okay.code)
         
-                    .send(apiTransaction.strBody);
-        
-                return; //end of the happy flow
+                    .send(transaction.strBody);
             }
-        
-            //apiTransaction.resp.ok evaluates to false, start error handling
-            const err = new ApiHubErr(
-                'httpErrReturn',
-                msg,
-                apiTransaction?.resp?.status,
-                apiTransaction?.strBody
-            );
-        
-            resp.status(err.httpStatus.code).json( err );
+            else {
+                //Implement error handling
+            }
         })
         .catch(err => {
-            const ahErr = new ApiHubErr(
-                'generic',
-                err.message,
-                apiTransaction?.resp?.status,
-                apiTransaction?.strBody
-            );
-
-            resp.status(ahErr.httpStatus.code).json( ahErr );    
-        });
-}
-
-export default function ahReqPersistResp(req, resp) {
-    const apiTransaction = apiProvider.baseUrlProviderApi(req.baseUrl);
-
-    if(req.params.key) { apiTransaction.key = req.params.key }
-
-    let sSql;
-
-    if(apiTransaction.provider === 'gleif') {
-        if(apiTransaction.api === 'lei') {
-            sSql = 'SELECT lei AS key, product, tsz, http_status FROM products_gleif WHERE lei = $1;'
-
-            apiTransaction.req = new LeiReq(apiTransaction.key);
-        }
-    }
-   
-    db.query( sSql, [ apiTransaction.key ])
-        .then(dbResp => { if(dbResp.rows.length && dbResp.rows[0].product) {console.log(dbResp.rows[0].product)} })
-
-    //Fire off the HTTP request
-    httpReqResp(req, resp, apiTransaction);
+            if(err.cause === 'breakThenChain') {
+                console.log(err.message) //Early escape, not an actual error
+            }
+            else {
+                const ahErr = new ApiHubErr(
+                    'generic',
+                    err.message,
+                    transaction.resp?.status,
+                    transaction.strBody
+                );
+    
+                resp.status(ahErr.httpStatus.code).json( ahErr );    
+            }
+        })
 }
