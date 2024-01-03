@@ -20,8 +20,8 @@
 //
 // *********************************************************************
 
-import { dcdrUtf8 } from '../share/utils.js';
-import { LeiReq } from "../share/apiDefs.js";
+import { dcdrUtf8, isNumber } from '../share/utils.js';
+import { LeiReq } from '../share/apiDefs.js';
 import db from './pg.js';
 import { ApiHubErr, httpStatus } from './err.js';
 
@@ -94,8 +94,13 @@ export default function ahReqPersistResp(req, resp, transaction) {
         
                     .send(transaction.strBody);
             }
-            else {
-                //Implement error handling
+            else { //transaction.resp.ok evaluates to false, start error handling
+                throw new ApiHubErr(
+                    'httpErrReturn',
+                    msg,
+                    transaction.resp?.status,
+                    transaction.strBody
+                )
             }
         })
         .catch(err => {
@@ -103,14 +108,19 @@ export default function ahReqPersistResp(req, resp, transaction) {
                 console.log(err.message) //Early escape, not an actual error
             }
             else {
-                const ahErr = new ApiHubErr(
-                    'generic',
-                    err.message,
-                    transaction.resp?.status,
-                    transaction.strBody
-                );
-    
-                resp.status(ahErr.httpStatus.code).json( ahErr );    
+                if(isNumber(err.hubErrorCode)) { //Error of class ApiHubErr was thrown
+                    resp.status(err.httpStatus.code).json( err );
+                }
+                else {
+                    const ahErr = new ApiHubErr(
+                        'generic',
+                        err.message,
+                        transaction.resp?.status,
+                        transaction.strBody
+                    );
+        
+                    resp.status(ahErr.httpStatus.code).json( ahErr );
+                }
             }
         })
 }

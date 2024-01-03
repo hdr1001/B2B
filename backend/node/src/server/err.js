@@ -44,12 +44,11 @@ const ahErrCode = new Map([
 //API Hub custom error class
 class ApiHubErr extends Error {
     constructor(errCode, addtlErrMsg, extnlApiStatus, extnlApiBody) {
-        super();
-
         const ahErr = ahErrCode.get(errCode) || ahErrCode.get('generic');
 
+        super(ahErr.desc);
+
         this.hubErrorCode = ahErr.code;
-        this.message = ahErr.desc
 
         if(addtlErrMsg) {
             this.addtlMessage = addtlErrMsg
@@ -77,6 +76,29 @@ class ApiHubErr extends Error {
                 }
             }
         }
+    }
+
+    toJSON() {
+        const ret = {
+            hubErrorCode: this.hubErrorCode,
+            message: this.message,
+            addtlMessage: this.addtlMessage,
+            httpStatus: this.httpStatus,
+        };
+
+        if(this.externalApi) {
+            ret.externalApi = {};
+
+            if(this.externalApi.httpStatusCode) {
+                ret.externalApi.httpStatusCode = this.externalApi.httpStatusCode
+            }
+
+            if(this.externalApi.body) {
+                ret.externalApi.body = this.externalApi.body
+            }
+        };
+
+        return ret;
     }
 }
 

@@ -34,7 +34,7 @@ router.get('/filter', (req, resp) => {
 
 router.get('/:key', (req, resp) => {
     if(!isValidLei(req.params.key)) {
-        const err = new ApiHubErr('invalidParameter', `LEI ${req.params.key} is not valid' `);
+        const err = new ApiHubErr('invalidParameter', `LEI ${req.params.key} is not valid`);
 
         resp.status(err.httpStatus.code).json( err );
 
