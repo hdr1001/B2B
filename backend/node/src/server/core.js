@@ -26,11 +26,14 @@ import db from './pg.js';
 import { ApiHubErr, httpStatus } from './err.js';
 
 export default function ahReqPersistResp(req, resp, transaction) {
-    let sSql;
+    let sSqlSelect, sSqlUpsert;
 
     if(transaction.provider === 'gleif') {
         if(transaction.api === 'lei') {
-            sSql = 'SELECT lei AS key, product, tsz, http_status FROM products_gleif WHERE lei = $1;'
+            sSqlSelect  = 'SELECT lei AS key, product, tsz, http_status FROM products_gleif WHERE lei = $1;'
+
+            sSqlUpsert  = 'INSERT INTO products_gleif (lei, product, http_status) VALUES ($1, $2, $3) '
+            sSqlUpsert += 'ON CONFLICT ( lei ) DO UPDATE SET product = $2, http_status = $3, tsz = CURRENT_TIMESTAMP;';
 
             transaction.req = new LeiReq(req.params.key);
         }
@@ -40,7 +43,7 @@ export default function ahReqPersistResp(req, resp, transaction) {
     const bForceNew = req.query?.forceNew && req.query.forceNew.toLowerCase() === 'true';
 
     //If not forceNew and data available from database, deliver from stock
-    (bForceNew ? Promise.resolve(null) : db.query( sSql, [ req.params.key ]))
+    (bForceNew ? Promise.resolve(null) : db.query( sSqlSelect, [ req.params.key ]))
         .then(dbQry => {
             if(dbQry) { //bForceNew === false
                 if(dbQry.rows.length && dbQry.rows[0].product) { //Requested key available on the database
@@ -102,6 +105,18 @@ export default function ahReqPersistResp(req, resp, transaction) {
                     transaction.strBody
                 )
             }
+
+            return db.query( sSqlUpsert, [ req.params.key, transaction.strBody, transaction.resp.status ]);
+        })
+        .then(dbQry => {
+            if(dbQry && dbQry.rowCount === 1) {
+                console.log(`Success executing ${dbQry.command} for lei ${req.params.key}`)
+            }
+            else {
+                console.error(`Something went wrong upserting lei ${req.params.key}`)
+            }
+
+            //Done 🙂✅
         })
         .catch(err => {
             if(err.cause === 'breakThenChain') {

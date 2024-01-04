@@ -30,7 +30,7 @@ CREATE TABLE public.products_gleif (
    lei character varying(32) COLLATE pg_catalog."default",
    product JSONB,
    http_status smallint,
-   tsz timestamptz,
+   tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
    CONSTRAINT products_gleif_pkey PRIMARY KEY (lei)
 )
 WITH (
@@ -43,7 +43,7 @@ CREATE TABLE public.products_dnb (
    duns character varying(9) COLLATE pg_catalog."default",
    product JSONB,
    http_status smallint,
-   tsz timestamptz,
+   tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
    CONSTRAINT products_dnb_pkey PRIMARY KEY (duns)
 )
 WITH (
@@ -68,7 +68,7 @@ CREATE TABLE public.project_keys (
    rec_key character varying(32) COLLATE pg_catalog."default",
    http_status smallint,
    note character varying(256) COLLATE pg_catalog."default",
-   tsz timestamptz,
+   tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
    CONSTRAINT project_keys_pkey PRIMARY KEY (id, rec_key),
    CONSTRAINT project_keys_fkey FOREIGN KEY(id) REFERENCES projects(id)
 )
