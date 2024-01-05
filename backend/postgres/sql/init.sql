@@ -20,10 +20,20 @@
 --
 -- *********************************************************************
 
+-- DROP TABLE public.errors_http; 
 -- DROP TABLE public.project_keys;
 -- DROP TABLE public.projects;
 -- DROP TABLE public.products_dnb;
 -- DROP TABLE public.products_gleif;
+-- DROP SEQUENCE public.errors_http_id_seq;
+
+-- Create the sequence for the primary key of table errors_http
+CREATE SEQUENCE public.errors_http_id_seq
+    INCREMENT 1
+    START 1
+    MINVALUE 1
+    MAXVALUE 9223372036854775807
+    CACHE 1;
 
 -- Create table for storing GLEIF data products
 CREATE TABLE public.products_gleif (
@@ -71,6 +81,20 @@ CREATE TABLE public.project_keys (
    tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
    CONSTRAINT project_keys_pkey PRIMARY KEY (id, rec_key),
    CONSTRAINT project_keys_fkey FOREIGN KEY(id) REFERENCES projects(id)
+)
+WITH (
+   OIDS = false
+)
+TABLESPACE pg_default;
+
+-- Create table for logging HTTP errors
+CREATE TABLE public.errors_http (
+   id integer NOT NULL DEFAULT nextval('errors_http_id_seq'::regclass),
+   req JSONB,
+   err JSONB,
+   http_status smallint,
+   tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
+   CONSTRAINT errors_http_pkey PRIMARY KEY (id)
 )
 WITH (
    OIDS = false

@@ -28,6 +28,8 @@ import { ApiHubErr, httpStatus } from './err.js';
 export default function ahReqPersistResp(req, resp, transaction) {
     let sSqlSelect, sSqlUpsert;
 
+    const sSqlHttpErr = 'INSERT INTO errors_http (req, err, http_status) VALUES ($1, $2, $3)';
+
     if(transaction.provider === 'gleif') {
         if(transaction.api === 'lei') {
             sSqlSelect  = 'SELECT lei AS key, product, tsz, http_status FROM products_gleif WHERE lei = $1;'
@@ -98,12 +100,28 @@ export default function ahReqPersistResp(req, resp, transaction) {
                     .send(transaction.strBody);
             }
             else { //transaction.resp.ok evaluates to false, start error handling
+                //Log the HTTP error to the database
+                db.query( sSqlHttpErr, [
+                    JSON.stringify(
+                        {
+                            provider: transaction.provider,
+                            api: transaction.api,
+                            key: req.params.key
+                        }
+                    ),
+                    transaction.strBody,
+                    transaction.resp.status
+                ])
+                    .then(dbQry => {} /* console.log(`Log ${dbQry && dbQry.rowCount > 0 ? '✅' : '❌'}`) */)
+                    .catch(err => console.error(err));
+
+                //Handle the error in the catch clause
                 throw new ApiHubErr(
                     'httpErrReturn',
                     msg,
                     transaction.resp?.status,
                     transaction.strBody
-                )
+                );
             }
 
             return db.query( sSqlUpsert, [ req.params.key, transaction.strBody, transaction.resp.status ]);
