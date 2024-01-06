@@ -20,12 +20,34 @@
 --
 -- *********************************************************************
 
+-- ALTER TABLE public.errors_http DROP CONSTRAINT errors_http_pkey;
 -- DROP TABLE public.errors_http; 
+-- ALTER TABLE public.project_keys DROP CONSTRAINT project_keys_fkey;
+-- ALTER TABLE public.project_keys DROP CONSTRAINT project_keys_pkey;
 -- DROP TABLE public.project_keys;
+-- ALTER TABLE public.projects DROP CONSTRAINT projects_pkey;
 -- DROP TABLE public.projects;
+-- ALTER TABLE public.products_dnb DROP CONSTRAINT products_dnb_pkey;
 -- DROP TABLE public.products_dnb;
+-- DROP TRIGGER trgr_archive_gleif ON public.products_gleif;
+-- DROP FUNCTION public.f_archive_gleif();
+-- ALTER TABLE public.archive_gleif DROP CONSTRAINT archive_gleif_pkey;
+-- DROP TABLE public.archive_gleif;
+-- ALTER TABLE public.products_gleif DROP CONSTRAINT products_gleif_pkey;
 -- DROP TABLE public.products_gleif;
 -- DROP SEQUENCE public.errors_http_id_seq;
+-- DROP SEQUENCE public.archive_gleif_id_seq;
+
+SET default_tablespace = 'pg_default';
+SET default_with_oids = false;
+
+-- Create the sequence for the primary key of table archive gleif
+CREATE SEQUENCE public.archive_gleif_id_seq
+    INCREMENT 1
+    START 1
+    MINVALUE 1
+    MAXVALUE 9223372036854775807
+    CACHE 1;
 
 -- Create the sequence for the primary key of table errors_http
 CREATE SEQUENCE public.errors_http_id_seq
@@ -42,11 +64,37 @@ CREATE TABLE public.products_gleif (
    http_status smallint,
    tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
    CONSTRAINT products_gleif_pkey PRIMARY KEY (lei)
-)
-WITH (
-   OIDS = false
-)
-TABLESPACE pg_default;
+);
+
+-- Create table for archiving a GLEIF data product
+CREATE TABLE public.archive_gleif (
+   id integer NOT NULL DEFAULT nextval('archive_gleif_id_seq'::regclass),
+   lei character varying(32) COLLATE pg_catalog."default",
+   product JSONB,
+   http_status smallint,
+   tsz_begin timestamptz,
+   tsz_end timestamptz DEFAULT CURRENT_TIMESTAMP,
+   CONSTRAINT archive_gleif_pkey PRIMARY KEY (id)
+);
+
+-- Create a function to archive a GLEIF data product
+CREATE FUNCTION public.f_archive_gleif()
+   RETURNS trigger
+   LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+   INSERT INTO archive_gleif(lei, product, http_status, tsz_begin)
+   VALUES (OLD.lei, OLD.product, OLD.http_status, OLD.tsz);
+   RETURN NEW;
+END;
+$BODY$;
+
+-- Create a database trigger to archive a GLEIF reference data product on update
+CREATE TRIGGER trgr_archive_gleif
+   AFTER UPDATE OF product
+   ON public.products_gleif
+   FOR EACH ROW
+   EXECUTE PROCEDURE public.f_archive_gleif();
 
 -- Create table for storing D&B data products
 CREATE TABLE public.products_dnb (
@@ -55,22 +103,14 @@ CREATE TABLE public.products_dnb (
    http_status smallint,
    tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
    CONSTRAINT products_dnb_pkey PRIMARY KEY (duns)
-)
-WITH (
-   OIDS = false
-)
-TABLESPACE pg_default;
+);
 
 -- Create table for storing projects 
 CREATE TABLE public.projects (
    id character(8) COLLATE pg_catalog."default",
    descr character varying(128) COLLATE pg_catalog."default",
    CONSTRAINT projects_pkey PRIMARY KEY (id)
-)
-WITH (
-   OIDS = false
-)
-TABLESPACE pg_default;
+);
 
 -- Create table for keeping track of keys associated wih projects 
 CREATE TABLE public.project_keys (
@@ -81,11 +121,7 @@ CREATE TABLE public.project_keys (
    tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
    CONSTRAINT project_keys_pkey PRIMARY KEY (id, rec_key),
    CONSTRAINT project_keys_fkey FOREIGN KEY(id) REFERENCES projects(id)
-)
-WITH (
-   OIDS = false
-)
-TABLESPACE pg_default;
+);
 
 -- Create table for logging HTTP errors
 CREATE TABLE public.errors_http (
@@ -95,8 +131,4 @@ CREATE TABLE public.errors_http (
    http_status smallint,
    tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
    CONSTRAINT errors_http_pkey PRIMARY KEY (id)
-)
-WITH (
-   OIDS = false
-)
-TABLESPACE pg_default;
+);
