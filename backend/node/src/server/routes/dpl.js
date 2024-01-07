@@ -1,7 +1,7 @@
 // *********************************************************************
 //
-// Definition of the API Hub GLEIF routes
-// JavaScript code file: gleif.js
+// Definition of the API Hub D&B Direct+ routes
+// JavaScript code file: dpl.js
 //
 // Copyright 2023 Hans de Rooij
 //
@@ -22,19 +22,19 @@
 
 import express from 'express';
 
-import { isValidLei } from '../../share/utils.js';
+import { cleanDUNS } from '../../share/utils.js';
 import ahReqPersistResp from '../core.js';
 import { ApiHubErr } from '../err.js';
 
 const router = express.Router();
 
-router.post('/filter', (req, resp) => {
-    resp.json( { endpoint: 'filter' } )
+router.post('/idr', (req, resp) => {
+    resp.json( { endpoint: 'idr' } )
 });
 
-router.get('/:key', (req, resp) => {
-    if(!isValidLei(req.params.key)) {
-        const err = new ApiHubErr('invalidParameter', `LEI ${req.params.key} is not valid`);
+router.get('/duns/:key', (req, resp) => {
+    if(!cleanDUNS(req.params.key)) {
+        const err = new ApiHubErr('invalidParameter', `DUNS ${req.params.key} is not valid`);
 
         resp.status(err.httpStatus.code).json( err );
 
@@ -42,7 +42,7 @@ router.get('/:key', (req, resp) => {
     }
 
     //Transaction parameters
-    const transaction = { provider: 'gleif', api: 'lei' };
+    const transaction = { provider: 'dnb', api: 'dpl' };
 
     //Let the API Hub do its thing
     ahReqPersistResp(req, resp, transaction)

@@ -21,7 +21,7 @@
 // *********************************************************************
 
 import { dcdrUtf8, isNumber } from '../share/utils.js';
-import { LeiReq } from '../share/apiDefs.js';
+import { LeiReq, DnbDplDBs } from '../share/apiDefs.js';
 import db from './pg.js';
 import { ApiHubErr, httpStatus } from './err.js';
 
@@ -38,6 +38,17 @@ export default function ahReqPersistResp(req, resp, transaction) {
             sSqlUpsert += 'ON CONFLICT ( lei ) DO UPDATE SET product = $2, http_status = $3, tsz = CURRENT_TIMESTAMP;';
 
             transaction.req = new LeiReq(req.params.key);
+        }
+    }
+
+    if(transaction.provider === 'dnb') {
+        if(transaction.api === 'dpl') {
+            sSqlSelect  = 'SELECT duns AS key, product, tsz, http_status FROM products_dnb WHERE duns = $1;'
+
+            sSqlUpsert  = 'INSERT INTO products_dnb (duns, product, http_status) VALUES ($1, $2, $3) '
+            sSqlUpsert += 'ON CONFLICT ( duns ) DO UPDATE SET product = $2, http_status = $3, tsz = CURRENT_TIMESTAMP;';
+
+            transaction.req = new DnbDplDBs(req.params.key, { blockIDs: 'companyinfo_L2_v1,hierarchyconnections_L1_v1' });
         }
     }
 
