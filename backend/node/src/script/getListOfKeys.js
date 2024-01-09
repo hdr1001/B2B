@@ -26,7 +26,7 @@ import { readInputFile } from "../share/readInputFileKeys.js";
 //Import the GLEIF API and D&B Direct+ rate limiters
 import { gleifLimiter, dnbDplLimiter } from '../share/limiters.js';
 
-//Emply the respective API definitions
+//Employ the respective API definitions
 import { LeiReq, DnbDplDBs, DnbDplFamTree, DnbDplBenOwner } from "../share/apiDefs.js";
 
 //Decoder object for decoding utf-8 data in a binary format
@@ -42,12 +42,12 @@ import { pgPool } from "../share/postgres.js";
 const dnbDplDBs = { //Set level to 0 ⬇️ to not include the block
     dbs: [
         {db: 'companyinfo',               level: 2, dbShort: 'ci', version: '1'},
-        {db: 'principalscontacts',        level: 0, dbShort: 'pc', version: '2'},
+        {db: 'principalscontacts',        level: 1, dbShort: 'pc', version: '2'},
         {db: 'hierarchyconnections',      level: 1, dbShort: 'hc', version: '1'},
         {db: 'financialstrengthinsight',  level: 0, dbShort: 'fs', version: '1'},
         {db: 'paymentinsight',            level: 0, dbShort: 'pi', version: '1'},
         {db: 'eventfilings',              level: 0, dbShort: 'ef', version: '1'},
-        {db: 'companyfinancials',         level: 1, dbShort: 'cf', version: '2'},
+        {db: 'companyfinancials',         level: 0, dbShort: 'cf', version: '2'},
         {db: 'globalfinancials',          level: 0, dbShort: 'gf', version: '1'},
         {db: 'esginsight',                level: 0, dbShort: 'ei', version: '1'},
         {db: 'ownershipinsight',          level: 0, dbShort: 'oi', version: '1'},
@@ -58,7 +58,8 @@ const dnbDplDBs = { //Set level to 0 ⬇️ to not include the block
         {db: 'externaldisruptioninsight', level: 0, dbShort: 'ed', version: '1'},
         {db: 'inquiryinsight',            level: 0, dbShort: 'ii', version: '1'},
         {db: 'salesmarketinginsight',     level: 0, dbShort: 'sm', version: '2'},
-        {db: 'shippinginsight',           level: 0, dbShort: 'si', version: '1'}
+        {db: 'shippinginsight',           level: 0, dbShort: 'si', version: '1'},
+        {db: 'thirdpartyriskinsight',     level: 0, dbShort: 'tp', version: '3'}
     ],
 
     getBlockIDs: function() {
@@ -226,7 +227,7 @@ async function process(arr) {
                 .then(resp => {
                     ret.httpStatus = resp.status; //Return the HTTP status code
 
-                    if (resp.ok) { ret.ok = true }
+                    if(resp.ok) { ret.ok = true }
 
                     return resp.arrayBuffer();
                 })

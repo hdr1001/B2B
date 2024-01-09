@@ -139,10 +139,10 @@ export default function ahReqPersistResp(req, resp, transaction) {
         })
         .then(dbQry => {
             if(dbQry && dbQry.rowCount === 1) {
-                console.log(`Success executing ${dbQry.command} for lei ${req.params.key}`)
+                console.log(`Success executing ${dbQry.command} for key ${req.params.key}`)
             }
             else {
-                console.error(`Something went wrong upserting lei ${req.params.key}`)
+                console.error(`Something went wrong upserting key ${req.params.key}`)
             }
 
             //Done 🙂✅

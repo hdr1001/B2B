@@ -763,7 +763,7 @@ class DplDBs {
             })
             .sort((role1, role2) => role1.prio - role2.prio);
 
-        return famTreeRoles[0].description;
+        return famTreeRoles?.[0]?.description;
     }
 
     hasFamTreeRole(dnbCode) {
