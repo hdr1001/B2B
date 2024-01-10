@@ -22,6 +22,7 @@
 
 import express from 'express';
 import { ApiHubErr } from './err.js';
+import DplAuthToken from '../share/dnbDplAuth.js'
 import hub from './routes/hub.js';
 
 const app = express();
@@ -45,3 +46,6 @@ const server = app.listen(port, err => {
         console.log(`Now listening on port ${server.address().port}`)
     }
 });
+
+//Get a D&B Direct+ Authorization token
+const dplAuthToken = new DplAuthToken;
