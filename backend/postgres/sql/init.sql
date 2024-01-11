@@ -27,6 +27,10 @@
 -- DROP TABLE public.project_keys;
 -- ALTER TABLE public.projects DROP CONSTRAINT projects_pkey;
 -- DROP TABLE public.projects;
+-- DROP TRIGGER trgr_archive_dnb ON public.products_dnb;
+-- DROP FUNCTION public.f_archive_dnb();
+-- ALTER TABLE public.archive_dnb DROP CONSTRAINT archive_dnb_pkey;
+-- DROP TABLE public.archive_dnb;
 -- ALTER TABLE public.products_dnb DROP CONSTRAINT products_dnb_pkey;
 -- DROP TABLE public.products_dnb;
 -- DROP TRIGGER trgr_archive_gleif ON public.products_gleif;
@@ -36,6 +40,7 @@
 -- ALTER TABLE public.products_gleif DROP CONSTRAINT products_gleif_pkey;
 -- DROP TABLE public.products_gleif;
 -- DROP SEQUENCE public.errors_http_id_seq;
+-- DROP SEQUENCE public.archive_dnb_id_seq;
 -- DROP SEQUENCE public.archive_gleif_id_seq;
 
 SET default_tablespace = 'pg_default';
@@ -43,6 +48,14 @@ SET default_with_oids = false;
 
 -- Create the sequence for the primary key of table archive gleif
 CREATE SEQUENCE public.archive_gleif_id_seq
+    INCREMENT 1
+    START 1
+    MINVALUE 1
+    MAXVALUE 9223372036854775807
+    CACHE 1;
+
+-- Create the sequence for the primary key of table archive D&B
+CREATE SEQUENCE public.archive_dnb_id_seq
     INCREMENT 1
     START 1
     MINVALUE 1
@@ -104,6 +117,36 @@ CREATE TABLE public.products_dnb (
    tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
    CONSTRAINT products_dnb_pkey PRIMARY KEY (duns)
 );
+
+-- Create table for archiving a D&B data product
+CREATE TABLE public.archive_dnb (
+   id integer NOT NULL DEFAULT nextval('archive_dnb_id_seq'::regclass),
+   duns character varying(9) COLLATE pg_catalog."default",
+   product JSONB,
+   http_status smallint,
+   tsz_begin timestamptz,
+   tsz_end timestamptz DEFAULT CURRENT_TIMESTAMP,
+   CONSTRAINT archive_duns_pkey PRIMARY KEY (id)
+);
+
+-- Create a function to archive a D&B data product
+CREATE FUNCTION public.f_archive_dnb()
+   RETURNS trigger
+   LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+   INSERT INTO archive_dnb(duns, product, http_status, tsz_begin)
+   VALUES (OLD.duns, OLD.product, OLD.http_status, OLD.tsz);
+   RETURN NEW;
+END;
+$BODY$;
+
+-- Create a database trigger to archive a D&B data product on update
+CREATE TRIGGER trgr_archive_dnb
+   AFTER UPDATE OF product
+   ON public.products_dnb
+   FOR EACH ROW
+   EXECUTE PROCEDURE public.f_archive_dnb();
 
 -- Create table for storing projects 
 CREATE TABLE public.projects (

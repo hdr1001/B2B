@@ -49,3 +49,13 @@ const server = app.listen(port, err => {
 
 //Get a D&B Direct+ Authorization token
 const dplAuthToken = new DplAuthToken;
+
+process.on('SIGINT', () => {
+    console.log('\nServer received SIGINT');
+
+    server.close(() => {
+        console.log('Express server closed');
+
+        process.exit(0);
+    });
+});
