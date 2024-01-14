@@ -27,13 +27,15 @@
 -- DROP TABLE public.project_keys;
 -- ALTER TABLE public.projects DROP CONSTRAINT projects_pkey;
 -- DROP TABLE public.projects;
--- DROP TRIGGER trgr_archive_dnb ON public.products_dnb;
+-- DROP TRIGGER trgr_archive_dnb_product_00 ON public.products_dnb;
+-- DROP TRIGGER trgr_archive_dnb_product_01 ON public.products_dnb;
+-- DROP TRIGGER trgr_archive_dnb_product_02 ON public.products_dnb;
 -- DROP FUNCTION public.f_archive_dnb();
 -- ALTER TABLE public.archive_dnb DROP CONSTRAINT archive_dnb_pkey;
 -- DROP TABLE public.archive_dnb;
 -- ALTER TABLE public.products_dnb DROP CONSTRAINT products_dnb_pkey;
 -- DROP TABLE public.products_dnb;
--- DROP TRIGGER trgr_archive_gleif ON public.products_gleif;
+-- DROP TRIGGER trgr_archive_gleif_product_00 ON public.products_gleif;
 -- DROP FUNCTION public.f_archive_gleif();
 -- ALTER TABLE public.archive_gleif DROP CONSTRAINT archive_gleif_pkey;
 -- DROP TABLE public.archive_gleif;
@@ -73,9 +75,12 @@ CREATE SEQUENCE public.errors_http_id_seq
 -- Create table for storing GLEIF data products
 CREATE TABLE public.products_gleif (
    lei character varying(32) COLLATE pg_catalog."default",
-   product JSONB,
-   http_status smallint,
-   tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
+   product_00 JSONB,
+   http_status_00 smallint,
+   tsz_00 timestamptz,
+   product_01 JSONB,
+   http_status_01 smallint,
+   tsz_01 timestamptz,
    CONSTRAINT products_gleif_pkey PRIMARY KEY (lei)
 );
 
@@ -84,6 +89,7 @@ CREATE TABLE public.archive_gleif (
    id integer NOT NULL DEFAULT nextval('archive_gleif_id_seq'::regclass),
    lei character varying(32) COLLATE pg_catalog."default",
    product JSONB,
+   product_key character(2),
    http_status smallint,
    tsz_begin timestamptz,
    tsz_end timestamptz DEFAULT CURRENT_TIMESTAMP,
@@ -96,25 +102,38 @@ CREATE FUNCTION public.f_archive_gleif()
    LANGUAGE 'plpgsql'
 AS $BODY$
 BEGIN
-   INSERT INTO archive_gleif(lei, product, http_status, tsz_begin)
-   VALUES (OLD.lei, OLD.product, OLD.http_status, OLD.tsz);
+   INSERT INTO archive_gleif(lei, product, product_key, http_status, tsz_begin)
+   VALUES (
+      OLD.lei,
+      concat('OLD.product_' || TG_ARGV[0]),
+      TG_ARGV[0],
+      concat('OLD.http_status' || TG_ARGV[0]),
+      concat('OLD.OLD.tsz' || TG_ARGV[0])
+   );
+
    RETURN NEW;
 END;
 $BODY$;
 
 -- Create a database trigger to archive a GLEIF reference data product on update
-CREATE TRIGGER trgr_archive_gleif
-   AFTER UPDATE OF product
+CREATE TRIGGER trgr_archive_gleif_product_00
+   AFTER UPDATE OF product_00
    ON public.products_gleif
    FOR EACH ROW
-   EXECUTE PROCEDURE public.f_archive_gleif();
+   EXECUTE PROCEDURE public.f_archive_gleif('00');
 
 -- Create table for storing D&B data products
 CREATE TABLE public.products_dnb (
    duns character varying(9) COLLATE pg_catalog."default",
-   product JSONB,
-   http_status smallint,
-   tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
+   product_00 JSONB,
+   http_status_00 smallint,
+   tsz timestamptz,
+   product_01 JSONB,
+   http_status_01 smallint,
+   tsz_01 timestamptz,
+   product_02 JSONB,
+   http_status_02 smallint,
+   tsz_02 timestamptz,
    CONSTRAINT products_dnb_pkey PRIMARY KEY (duns)
 );
 
@@ -123,10 +142,11 @@ CREATE TABLE public.archive_dnb (
    id integer NOT NULL DEFAULT nextval('archive_dnb_id_seq'::regclass),
    duns character varying(9) COLLATE pg_catalog."default",
    product JSONB,
+   product_key character(2),
    http_status smallint,
    tsz_begin timestamptz,
    tsz_end timestamptz DEFAULT CURRENT_TIMESTAMP,
-   CONSTRAINT archive_duns_pkey PRIMARY KEY (id)
+   CONSTRAINT archive_dnb_pkey PRIMARY KEY (id)
 );
 
 -- Create a function to archive a D&B data product
@@ -135,18 +155,31 @@ CREATE FUNCTION public.f_archive_dnb()
    LANGUAGE 'plpgsql'
 AS $BODY$
 BEGIN
-   INSERT INTO archive_dnb(duns, product, http_status, tsz_begin)
-   VALUES (OLD.duns, OLD.product, OLD.http_status, OLD.tsz);
+   INSERT INTO archive_dnb(duns, product, product_key, http_status, tsz_begin)
+   VALUES (OLD.duns, concat('OLD.product_' || TG_ARGV[0]), TG_ARGV[0], OLD.http_status, OLD.tsz);
+
    RETURN NEW;
 END;
 $BODY$;
 
--- Create a database trigger to archive a D&B data product on update
-CREATE TRIGGER trgr_archive_dnb
-   AFTER UPDATE OF product
+-- Create database triggers to archive D&B data products on update
+CREATE TRIGGER trgr_archive_dnb_product_00
+   AFTER UPDATE OF product_00
    ON public.products_dnb
    FOR EACH ROW
-   EXECUTE PROCEDURE public.f_archive_dnb();
+   EXECUTE PROCEDURE public.f_archive_dnb('00');
+
+CREATE TRIGGER trgr_archive_dnb_product_01
+   AFTER UPDATE OF product_01
+   ON public.products_dnb
+   FOR EACH ROW
+   EXECUTE PROCEDURE public.f_archive_dnb('01');
+
+CREATE TRIGGER trgr_archive_dnb_product_02
+   AFTER UPDATE OF product_02
+   ON public.products_dnb
+   FOR EACH ROW
+   EXECUTE PROCEDURE public.f_archive_dnb('02');
 
 -- Create table for storing projects 
 CREATE TABLE public.projects (
