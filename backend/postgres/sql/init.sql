@@ -36,7 +36,9 @@
 -- ALTER TABLE public.products_dnb DROP CONSTRAINT products_dnb_pkey;
 -- DROP TABLE public.products_dnb;
 -- DROP TRIGGER trgr_archive_gleif_product_00 ON public.products_gleif;
--- DROP FUNCTION public.f_archive_gleif();
+-- DROP FUNCTION public.f_archive_gleif_product_00();
+-- DROP TRIGGER trgr_archive_gleif_product_01 ON public.products_gleif;
+-- DROP FUNCTION public.f_archive_gleif_product_01();
 -- ALTER TABLE public.archive_gleif DROP CONSTRAINT archive_gleif_pkey;
 -- DROP TABLE public.archive_gleif;
 -- ALTER TABLE public.products_gleif DROP CONSTRAINT products_gleif_pkey;
@@ -96,31 +98,43 @@ CREATE TABLE public.archive_gleif (
    CONSTRAINT archive_gleif_pkey PRIMARY KEY (id)
 );
 
--- Create a function to archive a GLEIF data product
-CREATE FUNCTION public.f_archive_gleif()
+-- Create a function to archive a GLEIF info product
+CREATE FUNCTION public.f_archive_gleif_product_00()
    RETURNS trigger
    LANGUAGE 'plpgsql'
 AS $BODY$
 BEGIN
    INSERT INTO archive_gleif(lei, product, product_key, http_status, tsz_begin)
-   VALUES (
-      OLD.lei,
-      concat('OLD.product_' || TG_ARGV[0]),
-      TG_ARGV[0],
-      concat('OLD.http_status' || TG_ARGV[0]),
-      concat('OLD.OLD.tsz' || TG_ARGV[0])
-   );
-
+   VALUES (OLD.lei, OLD.product_00, '00', OLD.http_status_00, OLD.tsz_00);
    RETURN NEW;
 END;
 $BODY$;
 
--- Create a database trigger to archive a GLEIF reference data product on update
+-- Create a database trigger to archive a GLEIF info product on update
 CREATE TRIGGER trgr_archive_gleif_product_00
    AFTER UPDATE OF product_00
    ON public.products_gleif
    FOR EACH ROW
-   EXECUTE PROCEDURE public.f_archive_gleif('00');
+   EXECUTE PROCEDURE public.f_archive_gleif_product_00();
+
+-- Create a function to archive a GLEIF relationship product
+CREATE FUNCTION public.f_archive_gleif_product_01()
+   RETURNS trigger
+   LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+   INSERT INTO archive_gleif(lei, product, product_key, http_status, tsz_begin)
+   VALUES (OLD.lei, OLD.product_01, '01', OLD.http_status_01, OLD.tsz_01);
+   RETURN NEW;
+END;
+$BODY$;
+
+-- Create a database trigger to archive a GLEIF relationship product on update
+CREATE TRIGGER trgr_archive_gleif_product_01
+   AFTER UPDATE OF product_01
+   ON public.products_gleif
+   FOR EACH ROW
+   EXECUTE PROCEDURE public.f_archive_gleif_product_01();
 
 -- Create table for storing D&B data products
 CREATE TABLE public.products_dnb (
