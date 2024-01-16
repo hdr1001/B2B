@@ -22,12 +22,12 @@
 
 import { dcdrUtf8, isNumber } from '../share/utils.js';
 import { LeiReq, DnbDplDBs } from '../share/apiDefs.js';
-import { dplReqParams } from './globs.js';
+import dplReqParams from './globs.js'
 import db from './pg.js';
 import { ApiHubErr, httpStatus } from './err.js';
 
 export default function ahReqPersistResp(req, resp, transaction) {
-    const key = '00';
+    const apiProduct = req.query?.product || '00';
 
     let sSqlSelect, sSqlUpsert;
 
@@ -35,10 +35,10 @@ export default function ahReqPersistResp(req, resp, transaction) {
 
     if(transaction.provider === 'gleif') {
         if(transaction.api === 'lei') {
-            sSqlSelect  = `SELECT lei, product_${key}, http_status_${key}, tsz_${key} FROM products_gleif WHERE lei = $1;`
+            sSqlSelect  = `SELECT lei, product_${apiProduct}, http_status_${apiProduct}, tsz_${apiProduct} FROM products_gleif WHERE lei = $1;`;
 
-            sSqlUpsert  = `INSERT INTO products_gleif (lei, product_${key}, http_status_${key}, tsz_${key}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `
-            sSqlUpsert += `ON CONFLICT ( lei ) DO UPDATE SET product_${key} = $2, http_status_${key} = $3, tsz_${key} = CURRENT_TIMESTAMP;`;
+            sSqlUpsert  = `INSERT INTO products_gleif (lei, product_${apiProduct}, http_status_${apiProduct}, tsz_${apiProduct}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
+            sSqlUpsert += `ON CONFLICT ( lei ) DO UPDATE SET product_${apiProduct} = $2, http_status_${apiProduct} = $3, tsz_${apiProduct} = CURRENT_TIMESTAMP;`;
 
             transaction.req = new LeiReq(req.params.key);
         }
@@ -46,12 +46,12 @@ export default function ahReqPersistResp(req, resp, transaction) {
 
     if(transaction.provider === 'dnb') {
         if(transaction.api === 'dpl') {
-            sSqlSelect  = 'SELECT duns, product_00, tsz_00, http_status_00 FROM products_dnb WHERE duns = $1;'
+            sSqlSelect  = `SELECT duns, product_${apiProduct}, tsz_${apiProduct}, http_status_${apiProduct} FROM products_dnb WHERE duns = $1;`;
 
-            sSqlUpsert  = 'INSERT INTO products_dnb (duns, product_00, http_status_00, tsz_00) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) '
-            sSqlUpsert += 'ON CONFLICT ( duns ) DO UPDATE SET product_00 = $2, http_status_00 = $3, tsz_00 = CURRENT_TIMESTAMP;';
+            sSqlUpsert  = `INSERT INTO products_dnb (duns, product_${apiProduct}, http_status_${apiProduct}, tsz_${apiProduct}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
+            sSqlUpsert += `ON CONFLICT ( duns ) DO UPDATE SET product_${apiProduct} = $2, http_status_${apiProduct} = $3, tsz_${apiProduct} = CURRENT_TIMESTAMP;`;
 
-            transaction.req = new DnbDplDBs(req.params.key, { blockIDs: 'companyinfo_L2_v1,hierarchyconnections_L1_v1' });
+            transaction.req = new DnbDplDBs(req.params.key, dplReqParams.get(apiProduct));
         }
     }
 
@@ -62,12 +62,12 @@ export default function ahReqPersistResp(req, resp, transaction) {
     (bForceNew ? Promise.resolve(null) : db.query( sSqlSelect, [ req.params.key ]))
         .then(dbQry => {
             if(dbQry) { //bForceNew === false
-                if(dbQry.rows.length && dbQry.rows[0]['product_' + key]) { //Requested key available on the database
+                if(dbQry.rows.length && dbQry.rows[0]['product_' + apiProduct]) { //Requested apiProduct available on the database
                     resp
                         .setHeader('X-B2BAH-Cache', true)
-                        .setHeader('X-B2BAH-Obtained-At', new Date(dbQry.rows[0]['tsz_' + key]).toISOString())
+                        .setHeader('X-B2BAH-Obtained-At', new Date(dbQry.rows[0]['tsz_' + apiProduct]).toISOString())
             
-                        .json(dbQry.rows[0]['product_'+ key]);
+                        .json(dbQry.rows[0]['product_'+ apiProduct]);
         
                     throw new Error( //Skip the rest of the then chain
                         `Request for key ${req.params.key} delivered from the database`,

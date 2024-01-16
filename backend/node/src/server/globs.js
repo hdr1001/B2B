@@ -32,6 +32,4 @@ const dplReqParams = new Map([
     }]
 ]);
 
-export {
-    dplReqParams
-};
+export default dplReqParams;

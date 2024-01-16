@@ -28,9 +28,11 @@
 -- ALTER TABLE public.projects DROP CONSTRAINT projects_pkey;
 -- DROP TABLE public.projects;
 -- DROP TRIGGER trgr_archive_dnb_product_00 ON public.products_dnb;
+-- DROP FUNCTION public.f_archive_dnb_product_00();
 -- DROP TRIGGER trgr_archive_dnb_product_01 ON public.products_dnb;
+-- DROP FUNCTION public.f_archive_dnb_product_01();
 -- DROP TRIGGER trgr_archive_dnb_product_02 ON public.products_dnb;
--- DROP FUNCTION public.f_archive_dnb();
+-- DROP FUNCTION public.f_archive_dnb_product_02();
 -- ALTER TABLE public.archive_dnb DROP CONSTRAINT archive_dnb_pkey;
 -- DROP TABLE public.archive_dnb;
 -- ALTER TABLE public.products_dnb DROP CONSTRAINT products_dnb_pkey;
@@ -141,7 +143,7 @@ CREATE TABLE public.products_dnb (
    duns character varying(9) COLLATE pg_catalog."default",
    product_00 JSONB,
    http_status_00 smallint,
-   tsz timestamptz,
+   tsz_00 timestamptz,
    product_01 JSONB,
    http_status_01 smallint,
    tsz_01 timestamptz,
@@ -164,14 +166,35 @@ CREATE TABLE public.archive_dnb (
 );
 
 -- Create a function to archive a D&B data product
-CREATE FUNCTION public.f_archive_dnb()
+CREATE FUNCTION public.f_archive_dnb_product_00()
    RETURNS trigger
    LANGUAGE 'plpgsql'
 AS $BODY$
 BEGIN
    INSERT INTO archive_dnb(duns, product, product_key, http_status, tsz_begin)
-   VALUES (OLD.duns, concat('OLD.product_' || TG_ARGV[0]), TG_ARGV[0], OLD.http_status, OLD.tsz);
+   VALUES (OLD.duns, OLD.product_00, '00', OLD.http_status_00, OLD.tsz_00);
+   RETURN NEW;
+END;
+$BODY$;
 
+CREATE FUNCTION public.f_archive_dnb_product_01()
+   RETURNS trigger
+   LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+   INSERT INTO archive_dnb(duns, product, product_key, http_status, tsz_begin)
+   VALUES (OLD.duns, OLD.product_01, '01', OLD.http_status_01, OLD.tsz_01);
+   RETURN NEW;
+END;
+$BODY$;
+
+CREATE FUNCTION public.f_archive_dnb_product_02()
+   RETURNS trigger
+   LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+   INSERT INTO archive_dnb(duns, product, product_key, http_status, tsz_begin)
+   VALUES (OLD.duns, OLD.product_02, '02', OLD.http_status_02, OLD.tsz_02);
    RETURN NEW;
 END;
 $BODY$;
@@ -181,19 +204,19 @@ CREATE TRIGGER trgr_archive_dnb_product_00
    AFTER UPDATE OF product_00
    ON public.products_dnb
    FOR EACH ROW
-   EXECUTE PROCEDURE public.f_archive_dnb('00');
+   EXECUTE PROCEDURE public.f_archive_dnb_product_00();
 
 CREATE TRIGGER trgr_archive_dnb_product_01
    AFTER UPDATE OF product_01
    ON public.products_dnb
    FOR EACH ROW
-   EXECUTE PROCEDURE public.f_archive_dnb('01');
+   EXECUTE PROCEDURE public.f_archive_dnb_product_01();
 
 CREATE TRIGGER trgr_archive_dnb_product_02
    AFTER UPDATE OF product_02
    ON public.products_dnb
    FOR EACH ROW
-   EXECUTE PROCEDURE public.f_archive_dnb('02');
+   EXECUTE PROCEDURE public.f_archive_dnb_product_02();
 
 -- Create table for storing projects 
 CREATE TABLE public.projects (
