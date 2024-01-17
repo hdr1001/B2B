@@ -33,6 +33,7 @@
 -- DROP FUNCTION public.f_archive_dnb_product_01();
 -- DROP TRIGGER trgr_archive_dnb_product_02 ON public.products_dnb;
 -- DROP FUNCTION public.f_archive_dnb_product_02();
+-- DROP INDEX idx_archive_dnb;
 -- ALTER TABLE public.archive_dnb DROP CONSTRAINT archive_dnb_pkey;
 -- DROP TABLE public.archive_dnb;
 -- ALTER TABLE public.products_dnb DROP CONSTRAINT products_dnb_pkey;
@@ -164,6 +165,9 @@ CREATE TABLE public.archive_dnb (
    tsz_end timestamptz DEFAULT CURRENT_TIMESTAMP,
    CONSTRAINT archive_dnb_pkey PRIMARY KEY (id)
 );
+
+-- Enable quick DUNS search in archive
+CREATE INDEX idx_archive_dnb ON archive_dnb (duns);
 
 -- Create a function to archive a D&B data product
 CREATE FUNCTION public.f_archive_dnb_product_00()

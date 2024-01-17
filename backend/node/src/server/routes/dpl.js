@@ -23,6 +23,7 @@
 import express from 'express';
 
 import { cleanDUNS } from '../../share/utils.js';
+import dplReqParams from '../globs.js'
 import ahReqPersistResp from '../core.js';
 import { ApiHubErr } from '../err.js';
 
@@ -33,7 +34,10 @@ router.post('/idr', (req, resp) => {
 });
 
 router.get('/duns/:key', (req, resp) => {
-    if(!cleanDUNS(req.params.key)) {
+    //Transaction parameters
+    const transaction = { provider: 'dnb', api: 'dpl', duns: cleanDUNS(req.params.key) };
+
+    if(!transaction.duns) {
         const err = new ApiHubErr('invalidParameter', `DUNS ${req.params.key} is not valid`);
 
         resp.status(err.httpStatus.code).json( err );
@@ -41,8 +45,17 @@ router.get('/duns/:key', (req, resp) => {
         return;
     }
 
-    //Transaction parameters
-    const transaction = { provider: 'dnb', api: 'dpl' };
+    transaction.product = req.query?.product || '00'; //'00' is the default product key
+
+    transaction.reqParams = dplReqParams.get(transaction.product);
+
+    if(!transaction.reqParams) {
+        const err = new ApiHubErr('invalidParameter', `Query parameter product ${transaction.product} is not valid`);
+
+        resp.status(err.httpStatus.code).json( err );
+
+        return;
+    }
 
     //Let the API Hub do its thing
     ahReqPersistResp(req, resp, transaction)

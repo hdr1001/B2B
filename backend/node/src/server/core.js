@@ -22,23 +22,20 @@
 
 import { dcdrUtf8, isNumber } from '../share/utils.js';
 import { LeiReq, DnbDplDBs } from '../share/apiDefs.js';
-import dplReqParams from './globs.js'
 import db from './pg.js';
 import { ApiHubErr, httpStatus } from './err.js';
 
 export default function ahReqPersistResp(req, resp, transaction) {
-    const apiProduct = req.query?.product || '00';
-
     let sSqlSelect, sSqlUpsert;
 
     const sSqlHttpErr = 'INSERT INTO errors_http (req, err, http_status) VALUES ($1, $2, $3)';
 
     if(transaction.provider === 'gleif') {
         if(transaction.api === 'lei') {
-            sSqlSelect  = `SELECT lei, product_${apiProduct}, http_status_${apiProduct}, tsz_${apiProduct} FROM products_gleif WHERE lei = $1;`;
+            sSqlSelect  = `SELECT lei, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product} FROM products_gleif WHERE lei = $1;`;
 
-            sSqlUpsert  = `INSERT INTO products_gleif (lei, product_${apiProduct}, http_status_${apiProduct}, tsz_${apiProduct}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
-            sSqlUpsert += `ON CONFLICT ( lei ) DO UPDATE SET product_${apiProduct} = $2, http_status_${apiProduct} = $3, tsz_${apiProduct} = CURRENT_TIMESTAMP;`;
+            sSqlUpsert  = `INSERT INTO products_gleif (lei, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
+            sSqlUpsert += `ON CONFLICT ( lei ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
 
             transaction.req = new LeiReq(req.params.key);
         }
@@ -46,12 +43,12 @@ export default function ahReqPersistResp(req, resp, transaction) {
 
     if(transaction.provider === 'dnb') {
         if(transaction.api === 'dpl') {
-            sSqlSelect  = `SELECT duns, product_${apiProduct}, tsz_${apiProduct}, http_status_${apiProduct} FROM products_dnb WHERE duns = $1;`;
+            sSqlSelect  = `SELECT duns, product_${transaction.product}, tsz_${transaction.product}, http_status_${transaction.product} FROM products_dnb WHERE duns = $1;`;
 
-            sSqlUpsert  = `INSERT INTO products_dnb (duns, product_${apiProduct}, http_status_${apiProduct}, tsz_${apiProduct}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
-            sSqlUpsert += `ON CONFLICT ( duns ) DO UPDATE SET product_${apiProduct} = $2, http_status_${apiProduct} = $3, tsz_${apiProduct} = CURRENT_TIMESTAMP;`;
+            sSqlUpsert  = `INSERT INTO products_dnb (duns, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
+            sSqlUpsert += `ON CONFLICT ( duns ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
 
-            transaction.req = new DnbDplDBs(req.params.key, dplReqParams.get(apiProduct));
+            transaction.req = new DnbDplDBs(req.params.key, transaction.reqParams);
         }
     }
 
@@ -62,12 +59,12 @@ export default function ahReqPersistResp(req, resp, transaction) {
     (bForceNew ? Promise.resolve(null) : db.query( sSqlSelect, [ req.params.key ]))
         .then(dbQry => {
             if(dbQry) { //bForceNew === false
-                if(dbQry.rows.length && dbQry.rows[0]['product_' + apiProduct]) { //Requested apiProduct available on the database
+                if(dbQry.rows.length && dbQry.rows[0]['product_' + transaction.product]) { //Requested transaction.product available on the database
                     resp
                         .setHeader('X-B2BAH-Cache', true)
-                        .setHeader('X-B2BAH-Obtained-At', new Date(dbQry.rows[0]['tsz_' + apiProduct]).toISOString())
+                        .setHeader('X-B2BAH-Obtained-At', new Date(dbQry.rows[0]['tsz_' + transaction.product]).toISOString())
             
-                        .json(dbQry.rows[0]['product_'+ apiProduct]);
+                        .json(dbQry.rows[0]['product_'+ transaction.product]);
         
                     throw new Error( //Skip the rest of the then chain
                         `Request for key ${req.params.key} delivered from the database`,
