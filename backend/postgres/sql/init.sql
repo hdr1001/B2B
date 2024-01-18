@@ -208,18 +208,21 @@ CREATE TRIGGER trgr_archive_dnb_product_00
    AFTER UPDATE OF product_00
    ON public.products_dnb
    FOR EACH ROW
+   WHEN (OLD.product_00 IS NOT NULL)
    EXECUTE PROCEDURE public.f_archive_dnb_product_00();
 
 CREATE TRIGGER trgr_archive_dnb_product_01
    AFTER UPDATE OF product_01
    ON public.products_dnb
    FOR EACH ROW
+   WHEN (OLD.product_01 IS NOT NULL)
    EXECUTE PROCEDURE public.f_archive_dnb_product_01();
 
 CREATE TRIGGER trgr_archive_dnb_product_02
    AFTER UPDATE OF product_02
    ON public.products_dnb
    FOR EACH ROW
+   WHEN (OLD.product_02 IS NOT NULL)
    EXECUTE PROCEDURE public.f_archive_dnb_product_02();
 
 -- Create table for storing projects 
