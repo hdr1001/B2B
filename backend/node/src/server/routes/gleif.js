@@ -44,6 +44,16 @@ router.get('/:key', (req, resp) => {
     //Transaction parameters
     const transaction = { provider: 'gleif', api: 'lei' };
 
+    transaction.product = req.query?.product || '00'; //'00' is the default product key
+
+    if(transaction.product !== '00') {
+        const err = new ApiHubErr('invalidParameter', `Query parameter product ${transaction.product} is not valid`);
+
+        resp.status(err.httpStatus.code).json( err );
+
+        return;
+    }
+
     //Let the API Hub do its thing
     ahReqPersistResp(req, resp, transaction)
 });

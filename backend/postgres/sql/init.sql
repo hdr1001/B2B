@@ -40,8 +40,6 @@
 -- DROP TABLE public.products_dnb;
 -- DROP TRIGGER trgr_archive_gleif_product_00 ON public.products_gleif;
 -- DROP FUNCTION public.f_archive_gleif_product_00();
--- DROP TRIGGER trgr_archive_gleif_product_01 ON public.products_gleif;
--- DROP FUNCTION public.f_archive_gleif_product_01();
 -- ALTER TABLE public.archive_gleif DROP CONSTRAINT archive_gleif_pkey;
 -- DROP TABLE public.archive_gleif;
 -- ALTER TABLE public.products_gleif DROP CONSTRAINT products_gleif_pkey;
@@ -83,9 +81,6 @@ CREATE TABLE public.products_gleif (
    product_00 JSONB,
    http_status_00 smallint,
    tsz_00 timestamptz,
-   product_01 JSONB,
-   http_status_01 smallint,
-   tsz_01 timestamptz,
    CONSTRAINT products_gleif_pkey PRIMARY KEY (lei)
 );
 
@@ -118,26 +113,8 @@ CREATE TRIGGER trgr_archive_gleif_product_00
    AFTER UPDATE OF product_00
    ON public.products_gleif
    FOR EACH ROW
+   WHEN (OLD.product_00 IS NOT NULL)
    EXECUTE PROCEDURE public.f_archive_gleif_product_00();
-
--- Create a function to archive a GLEIF relationship product
-CREATE FUNCTION public.f_archive_gleif_product_01()
-   RETURNS trigger
-   LANGUAGE 'plpgsql'
-AS $BODY$
-BEGIN
-   INSERT INTO archive_gleif(lei, product, product_key, http_status, tsz_begin)
-   VALUES (OLD.lei, OLD.product_01, '01', OLD.http_status_01, OLD.tsz_01);
-   RETURN NEW;
-END;
-$BODY$;
-
--- Create a database trigger to archive a GLEIF relationship product on update
-CREATE TRIGGER trgr_archive_gleif_product_01
-   AFTER UPDATE OF product_01
-   ON public.products_gleif
-   FOR EACH ROW
-   EXECUTE PROCEDURE public.f_archive_gleif_product_01();
 
 -- Create table for storing D&B data products
 CREATE TABLE public.products_dnb (
