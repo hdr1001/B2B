@@ -26,6 +26,7 @@ import DplAuthToken from '../share/dnbDplAuth.js'
 import hub from './routes/hub.js';
 
 const app = express();
+app.use( express.json() );
 
 const port = process.env.API_SERVER_PORT || 8080; //Server port
 

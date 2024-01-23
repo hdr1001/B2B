@@ -30,7 +30,28 @@ import { ApiHubErr } from '../err.js';
 const router = express.Router();
 
 router.post('/idr', (req, resp) => {
-    resp.json( { endpoint: 'idr' } )
+    //Transaction parameters
+    const transaction = { provider: 'dnb', api: 'dpl', idr: true };
+
+    if(!req.body || req.body.constructor !== Object || Object.keys(req.body).length === 0) {
+        const err = new ApiHubErr('invalidParameter', 'No search parameters specified in the body of the POST transaction');
+
+        resp.status(err.httpStatus.code).json( err );
+
+        return;
+    }
+
+    if(!req.body.countryISOAlpha2Code) {
+        const err = new ApiHubErr('invalidParameter', 'No country code specified in the body of the POST transaction');
+
+        resp.status(err.httpStatus.code).json( err );
+
+        return;
+    }
+
+    console.log(req.body)
+
+    resp.json(transaction)
 });
 
 router.get('/duns/:key', (req, resp) => {
