@@ -21,12 +21,12 @@
 // *********************************************************************
 
 import { dcdrUtf8, isNumber } from '../share/utils.js';
-import { LeiReq, DnbDplDBs } from '../share/apiDefs.js';
+import { LeiReq, DnbDplDBs, DnbDplIDR } from '../share/apiDefs.js';
 import db from './pg.js';
 import { ApiHubErr, httpStatus } from './err.js';
 
 export default function ahReqPersistResp(req, resp, transaction) {
-    let sSqlSelect, sSqlUpsert;
+    let bForceNew, sSqlSelect, sSqlUpsert;
 
     const sSqlHttpErr = 'INSERT INTO errors_http (req, err, http_status) VALUES ($1, $2, $3)';
 
@@ -38,22 +38,34 @@ export default function ahReqPersistResp(req, resp, transaction) {
             sSqlUpsert += `ON CONFLICT ( lei ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
 
             transaction.req = new LeiReq(req.params.key);
+
+            //Don't deliver from the database if forceNew query parameter is set to true
+            bForceNew = req.query?.forceNew && req.query.forceNew.toLowerCase() === 'true';
         }
     }
 
     if(transaction.provider === 'dnb') {
         if(transaction.api === 'dpl') {
-            sSqlSelect  = `SELECT duns, product_${transaction.product}, tsz_${transaction.product}, http_status_${transaction.product} FROM products_dnb WHERE duns = $1;`;
+            if(transaction.idr) {
+                sSqlUpsert  = 'INSERT INTO idr_dnb_dpl (req_params, resp_idr, http_status, tsz) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)';
 
-            sSqlUpsert  = `INSERT INTO products_dnb (duns, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
-            sSqlUpsert += `ON CONFLICT ( duns ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
+                bForceNew = true;
 
-            transaction.req = new DnbDplDBs(req.params.key, transaction.reqParams);
+                transaction.req = new DnbDplIDR(req.body);
+            }
+            else {
+                sSqlSelect  = `SELECT duns, product_${transaction.product}, tsz_${transaction.product}, http_status_${transaction.product} FROM products_dnb WHERE duns = $1;`;
+
+                sSqlUpsert  = `INSERT INTO products_dnb (duns, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
+                sSqlUpsert += `ON CONFLICT ( duns ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
+        
+                //Don't deliver from the database if forceNew query parameter is set to true
+                bForceNew = req.query?.forceNew && req.query.forceNew.toLowerCase() === 'true';
+
+                transaction.req = new DnbDplDBs(req.params.key, transaction.reqParams);
+            }
         }
     }
-
-    //Don't deliver from the database if forceNew query parameter is set to true
-    const bForceNew = req.query?.forceNew && req.query.forceNew.toLowerCase() === 'true';
 
     //If not forceNew and data available from database, deliver from stock
     (bForceNew ? Promise.resolve(null) : db.query( sSqlSelect, [ req.params.key ]))
@@ -77,12 +89,12 @@ export default function ahReqPersistResp(req, resp, transaction) {
 
             return fetch(transaction.req.getReq()) //Request date from external API
         })
-        .then(leiResp => {
+        .then(apiResp => {
             transaction.tsResp = Date.now(); //Timestamp the receipt of the HTTP response
 
-            transaction.resp = leiResp;
+            transaction.resp = apiResp;
 
-            return leiResp.arrayBuffer();
+            return apiResp.arrayBuffer();
         })
         .then(buff => {
             //A bit of reporting about the external API transaction

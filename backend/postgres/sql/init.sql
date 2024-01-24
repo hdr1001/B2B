@@ -27,6 +27,8 @@
 -- DROP TABLE public.project_keys;
 -- ALTER TABLE public.projects DROP CONSTRAINT projects_pkey;
 -- DROP TABLE public.projects;
+-- ALTER TABLE public.idr_dnb_dpl DROP CONSTRAINT idr_dnb_dpl_pkey;
+-- DROP TABLE public.idr_dnb_dpl;
 -- DROP TRIGGER trgr_archive_dnb_product_00 ON public.products_dnb;
 -- DROP FUNCTION public.f_archive_dnb_product_00();
 -- DROP TRIGGER trgr_archive_dnb_product_01 ON public.products_dnb;
@@ -45,6 +47,7 @@
 -- ALTER TABLE public.products_gleif DROP CONSTRAINT products_gleif_pkey;
 -- DROP TABLE public.products_gleif;
 -- DROP SEQUENCE public.errors_http_id_seq;
+-- DROP SEQUENCE public.idr_dnb_dpl_id_seq;
 -- DROP SEQUENCE public.archive_dnb_id_seq;
 -- DROP SEQUENCE public.archive_gleif_id_seq;
 
@@ -61,6 +64,14 @@ CREATE SEQUENCE public.archive_gleif_id_seq
 
 -- Create the sequence for the primary key of table archive D&B
 CREATE SEQUENCE public.archive_dnb_id_seq
+    INCREMENT 1
+    START 1
+    MINVALUE 1
+    MAXVALUE 9223372036854775807
+    CACHE 1;
+
+-- Create the sequence for the primary key of table D&B Direct+ IDR
+CREATE SEQUENCE public.idr_dnb_dpl_id_seq
     INCREMENT 1
     START 1
     MINVALUE 1
@@ -201,6 +212,16 @@ CREATE TRIGGER trgr_archive_dnb_product_02
    FOR EACH ROW
    WHEN (OLD.product_02 IS NOT NULL)
    EXECUTE PROCEDURE public.f_archive_dnb_product_02();
+
+-- Create table for persisting IDR requests
+CREATE TABLE public.idr_dnb_dpl (
+   id integer NOT NULL DEFAULT nextval('idr_dnb_dpl_id_seq'::regclass),
+   req_params JSONB,
+   resp_idr JSONB,
+   http_status smallint,
+   tsz timestamptz,
+   CONSTRAINT idr_dnb_dpl_pkey PRIMARY KEY (id)
+);
 
 -- Create table for storing projects 
 CREATE TABLE public.projects (

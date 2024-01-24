@@ -34,7 +34,7 @@ router.post('/idr', (req, resp) => {
     const transaction = { provider: 'dnb', api: 'dpl', idr: true };
 
     if(!req.body || req.body.constructor !== Object || Object.keys(req.body).length === 0) {
-        const err = new ApiHubErr('invalidParameter', 'No search parameters specified in the body of the POST transaction');
+        const err = new ApiHubErr('invalidParameter', 'No search criteria specified in the body of the POST transaction');
 
         resp.status(err.httpStatus.code).json( err );
 
@@ -49,9 +49,8 @@ router.post('/idr', (req, resp) => {
         return;
     }
 
-    console.log(req.body)
-
-    resp.json(transaction)
+    //Let the API Hub do its thing
+    ahReqPersistResp(req, resp, transaction)
 });
 
 router.get('/duns/:key', (req, resp) => {
