@@ -26,7 +26,7 @@ import db from './pg.js';
 import { ApiHubErr, httpStatus } from './err.js';
 
 export default function ahReqPersistResp(req, resp, transaction) {
-    let bForceNew, sSqlSelect, sSqlUpsert;
+    let bForceNew, sSqlSelect, sSqlInsert, sSqlUpsert;
 
     const sSqlHttpErr = 'INSERT INTO errors_http (req, err, http_status) VALUES ($1, $2, $3)';
 
@@ -47,7 +47,7 @@ export default function ahReqPersistResp(req, resp, transaction) {
     if(transaction.provider === 'dnb') {
         if(transaction.api === 'dpl') {
             if(transaction.idr) {
-                sSqlUpsert  = 'INSERT INTO idr_dnb_dpl (req_params, resp_idr, http_status, tsz) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)';
+                sSqlInsert = 'INSERT INTO idr_dnb_dpl (req_params, resp_idr, http_status, tsz) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)';
 
                 bForceNew = true;
 
@@ -98,7 +98,14 @@ export default function ahReqPersistResp(req, resp, transaction) {
         })
         .then(buff => {
             //A bit of reporting about the external API transaction
-            let msg = `Request for key ${req.params.key} returned with HTTP status code ${transaction?.resp?.status}`;
+            let msg;
+
+            if(transaction.idr) {
+                msg = `IDR request returned with HTTP status code ${transaction?.resp?.status}`;
+            }
+            else {
+                msg = `Request for key ${req.params.key} returned with HTTP status code ${transaction?.resp?.status}`;
+            }
 
             if(transaction?.tsResp && transaction?.tsReq) {
                 msg += ` (${transaction.tsResp - transaction.tsReq} ms)`
@@ -129,7 +136,7 @@ export default function ahReqPersistResp(req, resp, transaction) {
                         {
                             provider: transaction.provider,
                             api: transaction.api,
-                            key: req.params.key
+                            key: req.params?.key
                         }
                     ),
                     transaction.strBody,
@@ -147,14 +154,21 @@ export default function ahReqPersistResp(req, resp, transaction) {
                 );
             }
 
-            return db.query( sSqlUpsert, [ req.params.key, transaction.strBody, transaction.resp.status ]);
+            return transaction.idr
+                ? db.query( sSqlInsert, [ JSON.stringify(req.body), transaction.strBody, transaction.resp.status ])
+                : db.query( sSqlUpsert, [ req.params.key, transaction.strBody, transaction.resp.status ]);
         })
         .then(dbQry => {
             if(dbQry && dbQry.rowCount === 1) {
-                console.log(`Success executing ${dbQry.command} for key ${req.params.key}`)
+                console.log(`Success executing ${dbQry.command}${transaction.idr ? '' : ` for key ${req.params.key}`}`)
             }
             else {
-                console.error(`Something went wrong upserting key ${req.params.key}`)
+                if(transaction.idr) {
+                    console.error(`Something went wrong persisting IDR request with criteria ${JSON.stringify(req.body)}`)
+                }
+                else {
+                    console.error(`Something went wrong upserting key ${req.params.key}`)
+                }
             }
 
             //Done 🙂✅
