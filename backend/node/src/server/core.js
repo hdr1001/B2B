@@ -47,7 +47,7 @@ export default function ahReqPersistResp(req, resp, transaction) {
     if(transaction.provider === 'dnb') {
         if(transaction.api === 'dpl') {
             if(transaction.idr) {
-                sSqlInsert = 'INSERT INTO idr_dnb_dpl (req_params, resp_idr, http_status, tsz) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)';
+                sSqlInsert = 'INSERT INTO idr_dnb_dpl (req_params, resp_idr, http_status, tsz) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id';
 
                 bForceNew = true;
 
@@ -73,8 +73,10 @@ export default function ahReqPersistResp(req, resp, transaction) {
             if(dbQry) { //bForceNew === false
                 if(dbQry.rows.length && dbQry.rows[0]['product_' + transaction.product]) { //Requested transaction.product available on the database
                     resp
-                        .setHeader('X-B2BAH-Cache', true)
-                        .setHeader('X-B2BAH-Obtained-At', new Date(dbQry.rows[0]['tsz_' + transaction.product]).toISOString())
+                        .header({
+                            'X-B2BAH-Cache': true,
+                            'X-B2BAH-Obtained-At': new Date(dbQry.rows[0]['tsz_' + transaction.product]).toISOString()
+                        })
             
                         .json(dbQry.rows[0]['product_'+ transaction.product]);
         
@@ -118,16 +120,20 @@ export default function ahReqPersistResp(req, resp, transaction) {
         
             //Happy flow
             if(transaction?.resp.ok) {
-                resp
-                    .setHeader('X-B2BAH-Cache', false)
-                    .setHeader('X-B2BAH-API-HTTP-Status', transaction.resp.status)
-                    .setHeader('X-B2BAH-Obtained-At', new Date(transaction.tsResp).toISOString())
-        
-                    .set('Content-Type', 'application/json')
-        
-                    .status(httpStatus.okay.code)
-        
-                    .send(transaction.strBody);
+                if(!transaction.idr) { //If idr then returned SQL row id is needed
+                    resp
+                        .header({
+                            'X-B2BAH-Cache': false,
+                            'X-B2BAH-API-HTTP-Status': transaction.resp.status,
+                            'X-B2BAH-Obtained-At': new Date(transaction.tsResp).toISOString()
+                        })
+
+                        .type('json')
+            
+                        .status(httpStatus.okay.code)
+            
+                        .send(transaction.strBody);
+                }
             }
             else { //transaction.resp.ok evaluates to false, start error handling
                 //Log the HTTP error to the database
@@ -160,11 +166,31 @@ export default function ahReqPersistResp(req, resp, transaction) {
         })
         .then(dbQry => {
             if(dbQry && dbQry.rowCount === 1) {
-                console.log(`Success executing ${dbQry.command}${transaction.idr ? '' : ` for key ${req.params.key}`}`)
+                if(transaction.idr) {
+                    console.log(`Success executing ${dbQry.command}, IDentity Resolution row ${dbQry.rows[0].id} returned`);
+
+                    resp
+                        .header({
+                            'X-B2BAH-API-HTTP-Status': transaction.resp.status,
+                            'X-B2BAH-Obtained-At': new Date(transaction.tsResp).toISOString(),
+                            'X-B2BAH-IDR-ID': dbQry.rows[0].id
+                        })
+
+                        .type('json')
+            
+                        .status(httpStatus.okay.code)
+            
+                        .send(transaction.strBody);
+                }
+                else {
+                    console.log(`Success executing ${dbQry.command} for key ${req.params.key}`)
+                }
             }
             else {
                 if(transaction.idr) {
                     console.error(`Something went wrong persisting IDR request with criteria ${JSON.stringify(req.body)}`)
+
+                    //Implement a .send based on a ApiHubErr
                 }
                 else {
                     console.error(`Something went wrong upserting key ${req.params.key}`)
