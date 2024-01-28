@@ -24,7 +24,7 @@ import express from 'express';
 
 import { cleanDUNS } from '../../share/utils.js';
 import dplReqParams from '../globs.js'
-import ahReqPersistResp from '../core.js';
+import { ahReqPersistRespKey, ahReqPersistRespIDR } from '../core.js';
 import { ApiHubErr } from '../err.js';
 
 const router = express.Router();
@@ -50,7 +50,7 @@ router.post('/idr', (req, resp) => {
     }
 
     //Let the API Hub do its thing
-    ahReqPersistResp(req, resp, transaction)
+    ahReqPersistRespIDR(req, resp, transaction)
 });
 
 router.get('/duns/:key', (req, resp) => {
@@ -78,7 +78,7 @@ router.get('/duns/:key', (req, resp) => {
     }
 
     //Let the API Hub do its thing
-    ahReqPersistResp(req, resp, transaction)
+    ahReqPersistRespKey(req, resp, transaction)
 });
  
 export default router;

@@ -23,7 +23,7 @@
 import express from 'express';
 
 import { isValidLei } from '../../share/utils.js';
-import ahReqPersistResp from '../core.js';
+import { ahReqPersistRespKey, ahReqPersistRespIDR } from '../core.js';
 import { ApiHubErr } from '../err.js';
 
 const router = express.Router();
@@ -55,7 +55,7 @@ router.get('/:key', (req, resp) => {
     }
 
     //Let the API Hub do its thing
-    ahReqPersistResp(req, resp, transaction)
+    ahReqPersistRespKey(req, resp, transaction)
 });
  
 export default router;
