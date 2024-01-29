@@ -144,6 +144,16 @@ const appConsts = {
             { attrs: [ 'financialStatementFromDate' ], desc: 'stmt from date' },
             { attrs: [ 'financialStatementToDate' ], desc: 'stmt to date', latestYearlyRevIdx: 6 }
         ],
+        latestGlobFin: [
+            { attrs: [ 'filedCurrencyView', 'profitAndLoss', 'netSales' ], desc: 'sales rev' },
+            { attrs: [ 'filedCurrencyView', 'balanceSheet', 'totalAssets' ], desc: 'total assets' },
+            { attrs: [ 'filedCurrencyView', 'currency' ], desc: 'currency' },
+            { attrs: [ 'units' ], desc: 'units' },
+            { attrs: [ 'reliability', 'description' ], desc: 'reliability (financials)' },
+            { attrs: [ 'informationScope', 'description' ], desc: 'info scope (financials)' },
+            { attrs: [ 'financialStatementFromDate' ], desc: 'stmt from date' },
+            { attrs: [ 'financialStatementToDate' ], desc: 'stmt to date' }
+        ],
         //The latestYearlyRev constant retrieves yearly revenue figures from the financials
         //array. In the algorithm reliability priorities and an ordering on most recent 
         //statement dates is used to get to the most relevant data. The components of the 
@@ -722,21 +732,31 @@ class DplDBs {
     }
 
     //Method latestFinsToArray returns latest financial figures in array format
-    //Best results with Company Financials L1+, fall back implemented to Company Information L2+
+    //➡️ Best results with either Company or Global Financials L1+ available but
+    //fall back implemented to Company Information L2+ implemented
     latestFinsToArray(bLabel) {
         if(bLabel) {
             return appConsts.fin.latest.map(elem => constructElemLabel(null, elem.desc));
         }
 
         //Financial data from Company Financials L1+
-        const latestFins = this.org?.latestFinancials;
+        let retArr, latestFins = this.org?.latestFinancials;
 
-        let retArr;
+        const idxCurr = appConsts.fin.latest.findIndex(elem => elem.desc === 'currency');
 
         if(!objEmpty(latestFins)) {
-            retArr = appConsts.fin.latest.map(elem => getObjAttrValue(latestFins, elem))
+            retArr = appConsts.fin.latest.map(elem => getObjAttrValue(latestFins, elem));
 
-            if(latestFins.currency) { return retArr }
+            if(retArr[idxCurr]) { return retArr }
+        }
+
+        //Financial data from Global Financials L1+
+        latestFins = this.org?.standardizedFinancials?.latestFinancials;
+
+        if(!objEmpty(latestFins)) {
+            retArr = appConsts.fin.latestGlobFin.map(elem => getObjAttrValue(latestFins, elem));
+
+            if(retArr[idxCurr]) { return retArr }
         }
 
         //No currency available, revert to modelled/estimated values from Company Information L2+
