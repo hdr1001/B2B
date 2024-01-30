@@ -21,7 +21,7 @@
 // *********************************************************************
 
 import { dcdrUtf8, isNumber } from '../share/utils.js';
-import { LeiReq, DnbDplDBs, DnbDplIDR } from '../share/apiDefs.js';
+import { LeiReq, LeiFilter, DnbDplDBs, DnbDplIDR } from '../share/apiDefs.js';
 import db from './pg.js';
 import { ApiHubErr, httpStatus } from './err.js';
 
@@ -180,6 +180,12 @@ export default function ahReqPersistRespIDR(req, resp, transaction) {
     let sSqlInsert;
 
     const sSqlHttpErr = 'INSERT INTO errors_http (req, err, http_status) VALUES ($1, $2, $3)';
+
+    if(transaction.api === 'lei') {
+        sSqlInsert = 'INSERT INTO idr_lei (req_params, resp_idr, http_status, tsz) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id';
+
+        transaction.req = new LeiFilter(req.body);
+    }
 
     if(transaction.api === 'dpl') {
         sSqlInsert = 'INSERT INTO idr_dnb_dpl (req_params, resp_idr, http_status, tsz) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id';

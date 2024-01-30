@@ -29,7 +29,11 @@ import { ApiHubErr } from '../err.js';
 const router = express.Router();
 
 router.post('/filter', (req, resp) => {
-    resp.json( { endpoint: 'filter' } )
+    //Transaction parameters
+    const transaction = { provider: 'gleif', api: 'lei', idr: true };
+
+    //Let the API Hub do its thing
+    ahReqPersistRespIDR(req, resp, transaction)
 });
 
 router.get('/:key', (req, resp) => {

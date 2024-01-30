@@ -40,6 +40,8 @@
 -- DROP TABLE public.archive_dnb;
 -- ALTER TABLE public.products_dnb DROP CONSTRAINT products_dnb_pkey;
 -- DROP TABLE public.products_dnb;
+-- ALTER TABLE public.idr_lei DROP CONSTRAINT idr_lei_pkey;
+-- DROP TABLE public.idr_lei;
 -- DROP TRIGGER trgr_archive_gleif_product_00 ON public.products_gleif;
 -- DROP FUNCTION public.f_archive_gleif_product_00();
 -- ALTER TABLE public.archive_gleif DROP CONSTRAINT archive_gleif_pkey;
@@ -49,6 +51,7 @@
 -- DROP SEQUENCE public.errors_http_id_seq;
 -- DROP SEQUENCE public.idr_dnb_dpl_id_seq;
 -- DROP SEQUENCE public.archive_dnb_id_seq;
+-- DROP SEQUENCE public.idr_lei_id_seq;
 -- DROP SEQUENCE public.archive_gleif_id_seq;
 
 SET default_tablespace = 'pg_default';
@@ -56,6 +59,14 @@ SET default_with_oids = false;
 
 -- Create the sequence for the primary key of table archive gleif
 CREATE SEQUENCE public.archive_gleif_id_seq
+    INCREMENT 1
+    START 1
+    MINVALUE 1
+    MAXVALUE 9223372036854775807
+    CACHE 1;
+
+-- Create the sequence for the primary key of table LEI filter
+CREATE SEQUENCE public.idr_lei_id_seq
     INCREMENT 1
     START 1
     MINVALUE 1
@@ -126,6 +137,16 @@ CREATE TRIGGER trgr_archive_gleif_product_00
    FOR EACH ROW
    WHEN (OLD.product_00 IS NOT NULL)
    EXECUTE PROCEDURE public.f_archive_gleif_product_00();
+
+-- Create table for persisting lei filter requests
+CREATE TABLE public.idr_lei (
+   id integer NOT NULL DEFAULT nextval('idr_lei_id_seq'::regclass),
+   req_params JSONB,
+   resp_idr JSONB,
+   http_status smallint,
+   tsz timestamptz,
+   CONSTRAINT idr_lei_pkey PRIMARY KEY (id)
+);
 
 -- Create table for storing D&B data products
 CREATE TABLE public.products_dnb (
