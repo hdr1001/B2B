@@ -116,8 +116,13 @@ const apiEndpoint = {
                     qryString = new URLSearchParams({ ...this.qryParameters, ...api.lei.leiPageSizeNum })
                 }
 
+                let uri = `${apiEndpoint.lei.baseURL}${this.path}`;
+                if(this.resource) { uri += `/${this.resource}` } 
+                if(this.subSingleton) { uri += `/${this.subSingleton}` } 
+                if(qryString) { uri += `?${qryString}` } 
+
                 return new Request(
-                    `${apiEndpoint.lei.baseURL}${this.path}${this.resource ? `/${this.resource}` : '?'}${qryString}`,
+                    uri,
                     {
                         headers: api.lei.headers
                     }
@@ -209,7 +214,7 @@ const apiEndpoint = {
 
 class LeiReq { //Get LEI record by ID 
     constructor(resource) {
-        this.resource = resource;        
+        this.resource = resource;
     }
 
     def = { api: 'lei', endpoint: 'leiRecs' };
@@ -219,12 +224,20 @@ class LeiReq { //Get LEI record by ID
     getReq = apiEndpoint.lei.leiRecs.getReq;
 }
 
+class LeiUltParentRelation extends LeiReq {
+    constructor(resource) { super(resource) }
+
+    subSingleton = 'ultimate-parent-relationship';
+
+    def = { ...this.def, relation: 'ultParent' };
+}
+
 class LeiFilter { //Get LEI record using filters
     constructor(qryParameters) {
         this.qryParameters = qryParameters;
     }
 
-    def = { api: 'lei', endpoint: 'leiRecs' };
+    def = { api: 'lei', endpoint: 'leiRecs', filter: true };
 
     path = 'api/v1/lei-records';
 
@@ -306,6 +319,7 @@ class DnbDplIDR {
 export {
     apiProvider,
     LeiReq,
+    LeiUltParentRelation,
     LeiFilter,
     DnbDplAuth,
     DnbDplDBs,
