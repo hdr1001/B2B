@@ -23,6 +23,7 @@
 import express from 'express';
 
 import { isValidLei } from '../../share/utils.js';
+import { leiReqParams } from '../globs.js';
 import { ahReqPersistRespKey, ahReqPersistRespIDR } from '../core.js';
 import { ApiHubErr } from '../err.js';
 
@@ -37,6 +38,9 @@ router.post('/filter', (req, resp) => {
 });
 
 router.get('/:key', (req, resp) => {
+    //Transaction parameters
+    const transaction = { provider: 'gleif', api: 'lei' };
+
     if(!isValidLei(req.params.key)) {
         const err = new ApiHubErr('invalidParameter', `LEI ${req.params.key} is not valid`);
 
@@ -45,12 +49,11 @@ router.get('/:key', (req, resp) => {
         return;
     }
 
-    //Transaction parameters
-    const transaction = { provider: 'gleif', api: 'lei' };
-
     transaction.product = req.query?.product || '00'; //'00' is the default product key
 
-    if(transaction.product !== '00') {
+    transaction.reqParams = leiReqParams.get(transaction.product);
+
+    if(!transaction.reqParams) {
         const err = new ApiHubErr('invalidParameter', `Query parameter product ${transaction.product} is not valid`);
 
         resp.status(err.httpStatus.code).json( err );

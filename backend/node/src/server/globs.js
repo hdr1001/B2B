@@ -32,4 +32,12 @@ const dplReqParams = new Map([
     }]
 ]);
 
-export default dplReqParams;
+const leiReqParams = new Map([
+    ['00', { subSingleton: null }],
+    ['01', { subSingleton: 'ultimate-parent-relationship' }]
+]);
+
+export {
+    dplReqParams,
+    leiReqParams
+};

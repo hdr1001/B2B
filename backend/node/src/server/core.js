@@ -37,7 +37,7 @@ function ahReqPersistRespKey(req, resp, transaction) {
             sSqlUpsert  = `INSERT INTO products_gleif (lei, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
             sSqlUpsert += `ON CONFLICT ( lei ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
 
-            transaction.req = new LeiReq(req.params.key);
+            transaction.req = new LeiReq(req.params.key, transaction.reqParams.subSingleton);
 
             //Don't deliver from the database if forceNew query parameter is set to true
             bForceNew = req.query?.forceNew && req.query.forceNew.toLowerCase() === 'true';

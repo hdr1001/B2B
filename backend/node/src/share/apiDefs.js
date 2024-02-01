@@ -213,8 +213,9 @@ const apiEndpoint = {
 };
 
 class LeiReq { //Get LEI record by ID 
-    constructor(resource) {
+    constructor(resource, subSingleton) {
         this.resource = resource;
+        this.subSingleton = subSingleton;
     }
 
     def = { api: 'lei', endpoint: 'leiRecs' };
@@ -222,14 +223,6 @@ class LeiReq { //Get LEI record by ID
     path = 'api/v1/lei-records';
 
     getReq = apiEndpoint.lei.leiRecs.getReq;
-}
-
-class LeiUltParentRelation extends LeiReq {
-    constructor(resource) { super(resource) }
-
-    subSingleton = 'ultimate-parent-relationship';
-
-    def = { ...this.def, relation: 'ultParent' };
 }
 
 class LeiFilter { //Get LEI record using filters
@@ -319,7 +312,6 @@ class DnbDplIDR {
 export {
     apiProvider,
     LeiReq,
-    LeiUltParentRelation,
     LeiFilter,
     DnbDplAuth,
     DnbDplDBs,

@@ -21,8 +21,7 @@
 // *********************************************************************
 
 //Import the API definitions
-import { LeiFilter, LeiReq, LeiUltParentRelation,
-    DnbDplAuth, DnbDplDBs, DnbDplIDR } from '../../share/apiDefs.js';
+import { LeiFilter, LeiReq, DnbDplAuth, DnbDplDBs, DnbDplIDR } from '../../share/apiDefs.js';
 
 //Import rate limiter
 import { gleifLimiter } from '../../share/limiters.js';
@@ -32,7 +31,7 @@ const leiReqs = [];
 
 leiReqs.push(new LeiReq('529900F4SNCR9BEWFZ60'));
 
-leiReqs.push(new LeiUltParentRelation('5493004SYPRAVRVNK561'));
+leiReqs.push(new LeiReq('5493004SYPRAVRVNK561', 'ultimate-parent-relationship'));
 
 leiReqs.push(new LeiFilter({
     'filter[entity.registeredAs]': '33302453',
@@ -132,7 +131,7 @@ function evaluateLeiRec(leiReq, leiRec) {
         return;
     }
 
-    if(leiReq.def?.relation && leiRec?.data?.attributes?.relationship?.endNode?.id) {
+    if(leiReq.subSingleton === 'ultimate-parent-relationship' && leiRec?.data?.attributes?.relationship?.endNode?.id) {
         console.log(`✅ LEI ult parent request, retrieved ➡️ ${leiRec?.data?.attributes?.relationship?.endNode?.id}`);
         return;
     }

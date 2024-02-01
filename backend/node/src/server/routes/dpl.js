@@ -23,7 +23,7 @@
 import express from 'express';
 
 import { cleanDUNS } from '../../share/utils.js';
-import dplReqParams from '../globs.js'
+import { dplReqParams } from '../globs.js'
 import { ahReqPersistRespKey, ahReqPersistRespIDR } from '../core.js';
 import { ApiHubErr } from '../err.js';
 
