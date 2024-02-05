@@ -23,6 +23,7 @@
 import { promises as fs } from 'fs';
 
 import { LeiFilter } from '../share/httpApiDefs.js';
+import { LeiFilterHub } from '../share/apiDefsHub.js';
 
 //Import rate limiters
 import { readFileLimiter } from '../share/limiters.js';
@@ -448,17 +449,17 @@ function processChunk(arrChunk) {
                     ];
 
                     //Instantiate a new LEI filter request for registration number matching
-                    leiMatch.stages[idMatch1].gleifFilterReq = new LeiFilter({
+                    leiMatch.stages[idMatch1].gleifFilterReq = new LeiFilterHub({
                         'filter[entity.registeredAs]': leiMatch.stages[idMatch1].dnbRegNumToMatch,
                         'filter[entity.legalAddress.country]': leiMatch.ctry
                     });
 
-                    leiMatch.stages[idMatch2].gleifFilterReq = new LeiFilter({
+                    leiMatch.stages[idMatch2].gleifFilterReq = new LeiFilterHub({
                         'filter[entity.registeredAs]': leiMatch.stages[idMatch2].dnbRegNumToMatch,
                         'filter[entity.legalAddress.country]': leiMatch.ctry
                     });
 
-                    leiMatch.stages[nameMatch].gleifFilterReq = new LeiFilter({
+                    leiMatch.stages[nameMatch].gleifFilterReq = new LeiFilterHub({
                         'filter[entity.legalName]': leiMatch.dplDBs.map121.primaryName,
                         'filter[entity.legalAddress.country]': leiMatch.ctry
                     });
@@ -473,34 +474,27 @@ function processChunk(arrChunk) {
                     if(execReq === null) { return Promise.resolve(null) }
 
                     //Fire off the prepared match request
-                    return leiMatch.stages[leiMatch.currentStage].gleifFilterReq.execReq();
+                    return fetch(leiMatch.stages[leiMatch.currentStage].gleifFilterReq.getReq());
                 }
 
                 //Process the LEI match response
                 function processLeiMatchResp(resp) {
                     if(resp) {
-                        if(persistFile) { //Persist the Gleif response if so configured
-                            if(leiMatch.currentStage === nameMatch) {
-                                writeFile(`${leiMatch.inqDuns}_${leiMatch.dplDBs.map121.primaryName}_${resp.httpStatus}`, dcdrUtf8.decode(resp.buffBody))
-                            }
-                            else {
-                                writeFile(`${leiMatch.inqDuns}_${leiMatch.stages[leiMatch.currentStage].dnbRegNumToMatch}_${resp.httpStatus}`, dcdrUtf8.decode(resp.buffBody))
-                            }
-                        }
-
                         //Store a couple of high level LEI match parameters
                         leiMatch.stages[leiMatch.currentStage].resp = {};
 
-                        leiMatch.stages[leiMatch.currentStage].resp.httpStatus = resp.httpStatus;
+                        leiMatch.stages[leiMatch.currentStage].resp.httpStatus = resp.status;
 
-                        //Parse the Gleif response
-                        try {
-                            leiMatch.stages[leiMatch.currentStage].resp.leiResp = JSON.parse(resp.buffBody)
-                        }
-                        catch(err) {
-                            console.error(err.message);
-                            throw new Error(`Unable to instantiate a LEI object from API response`);
-                        }
+                        return resp.json();
+                    }
+
+                    return null;
+               }
+
+                //Process the LEI match response
+                function processLeiMatchResults(respBody) {
+                    if(respBody) {
+                        leiMatch.stages[leiMatch.currentStage].resp.leiResp = respBody;
 
                         if(leiMatch.stages[leiMatch.currentStage]?.resp?.leiResp?.data?.[0]) { //LEI match
                             leiMatch.lei = leiMatch.stages[leiMatch.currentStage].resp.leiResp.data[0].id;
@@ -513,18 +507,22 @@ function processChunk(arrChunk) {
                     if(!execMatchStage(++leiMatch.currentStage)) { return Promise.resolve(null) }
 
                     return gleifLimiter.removeTokens(1); //Throttle the Gleif requests
-               }
+                }
 
                 //Main application logic
                 return readFileLimiter.removeTokens(1)            //Throttle the reading of files
                     .then( () => fs.readFile(`../io/out/${fn}`) ) //Read the JSON file containing the data blocks & prepare the match request
                     .then( prepareLeiMatch )                      //Respect the rate limits dictated by the API
                     .then( execLeiMatch )                         //Request the filtered LEI match on the 1st registration number
+                    .then( processLeiMatchResp )
+                    .then( processLeiMatchResults )
                     .then( processLeiMatchResp )                  //Handle the API response
                     .then( execLeiMatch )                         //Request the filtered LEI match on the 2nd registration number
                     .then( processLeiMatchResp )                  //Handle the API response
+                    .then( processLeiMatchResults )
                     .then( execLeiMatch )                         //Request the filtered LEI match on the company name
                     .then( processLeiMatchResp )                  //Handle the API response
+                    .then( processLeiMatchResults )
                     .catch( err => console.error(err.message) );
             }
         )
@@ -559,7 +557,7 @@ fs.readdir('../io/out')
         //Process the files available in the specified directory
         const fns = arrFiles
             .filter(fn => fn.endsWith('.json'))
-            .filter(fn => fn.indexOf('dnb_dpl_1118_ci_L') > -1);
+            .filter(fn => fn.indexOf('dnb_dpl_0204_ci_L') > -1)
 
         const arrChunks = [];
 
