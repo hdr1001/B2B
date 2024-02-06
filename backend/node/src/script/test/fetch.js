@@ -22,26 +22,46 @@
 
 //Import the API definitions
 import { LeiFilter, LeiReq, DnbDplAuth, DnbDplDBs, DnbDplIDR } from '../../share/apiDefs.js';
+import { LeiReqHub, LeiFilterHub } from '../../share/apiDefsHub.js';
 
 //Import rate limiter
 import { gleifLimiter } from '../../share/limiters.js';
 
+const useHub = true;
+
 //Specify test requests against the GLEIF API
 const leiReqs = [];
 
-leiReqs.push(new LeiReq('529900F4SNCR9BEWFZ60'));
+if(useHub) { //Request the LEI examples through the API Hub
+    leiReqs.push(new LeiReqHub('529900F4SNCR9BEWFZ60'));
 
-leiReqs.push(new LeiReq('5493004SYPRAVRVNK561', 'ultimate-parent-relationship'));
+    leiReqs.push(new LeiReqHub('5493004SYPRAVRVNK561', { forceNew: true, product: '01' }));
+    
+    leiReqs.push(new LeiFilterHub({
+        'filter[entity.registeredAs]': '33302453',
+        'filter[entity.legalAddress.country]': 'NL'
+    }));
+    
+    leiReqs.push(new LeiFilterHub({
+        'filter[entity.legalName]': 'Feyenoord',
+        'filter[entity.legalAddress.country]': 'NL'
+    }));
+}
+else { //Request the LEI examples directly from GLEIF
+    leiReqs.push(new LeiReq('529900F4SNCR9BEWFZ60'));
 
-leiReqs.push(new LeiFilter({
-    'filter[entity.registeredAs]': '33302453',
-    'filter[entity.legalAddress.country]': 'NL'
-}));
-
-leiReqs.push(new LeiFilter({
-    'filter[entity.legalName]': 'Feyenoord',
-    'filter[entity.legalAddress.country]': 'NL'
-}));
+    leiReqs.push(new LeiReq('5493004SYPRAVRVNK561', 'ultimate-parent-relationship'));
+    
+    leiReqs.push(new LeiFilter({
+        'filter[entity.registeredAs]': '33302453',
+        'filter[entity.legalAddress.country]': 'NL'
+    }));
+    
+    leiReqs.push(new LeiFilter({
+        'filter[entity.legalName]': 'Feyenoord',
+        'filter[entity.legalAddress.country]': 'NL'
+    }));
+}
 
 //Execute the GLEIF test requests
 leiReqs.forEach(req => 
@@ -58,7 +78,7 @@ leiReqs.forEach(req =>
         .then(leiRec => evaluateLeiRec(req, leiRec))
         .catch(err => console.error('GLEIF API data fetch error: ', err))
 );
-
+/*
 //Instantiate a D&B Direct+ authentication object
 const dnbDplAuth = new DnbDplAuth; //Credentials in .env file
 //const dnbDplAuth = new DnbDplAuth('v2');
@@ -122,7 +142,7 @@ fetch(dnbDplAuth.getReq())
         }
     })
     .catch(err => console.error('D&B Direct+ API data fetch error: ', err));
-
+*/
 //Evaluate if the API return matches the expectation
 function evaluateLeiRec(leiReq, leiRec) {
     //Just echo the name associated with the LEI requested
@@ -131,22 +151,22 @@ function evaluateLeiRec(leiReq, leiRec) {
         return;
     }
 
-    if(leiReq.subSingleton === 'ultimate-parent-relationship' && leiRec?.data?.attributes?.relationship?.endNode?.id) {
+    if((leiReq.params?.product === '01' || leiReq.subSingleton) && leiRec?.data?.attributes?.relationship?.endNode?.id) {
         console.log(`✅ LEI ult parent request, retrieved ➡️ ${leiRec?.data?.attributes?.relationship?.endNode?.id}`);
         return;
     }
 
-    if(leiReq.qryParameters) {
+    if(leiReq.params) {
         //Check id the registration number in matches the one out
-        if(leiReq.qryParameters['filter[entity.registeredAs]'] === leiRec?.data?.[0]?.attributes?.entity?.registeredAs) {
+        if(leiReq.params['filter[entity.registeredAs]'] === leiRec?.data?.[0]?.attributes?.entity?.registeredAs) {
             console.log(`✅ LEI request, filtered ➡️ ${leiRec?.data?.[0]?.attributes?.entity?.legalName?.name}`);
             return;
         }
 
         //Check if the name submitted is part of the name returned
-        if(leiReq.qryParameters['filter[entity.legalName]']) {
+        if(leiReq.params['filter[entity.legalName]']) {
             if(leiRec?.data?.[0]?.attributes?.entity?.legalName?.name) {
-                if(leiRec.data[0]?.attributes.entity.legalName.name.toLowerCase().indexOf(leiReq.qryParameters['filter[entity.legalName]'].toLowerCase()) > -1) {
+                if(leiRec.data[0]?.attributes.entity.legalName.name.toLowerCase().indexOf(leiReq.params['filter[entity.legalName]'].toLowerCase()) > -1) {
                     console.log(`✅ LEI request, filtered ➡️ ${leiRec.data[0].attributes.entity.legalName.name}`);
                     return;
                 }

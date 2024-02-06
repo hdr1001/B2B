@@ -112,8 +112,8 @@ const apiEndpoint = {
             getReq: function() {
                 let qryString = '';
 
-                if(this.qryParameters) {
-                    qryString = new URLSearchParams({ ...this.qryParameters, ...api.lei.leiPageSizeNum })
+                if(this.params) {
+                    qryString = new URLSearchParams({ ...this.params, ...api.lei.leiPageSizeNum })
                 }
 
                 let uri = `${apiEndpoint.lei.baseURL}${this.path}`;
@@ -227,7 +227,7 @@ class LeiReq { //Get LEI record by ID
 
 class LeiFilter { //Get LEI record using filters
     constructor(qryParameters) {
-        this.qryParameters = qryParameters;
+        this.params = qryParameters;
     }
 
     def = { api: 'lei', endpoint: 'leiRecs', filter: true };
