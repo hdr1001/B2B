@@ -41,7 +41,7 @@ const apiEndpoint = {
         lei: {
             getReq: function() {
                 let uri = `${baseURL()}${basePath}${this.path}`;
-                if(this.resource) { uri += `/${this.resource}` } 
+                if(this.resource) { uri += this.resource }
 
                 const opts = { headers: sharedHeaders };
 
@@ -57,50 +57,15 @@ const apiEndpoint = {
             }
         }
     },
-/*
+
     dpl: {
-        baseURL: baseURL(api.dpl.url),
-
-        auth: { //D&B Direct+ generate auth token
-            getReq: function() {
-                let sBody = '', httpHeaders;
-
-                if(this.path.slice(0, 2) === 'v2') {
-                    sBody = JSON.stringify({ 'grant_type': 'client_credentials' });
-
-                    httpHeaders = sharedHeaders;
-                }
-
-                if(this.path.slice(0, 2) === 'v3') {
-                    sBody = (new URLSearchParams({ grant_type: 'client_credentials' })).toString();
-
-                    httpHeaders = { 'Content-Type': 'application/x-www-form-urlencoded' }
-                }
-
-                if(!sBody) { throw new Error(`Invalid version specified (${this.path.slice(0, 2)}) for D&B Direct+ authentication token`)}
-
-                return new Request (
-                    `${apiEndpoint.dpl.baseURL}${this.path}`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            ...httpHeaders,
-                            Authorization: `Basic ${Buffer.from(`${process.env.DNB_DPL_KEY}:${process.env.DNB_DPL_SECRET}`).toString('Base64')}`
-                        },
-                        body: sBody
-                    }
-                )
-            }
-        },
-
         dbs: { //D&B Direct+ data blocks
             getReq: function() {
-                return new Request(
-                    `${apiEndpoint.dpl.baseURL}${this.path}${this.resource}?${new URLSearchParams({ ...this.qryParameters })}`,
-                    {
-                        headers: api.dpl.headers,
-                    }
-                )
+                let uri = `${baseURL()}${basePath}${this.path}`;
+                if(this.resource) { uri += this.resource }
+                if(this.params) { uri += `?${new URLSearchParams({ ...this.params })}` } 
+
+                return new Request( uri );
             }
         },
 
@@ -136,7 +101,7 @@ const apiEndpoint = {
                 )
             }
         }
-    } */
+    }
 };
 
 class LeiReqHub { //Get LEI record by ID 
@@ -147,7 +112,7 @@ class LeiReqHub { //Get LEI record by ID
 
     def = { api: 'hub', endpoint: 'lei' };
 
-    path = 'gleif/lei';
+    path = 'gleif/lei/';
 
     getReq = apiEndpoint.gleif.lei.getReq;
 }
@@ -163,37 +128,16 @@ class LeiFilterHub { //Get LEI record using filters
 
     getReq = apiEndpoint.gleif.lei.getReq;
 }
-/*
-class DnbDplAuth { //Get D&B D+ access token
-    constructor(version = 'v2') {
-        this.path = `${version}/token`;
-    }
 
-    def = { api: 'dpl', endpoint: 'auth' };
-
-    getReq = apiEndpoint.dpl.auth.getReq;
-
-    //Propagate the token acquired
-    updToken = accessToken => {
-        process.env.DNB_DPL_TOKEN = accessToken; //Propagate to the environment
-
-        //Update the HTTP authorization header
-        api.dpl.headers.Authorization = `Bearer ${process.env.DNB_DPL_TOKEN}`;
-
-        //Write the new token to the .env file
-        setEnvValue('DNB_DPL_TOKEN', '\"' + accessToken + '\"');
-    }
-}
-
-class DnbDplDBs { //Get D&B D+ data blocks
+class DnbDplDBsHub { //Get D&B D+ data blocks
     constructor(resource, qryParameters) {
         this.resource = resource;        
-        this.qryParameters = qryParameters;
+        this.params = qryParameters;
     }
 
     def = { api: 'dpl', endpoint: 'dbs' };
 
-    path = 'v1/data/duns/';
+    path = 'dnb/dpl/duns/';
 
     getReq = apiEndpoint.dpl.dbs.getReq;
 }
@@ -235,13 +179,12 @@ class DnbDplIDR {
 
     getReq = apiEndpoint.dpl.idr.getReq;
 }
-*/
+
 export {
     LeiReqHub,
     LeiFilterHub,
-/*    DnbDplAuth,
-    DnbDplDBs,
+    DnbDplDBsHub,
     DnbDplFamTree,
     DnbDplBenOwner,
-    DnbDplIDR */
+    DnbDplIDR
 };
