@@ -30,7 +30,7 @@ const url = {
 //Construct the base URL for an API
 const baseURL = () => `${url.scheme}://${url.apiHubDomain.join('.')}${url.port ? ':' + url.port : ''}/`;
 
-const basePath = 'hub/';
+const basePath = 'hub';
 
 //Shared HTTP headers
 const sharedHeaders = { 'Content-Type': 'application/json' };
@@ -40,8 +40,8 @@ const apiEndpoint = {
     gleif: {
         lei: {
             getReq: function() {
-                let uri = `${baseURL()}${basePath}${this.path}`;
-                if(this.resource) { uri += this.resource }
+                let uri = `${baseURL()}${basePath}/${this.path}`;
+                if(this.resource) { uri += `/${this.resource}` }
 
                 const opts = { headers: sharedHeaders };
 
@@ -61,44 +61,27 @@ const apiEndpoint = {
     dpl: {
         dbs: { //D&B Direct+ data blocks
             getReq: function() {
-                let uri = `${baseURL()}${basePath}${this.path}`;
-                if(this.resource) { uri += this.resource }
+                let uri = `${baseURL()}${basePath}/${this.path}`;
+                if(this.resource) { uri += `/${this.resource}` }
                 if(this.params) { uri += `?${new URLSearchParams({ ...this.params })}` } 
 
-                return new Request( uri );
-            }
-        },
+                const opts = { headers: sharedHeaders };
 
-        famTree: { //D&B Direct+ family tree
-            getReq: function() {
-                return new Request(
-                    `${apiEndpoint.dpl.baseURL}${this.path}${this.resource}?${new URLSearchParams({ ...this.qryParameters })}`,
-                    {
-                        headers: api.dpl.headers,
-                    }
-                )
-            }
-        },
-
-        benOwner: { //D&B Direct+ beneficial owner
-            getReq: function() {
-                return new Request(
-                    `${apiEndpoint.dpl.baseURL}${this.path}?${new URLSearchParams({ duns: this.duns, ...this.qryParameters })}`,
-                    {
-                        headers: api.dpl.headers,
-                    }
-                )
+                return new Request( uri, opts );
             }
         },
 
         idr: { //D&B Direct+ IDentity Resolution
             getReq: function() {
-                return new Request(
-                    `${apiEndpoint.dpl.baseURL}${this.path}?${new URLSearchParams({ ...this.qryParameters })}`,
-                    {
-                        headers: api.dpl.headers,
-                    }
-                )
+                let uri = `${baseURL()}${basePath}/${this.path}`;
+
+                const opts = {
+                    headers: sharedHeaders,
+                    method: 'POST',
+                    body: JSON.stringify(this.params)
+                };
+
+                return new Request( uri, opts );
             }
         }
     }
@@ -112,7 +95,7 @@ class LeiReqHub { //Get LEI record by ID
 
     def = { api: 'hub', endpoint: 'lei' };
 
-    path = 'gleif/lei/';
+    path = 'gleif/lei';
 
     getReq = apiEndpoint.gleif.lei.getReq;
 }
@@ -137,45 +120,19 @@ class DnbDplDBsHub { //Get D&B D+ data blocks
 
     def = { api: 'dpl', endpoint: 'dbs' };
 
-    path = 'dnb/dpl/duns/';
+    path = 'dnb/dpl/duns';
 
     getReq = apiEndpoint.dpl.dbs.getReq;
 }
 
-class DnbDplFamTree { //Get a D&B D+ corporate structure
-    constructor(resource, qryParameters) {
-        this.resource = resource;        
-        this.qryParameters = qryParameters;
-    }
-
-    def = { api: 'dpl', endpoint: 'famTree' };
-
-    path = 'v1/familyTree/';
-
-    getReq = apiEndpoint.dpl.famTree.getReq;
-}
-
-class DnbDplBenOwner { //Get a D&B D+ beneficial owner
-    constructor(duns, qryParameters) {
-        this.duns = duns;        
-        this.qryParameters = qryParameters;
-    }
-
-    def = { api: 'dpl', endpoint: 'benOwner' };
-
-    path = 'v1/beneficialowner';
-
-    getReq = apiEndpoint.dpl.benOwner.getReq;
-}
-
-class DnbDplIDR {
+class DnbDplIdrHub {
     constructor(qryParameters) {
-        this.qryParameters = qryParameters;
+        this.params = qryParameters;
     }
 
     def = { api: 'dpl', endpoint: 'idr' };
 
-    path = 'v1/match/cleanseMatch';
+    path = 'dnb/dpl/idr';
 
     getReq = apiEndpoint.dpl.idr.getReq;
 }
@@ -184,7 +141,5 @@ export {
     LeiReqHub,
     LeiFilterHub,
     DnbDplDBsHub,
-    DnbDplFamTree,
-    DnbDplBenOwner,
-    DnbDplIDR
+    DnbDplIdrHub
 };

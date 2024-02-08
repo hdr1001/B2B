@@ -169,7 +169,7 @@ const apiEndpoint = {
         dbs: { //D&B Direct+ data blocks
             getReq: function() {
                 return new Request(
-                    `${apiEndpoint.dpl.baseURL}${this.path}${this.resource}?${new URLSearchParams({ ...this.qryParameters })}`,
+                    `${apiEndpoint.dpl.baseURL}${this.path}/${this.resource}?${new URLSearchParams({ ...this.qryParameters })}`,
                     {
                         headers: api.dpl.headers,
                     }
@@ -180,7 +180,7 @@ const apiEndpoint = {
         famTree: { //D&B Direct+ family tree
             getReq: function() {
                 return new Request(
-                    `${apiEndpoint.dpl.baseURL}${this.path}${this.resource}?${new URLSearchParams({ ...this.qryParameters })}`,
+                    `${apiEndpoint.dpl.baseURL}${this.path}/${this.resource}?${new URLSearchParams({ ...this.qryParameters })}`,
                     {
                         headers: api.dpl.headers,
                     }
@@ -266,7 +266,7 @@ class DnbDplDBs { //Get D&B D+ data blocks
 
     def = { api: 'dpl', endpoint: 'dbs' };
 
-    path = 'v1/data/duns/';
+    path = 'v1/data/duns';
 
     getReq = apiEndpoint.dpl.dbs.getReq;
 }
@@ -279,7 +279,7 @@ class DnbDplFamTree { //Get a D&B D+ corporate structure
 
     def = { api: 'dpl', endpoint: 'famTree' };
 
-    path = 'v1/familyTree/';
+    path = 'v1/familyTree';
 
     getReq = apiEndpoint.dpl.famTree.getReq;
 }

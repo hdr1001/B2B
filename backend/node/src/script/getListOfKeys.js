@@ -28,6 +28,7 @@ import { gleifLimiter, dnbDplLimiter } from '../share/limiters.js';
 
 //Employ the respective API definitions
 import { LeiReq, DnbDplDBs, DnbDplFamTree, DnbDplBenOwner } from "../share/apiDefs.js";
+import { LeiReqHub } from '../share/apiDefsHub.js'
 
 //Decoder object for decoding utf-8 data in a binary format
 import { dcdrUtf8, sDateIsoToYYYYMMDD } from '../share/utils.js';
@@ -112,10 +113,11 @@ const persistence = {
 };
 
 //Script variables
-let limiter;   //Rate limiter (see imports)
-let inpFile;   //Input file containing the keys
-let qryParams; //Request query parameters
-let keyType;   //Type of key (duns, lei)
+let limiter;      //Rate limiter (see imports)
+let inpFile;      //Input file containing the keys
+let qryParams;    //Request query parameters
+let keyType;      //Type of key (duns, lei)
+let subSingleton; //Gleif relationship sub-singleton
 
 //Current month day is made part of the file name
 const monthDay = sDateIsoToYYYYMMDD(new Date().toISOString(), 4);
@@ -123,7 +125,7 @@ const monthDay = sDateIsoToYYYYMMDD(new Date().toISOString(), 4);
 // ➡️ Main application configuration settings
 
 // First specify the API to call
-const api = 'dnbDpl';       //Available options are gleif & dnbDpl
+const api = 'gleif';       //Available options are gleif & dnbDpl
 
 // Choose an endpoint in case the API selected is D&B Direct+
 // If Data Blocks (i.e. dbs) configure object dnbDplDBs above
@@ -147,7 +149,9 @@ if(api === 'gleif') { //Enrich LEI numbers
 
     inpFile = 'LEI.txt';
 
-    persistence.file.name = `lei_${monthDay}${projectID ? '_' + projectID : ''}`;
+    //subSingleton = 'ultimate-parent-relationship';
+
+    persistence.file.name = `lei_${monthDay}${projectID ? '_' + projectID : ''}${subSingleton ? '_01' : ''}`;
 }
 
 // ➡️ Application configuration for D&B Direct+ download
@@ -163,9 +167,9 @@ if(api === 'dnbDpl') { //Enrich DUNS numbers
     if(endpoint === 'dbs') {
         qryParams = {
             blockIDs: dnbDplDBs.getBlockIDs(), //Configure data blocks above
-            tradeUp: '',                     //Possible values '', 'hq' or 'domhq'
+            tradeUp: 'hq',                     //Possible values '', 'hq' or 'domhq'
             orderReason: '6332',
-            customerReference: 'footyNL'
+            customerReference: 'cust'
         }
 
         persistence.file.name += dnbDplDBs.getFileName();
@@ -202,7 +206,7 @@ async function process(arr) {
         let apiReq;
 
         //Instantiate a new LEI API request
-        if(api === 'gleif') { apiReq = new LeiReq(key) }
+        if(api === 'gleif') { apiReq = new LeiReqHub(key, { forceNew: true }) }
 
         //Instantiate a new D&B Direct+ API request
         if(api === 'dnbDpl') {

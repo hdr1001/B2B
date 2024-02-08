@@ -25,6 +25,7 @@ import { dcdrUtf8, sDateIsoToYYYYMMDD, nanoid } from "../share/utils.js";
 import { dnbDplLimiter } from '../share/limiters.js';
 
 import { DnbDplIDR } from "../share/apiDefs.js";
+import { DnbDplIdrHub } from "../share/apiDefsHub.js";
 
 import { readInputFileAttrs } from "../share/readInputFileAttrs.js";
 
@@ -44,7 +45,7 @@ function processChunk(arrChunk) {
                 //Logic for processing an IDR request
                 return dnbDplLimiter.removeTokens(1)                //Throttle the D+ API requests
                     .then(() => 
-                        fetch(new DnbDplIDR(idrParams).getReq())    //Fire off the requests
+                        fetch(new DnbDplIdrHub(idrParams).getReq())    //Fire off the requests
                     )
                     .then(resp => {
                         idrRslts.httpStatus = resp.status;

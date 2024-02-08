@@ -22,7 +22,7 @@
 
 //Import the API definitions
 import { LeiFilter, LeiReq, DnbDplAuth, DnbDplDBs, DnbDplIDR } from '../../share/apiDefs.js';
-import { LeiReqHub, LeiFilterHub, DnbDplDBsHub } from '../../share/apiDefsHub.js';
+import { LeiReqHub, LeiFilterHub, DnbDplDBsHub, DnbDplIdrHub } from '../../share/apiDefsHub.js';
 
 //Import rate limiter
 import { gleifLimiter } from '../../share/limiters.js';
@@ -102,8 +102,8 @@ fetch(dnbDplAuth.getReq())
             dnbDplAuth.updToken(dplAuth.access_token); //Propagate the new token
 
             const dplReqs = useHub 
-                ? [new DnbDplDBsHub('407809623', { product: '01', forceNew: true })]
-                : new DnbDplDBs('407809623', { blockIDs: 'companyinfo_L2_v1' });
+                ? [ new DnbDplDBsHub('407809623', { product: '01', forceNew: true }) ]
+                : [ new DnbDplDBs('407809623', { blockIDs: 'companyinfo_L2_v1' }) ];
 
             dplReqs.forEach(dplReq => 
                 fetch(dplReq.getReq())
@@ -119,9 +119,9 @@ fetch(dnbDplAuth.getReq())
                     .catch(err => console.error('D&B Direct+ API data fetch error: ', err))
             );
 
-            const dplIdrReqs = [
-                new DnbDplIDR( { name: 'de librije', addressLocality: 'Zwolle', countryISOAlpha2Code: 'NL' } )
-            ]
+            const dplIdrReqs = useHub 
+                ? [ new DnbDplIdrHub( { name: 'vitesse', addressLocality: 'arnhem', countryISOAlpha2Code: 'NL' } ) ]
+                : [ new DnbDplIDR( { name: 'de librije', addressLocality: 'Zwolle', countryISOAlpha2Code: 'NL' } ) ];
 
             dplIdrReqs.forEach(dplIdrReq => 
                 fetch(dplIdrReq.getReq())
