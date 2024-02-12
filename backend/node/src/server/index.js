@@ -49,7 +49,7 @@ const server = app.listen(port, err => {
 });
 
 //Get a D&B Direct+ Authorization token
-const dplAuthToken = new DplAuthToken;
+const dplAuthToken = new DplAuthToken('v2', false);
 
 process.on('SIGINT', () => {
     console.log('\nServer received SIGINT');

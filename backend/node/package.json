@@ -17,6 +17,7 @@
     "thumbsUp": "node ./src/script/test/thumbsUp",
     "nanoid": "node ./src/script/test/nanoid",
     "devHub": "nodemon ./src/server/index",
+    "apiHub": "node ./src/server/index",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

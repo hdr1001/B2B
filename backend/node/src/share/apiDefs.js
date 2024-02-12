@@ -238,8 +238,9 @@ class LeiFilter { //Get LEI record using filters
 }
 
 class DnbDplAuth { //Get D&B D+ access token
-    constructor(version = 'v2') {
+    constructor(version = 'v2', updEnvFile = true) {
         this.path = `${version}/token`;
+        this.updEnvFile = updEnvFile;
     }
 
     def = { api: 'dpl', endpoint: 'auth' };
@@ -248,13 +249,17 @@ class DnbDplAuth { //Get D&B D+ access token
 
     //Propagate the token acquired
     updToken = accessToken => {
+        console.log(`Updating to D&B Direct+ token ${accessToken.slice(0, 3)}... `);
+
         process.env.DNB_DPL_TOKEN = accessToken; //Propagate to the environment
 
         //Update the HTTP authorization header
         api.dpl.headers.Authorization = `Bearer ${process.env.DNB_DPL_TOKEN}`;
 
         //Write the new token to the .env file
-        setEnvValue('DNB_DPL_TOKEN', '\"' + accessToken + '\"');
+        if(this.updEnvFile) {
+            setEnvValue('DNB_DPL_TOKEN', '\"' + accessToken + '\"')
+        }
     }
 }
 

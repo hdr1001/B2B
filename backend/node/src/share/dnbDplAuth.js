@@ -23,7 +23,7 @@
 import { DnbDplAuth } from "./apiDefs.js";
 
 export default class DplAuthToken {
-    constructor() {
+    constructor(version = 'v2', updEnvFile = true) {
         //Token can only be generated if credentials are available
         if(!process.env.DNB_DPL_KEY || !process.env.DNB_DPL_SECRET) {
             let sErrMsg = 'Please set the Direct+ API credentials as environment variables\n';
@@ -32,7 +32,7 @@ export default class DplAuthToken {
             throw new Error(sErrMsg);
         }
 
-        this.dnbDplAuth = new DnbDplAuth('v2');
+        this.dnbDplAuth = new DnbDplAuth(version, updEnvFile);
 
         this.reqNewDplAuthToken(); //Get a new token on object instantiation
 
