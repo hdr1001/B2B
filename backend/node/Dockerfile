@@ -25,16 +25,6 @@ ARG dnb_dpl_secret
 ENV DNB_DPL_KEY=${dnb_dpl_key}
 ENV DNB_DPL_SECRET=${dnb_dpl_secret}
 
-ARG pg_host
-ARG pg_db
-ARG pg_user
-ARG pg_pwd
-
-ENV PG_HOST=${pg_host}
-ENV PG_DATABASE=${pg_db}
-ENV PG_USER=${pg_user}
-ENV PG_PASSWORD=${pg_pwd}
-
 ARG api_server_port
 
 ENV API_SERVER_PORT=${api_server_port}

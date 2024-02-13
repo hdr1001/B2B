@@ -23,10 +23,14 @@ services:
    b2b_ah_pg:
       image: postgres:16.1-alpine
 
+      secrets:
+         - pg_user
+         - pg_password
+
       environment:
-         POSTGRES_USER: ${DKR_PGUSER}
-         POSTGRES_PASSWORD: ${DKR_PGPASSWORD}
-         POSTGRES_DB: ${DKR_PGDATABASE}
+         POSTGRES_USER: /run/secrets/pg_user
+         POSTGRES_PASSWORD: /run/secrets/pg_password
+         POSTGRES_DB: ${PG_DATABASE}
 
       restart: always
 
@@ -50,10 +54,12 @@ services:
             - dnb_dpl_key=${DNB_DPL_KEY}
             - dnb_dpl_secret=${DNB_DPL_SECRET}
             - api_server_port=${API_SERVER_PORT}
-            - pg_host=${DKR_PGHOST}
-            - pg_db=${DKR_PGDATABASE}
-            - pg_user=${DKR_PGUSER}
-            - pg_pwd=${DKR_PGPASSWORD}
+
+      environment:
+         PG_HOST: ${PG_HOST}
+         PG_DATABASE: ${PG_DATABASE}
+         PG_USER: /run/secrets/pg_user
+         PG_PASSWORD: /run/secrets/pg_password
 
       depends_on:
          b2b_ah_pg:
@@ -61,3 +67,9 @@ services:
 
       ports:
          - 8088:${API_SERVER_PORT}
+
+secrets:
+   pg_user:
+     file: ~/.secrets/pg_user.txt
+   pg_password:
+     file: ~/.secrets/pg_password.txt
