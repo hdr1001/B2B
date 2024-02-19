@@ -19,16 +19,6 @@
 
 FROM node:20.11-alpine3.18
 
-ARG dnb_dpl_key
-ARG dnb_dpl_secret
-
-ENV DNB_DPL_KEY=${dnb_dpl_key}
-ENV DNB_DPL_SECRET=${dnb_dpl_secret}
-
-ARG api_server_port
-
-ENV API_SERVER_PORT=${api_server_port}
-
 # App directory
 WORKDIR /usr/src/app/
 

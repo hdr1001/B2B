@@ -24,7 +24,7 @@
 import 'dotenv/config';
 
 //Persist updated key values in the .env file
-import { setEnvValue } from './utils.js';
+import { setEnvValue, getCreds } from './utils.js';
 
 //Construct the base URL for an API
 const baseURL = url => `${url.scheme}://${url.domainSub}.${url.domain}.${url.domainTop}${url.port ? ':' + url.port : ''}/`;
@@ -152,13 +152,15 @@ const apiEndpoint = {
 
                 if(!sBody) { throw new Error(`Invalid version specified (${this.path.slice(0, 2)}) for D&B Direct+ authentication token`)}
 
+                const creds = getCreds();
+
                 return new Request (
                     `${apiEndpoint.dpl.baseURL}${this.path}`,
                     {
                         method: 'POST',
                         headers: {
                             ...httpHeaders,
-                            Authorization: `Basic ${Buffer.from(`${process.env.DNB_DPL_KEY}:${process.env.DNB_DPL_SECRET}`).toString('Base64')}`
+                            Authorization: `Basic ${Buffer.from(`${creds.apiKey}:${creds.apiSecret}`).toString('Base64')}`
                         },
                         body: sBody
                     }

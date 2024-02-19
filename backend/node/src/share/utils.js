@@ -22,7 +22,7 @@
 
 //Some imports related to reading and writing to and from files
 import * as os from 'os';
-import { promises as fs } from 'fs';
+import { readFileSync, promises as fs } from 'fs';
 
 //A decoder takes a stream of bytes as input & emits a stream of code points
 const dcdrUtf8 = new TextDecoder('utf-8');
@@ -136,6 +136,43 @@ function isNumber(value) {
 const custAlphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 const nanoid = customAlphabet(custAlphabet, 6); //Six characters should do
 
+//Get the Direct+ credentials
+function getCreds() {
+    const oCreds = {};
+
+    oCreds.apiKey = process.env.DNB_DPL_KEY;
+        
+    if(!oCreds.apiKey) {
+        try {
+            oCreds.apiKey = readFileSync('/run/secrets/dnb_dpl_key', 'utf8').trim()
+        }
+        catch(err) {
+            console.error(err)
+        }
+    };
+
+    oCreds.apiSecret = process.env.DNB_DPL_SECRET;
+
+    if(!oCreds.apiSecret) {
+        try {
+            oCreds.apiSecret = readFileSync('/run/secrets/dnb_dpl_secret', 'utf8').trim()
+        }
+        catch(err) {
+            console.error(err)
+        }
+    }
+
+    //Token can only be generated if credentials are available
+    if(!oCreds.apiKey || !oCreds.apiSecret) {
+        let sErrMsg = 'Please set the Direct+ API credentials as environment variables or Docker secrets\n';
+        sErrMsg += 'Relevant variables are DNB_DPL_KEY and DNB_DPL_SECRET\n';
+
+        throw new Error(sErrMsg);
+    }
+
+    return oCreds;
+}
+
 export {
     dcdrUtf8,
     setEnvValue,
@@ -145,5 +182,6 @@ export {
     objEmpty,
     isObject,
     isNumber,
-    nanoid
+    nanoid,
+    getCreds
 };

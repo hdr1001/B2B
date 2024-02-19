@@ -17,25 +17,24 @@
 #
 ##
 
-version: "3"
-
 services:
    b2b_ah_pg:
-      image: postgres:16.1-alpine
+      container_name: b2b_ah_pg
+
+      image: postgres:16.2
 
       secrets:
-         - pg_user
          - pg_password
 
       environment:
-         POSTGRES_USER: /run/secrets/pg_user
-         POSTGRES_PASSWORD: /run/secrets/pg_password
-         POSTGRES_DB: ${PG_DATABASE}
+         - POSTGRES_DB=${PG_DATABASE}
+         - PGUSER=${PG_USER}
+         - POSTGRES_PASSWORD_FILE=/run/secrets/pg_password
 
       restart: always
 
       volumes:
-#         - ./postgres-data:/var/lib/postgresql/data
+         - /var/lib/pg/data:/var/lib/postgresql/data
          - ./postgres/sql:/docker-entrypoint-initdb.d
 
       healthcheck:
@@ -48,18 +47,21 @@ services:
          - 5432:5432
 
    b2b_api_hub:
-      build:
-         context: ./node
-         args:
-            - dnb_dpl_key=${DNB_DPL_KEY}
-            - dnb_dpl_secret=${DNB_DPL_SECRET}
-            - api_server_port=${API_SERVER_PORT}
+      container_name: b2b_api_hub
+
+      secrets:
+         - pg_password
+         - dnb_dpl_key
+         - dnb_dpl_secret
 
       environment:
-         PG_HOST: ${PG_HOST}
-         PG_DATABASE: ${PG_DATABASE}
-         PG_USER: /run/secrets/pg_user
-         PG_PASSWORD: /run/secrets/pg_password
+         - PG_HOST=${PG_HOST}
+         - PG_DATABASE=${PG_DATABASE}
+         - PG_USER=${PG_USER}
+         - API_SERVER_PORT=${API_SERVER_PORT}
+
+      build:
+         context: ./node
 
       depends_on:
          b2b_ah_pg:
@@ -69,7 +71,9 @@ services:
          - 8088:${API_SERVER_PORT}
 
 secrets:
-   pg_user:
-     file: ~/.secrets/pg_user.txt
    pg_password:
-     file: ~/.secrets/pg_password.txt
+      file: ${HOME}/.secrets/pg_password
+   dnb_dpl_key:
+      file: ${HOME}/.secrets/dnb_dpl_key
+   dnb_dpl_secret:
+      file: ${HOME}/.secrets/dnb_dpl_secret

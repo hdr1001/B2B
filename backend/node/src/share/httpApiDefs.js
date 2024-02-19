@@ -24,6 +24,8 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
+import { getCreds } from './utils.js';
+
 //Class for executing HTTPS requests
 import * as https from 'https';
 
@@ -139,7 +141,9 @@ class DnbDplAuth { //Get D&B D+ access token
             body: JSON.stringify({ 'grant_type': 'client_credentials' })
         };
 
-        httpsParameters.headers.Authorization = `Basic ${Buffer.from(`${process.env.DNB_DPL_KEY}:${process.env.DNB_DPL_SECRET}`).toString('Base64')}`;
+        const creds = getCreds();
+        
+        httpsParameters.headers.Authorization = `Basic ${Buffer.from(`${creds.apiKey}:${creds.apiSecret}`).toString('Base64')}`;
 
         return (new Https(httpsParameters)).execReq();
     };

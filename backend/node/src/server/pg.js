@@ -23,15 +23,29 @@
 import pg from 'pg';
 pg.defaults.parseInt8 = true;
 
+//Import the fs module for interacting with the file system
+import { readFileSync } from 'fs';
+
 const { Pool } = pg;
 
 const { PG_HOST, PG_DATABASE, PG_USER, PG_PASSWORD } = process.env;
+
+let pg_pwd = '';
+
+if(!PG_PASSWORD) {
+    try {
+        pg_pwd = readFileSync('/run/secrets/pg_password', 'utf8').trim()
+    }
+    catch(err) {
+        console.error(err)
+    }
+}
 
 const pgConn = {
     host: PG_HOST,
     database: PG_DATABASE,
     user: PG_USER,
-    password: PG_PASSWORD,
+    password: PG_PASSWORD || pg_pwd,
     port: 5432,
     max: 10, //set pool max size to 10
     idleTimeoutMillis: 1000, //close idle clients after 1 second
@@ -40,7 +54,7 @@ const pgConn = {
 }
 
 //const pool = new Pool({ ...pgConn, ssl: false });
-const pool = new Pool({ ...pgConn, ssl: { require: true } });
+const pool = new Pool({ ...pgConn, ssl: false });
 
 pool.query('SELECT NOW() as now')
     .then(sqlRslt => console.log(`Database connection at ${sqlRslt.rows[0].now}`))
