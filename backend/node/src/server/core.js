@@ -25,6 +25,11 @@ import { LeiReq, LeiFilter, DnbDplDBs, DnbDplIDR } from '../share/apiDefs.js';
 import db from './pg.js';
 import { ApiHubErr, httpStatus } from './err.js';
 
+const errNonCritical = new Map([
+    [ 'gleif', [ 404 ] ],
+    [ 'dnb', [ 404 ] ]
+]);
+
 function ahReqPersistRespKey(req, resp, transaction) {
     let bForceNew, sSqlSelect, sSqlUpsert;
 
@@ -103,7 +108,7 @@ function ahReqPersistRespKey(req, resp, transaction) {
             transaction.strBody = buff ? dcdrUtf8.decode(buff) : null;
         
             //Happy flow
-            if(transaction?.resp.ok) {
+            if(transaction?.resp.ok || errNonCritical.get(transaction.provider).indexOf(transaction.status)) {
                 resp
                     .header({
                         'X-B2BAH-Cache': false,
