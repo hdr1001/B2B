@@ -30,7 +30,7 @@ const errNonCritical = new Map([
     [ 'dnb', [ 404 ] ]
 ]);
 
-function ahReqPersistRespKey(req, resp, transaction) {
+function ahReqPersistRespKey(transaction) {
     let bForceNew, sSqlSelect, sSqlUpsert;
 
     const sSqlHttpErr = 'INSERT INTO errors_http (req, err, http_status) VALUES ($1, $2, $3)';
@@ -42,10 +42,10 @@ function ahReqPersistRespKey(req, resp, transaction) {
             sSqlUpsert  = `INSERT INTO products_gleif (lei, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
             sSqlUpsert += `ON CONFLICT ( lei ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
 
-            transaction.req = new LeiReq(req.params.key, transaction.reqParams.subSingleton);
+            transaction.req = new LeiReq(transaction.key, transaction.reqParams.subSingleton);
 
             //Don't deliver from the database if forceNew query parameter is set to true
-            bForceNew = req.query?.forceNew && req.query.forceNew.toLowerCase() === 'true';
+            bForceNew = transaction.expressReq.query?.forceNew && transaction.expressReq.query.forceNew.toLowerCase() === 'true';
         }
     }
 
@@ -57,18 +57,18 @@ function ahReqPersistRespKey(req, resp, transaction) {
             sSqlUpsert += `ON CONFLICT ( duns ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
     
             //Don't deliver from the database if forceNew query parameter is set to true
-            bForceNew = req.query?.forceNew && req.query.forceNew.toLowerCase() === 'true';
+            bForceNew = transaction.expressReq.query?.forceNew && transaction.expressReq.query.forceNew.toLowerCase() === 'true';
 
-            transaction.req = new DnbDplDBs(req.params.key, transaction.reqParams);
+            transaction.req = new DnbDplDBs(transaction.key, transaction.reqParams);
         }
     }
 
     //If not forceNew and data available from database, deliver from stock
-    (bForceNew ? Promise.resolve(null) : db.query( sSqlSelect, [ req.params.key ]))
+    (bForceNew ? Promise.resolve(null) : db.query( sSqlSelect, [ transaction.key ]))
         .then(dbQry => {
             if(dbQry) { //bForceNew === false
                 if(dbQry.rows.length && dbQry.rows[0]['product_' + transaction.product]) { //Requested transaction.product available on the database
-                    resp
+                    transaction.expressResp
                         .header({
                             'X-B2BAH-Cache': true,
                             'X-B2BAH-Obtained-At': new Date(dbQry.rows[0]['tsz_' + transaction.product]).toISOString()
@@ -77,7 +77,7 @@ function ahReqPersistRespKey(req, resp, transaction) {
                         .json(dbQry.rows[0]['product_'+ transaction.product]);
         
                     throw new Error( //Skip the rest of the then chain
-                        `Request for key ${req.params.key} delivered from the database`,
+                        `Request for key ${transaction.key} delivered from the database`,
                         { cause: 'breakThenChain' }
                     );
                 }
@@ -96,7 +96,7 @@ function ahReqPersistRespKey(req, resp, transaction) {
         })
         .then(buff => {
             //A bit of reporting about the external API transaction
-            let msg = `Request for key ${req.params.key} returned with HTTP status code ${transaction?.resp?.status}`;
+            let msg = `Request for key ${transaction.key} returned with HTTP status code ${transaction?.resp?.status}`;
 
             if(transaction?.tsResp && transaction?.tsReq) {
                 msg += ` (${transaction.tsResp - transaction.tsReq} ms)`
@@ -108,8 +108,8 @@ function ahReqPersistRespKey(req, resp, transaction) {
             transaction.strBody = buff ? dcdrUtf8.decode(buff) : null;
         
             //Happy flow
-            if(transaction?.resp.ok || errNonCritical.get(transaction.provider).indexOf(transaction.status)) {
-                resp
+            if(transaction?.resp.ok || transaction.nonCriticalErrs.includes(transaction.status)) {
+                transaction.expressResp
                     .header({
                         'X-B2BAH-Cache': false,
                         'X-B2BAH-API-HTTP-Status': transaction.resp.status,
@@ -129,7 +129,7 @@ function ahReqPersistRespKey(req, resp, transaction) {
                         {
                             provider: transaction.provider,
                             api: transaction.api,
-                            key: req.params?.key
+                            key: transaction.key
                         }
                     ),
                     transaction.strBody,
@@ -147,14 +147,14 @@ function ahReqPersistRespKey(req, resp, transaction) {
                 );
             }
 
-            return db.query( sSqlUpsert, [ req.params.key, transaction.strBody, transaction.resp.status ]);
+            return db.query( sSqlUpsert, [ transaction.key, transaction.strBody, transaction.resp.status ]);
         })
         .then(dbQry => {
             if(dbQry && dbQry.rowCount === 1) {
-                console.log(`Success executing ${dbQry.command} for key ${req.params.key}`)
+                console.log(`Success executing ${dbQry.command} for key ${transaction.key}`)
             }
             else {
-                console.error(`Something went wrong upserting key ${req.params.key}`)
+                console.error(`Something went wrong upserting key ${transaction.key}`)
             }
 
             //Done 🙂✅
@@ -165,7 +165,7 @@ function ahReqPersistRespKey(req, resp, transaction) {
             }
             else {
                 if(isNumber(err.hubErrorCode)) { //Error of class ApiHubErr was thrown
-                    resp.status(err.httpStatus.code).json( err );
+                    transaction.expressResp.status(err.httpStatus.code).json( err );
                 }
                 else {
                     const ahErr = new ApiHubErr(
@@ -175,13 +175,13 @@ function ahReqPersistRespKey(req, resp, transaction) {
                         transaction.strBody
                     );
         
-                    resp.status(ahErr.httpStatus.code).json( ahErr );
+                    transaction.expressResp.status(ahErr.httpStatus.code).json( ahErr );
                 }
             }
         })
 }
 
-export default function ahReqPersistRespIDR(req, resp, transaction) {
+export default function ahReqPersistRespIDR(transaction) {
     let sSqlInsert;
 
     const sSqlHttpErr = 'INSERT INTO errors_http (req, err, http_status) VALUES ($1, $2, $3)';
@@ -189,13 +189,13 @@ export default function ahReqPersistRespIDR(req, resp, transaction) {
     if(transaction.api === 'lei') {
         sSqlInsert = 'INSERT INTO idr_lei (req_params, resp_idr, http_status, tsz) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id';
 
-        transaction.req = new LeiFilter(req.body);
+        transaction.req = new LeiFilter(transaction.expressReq.body);
     }
 
     if(transaction.api === 'dpl') {
         sSqlInsert = 'INSERT INTO idr_dnb_dpl (req_params, resp_idr, http_status, tsz) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id';
 
-        transaction.req = new DnbDplIDR(req.body);
+        transaction.req = new DnbDplIDR(transaction.expressReq.body);
     }
 
     transaction.tsReq = Date.now(); //Timestamp the HTTP request
@@ -231,7 +231,7 @@ export default function ahReqPersistRespIDR(req, resp, transaction) {
                         {
                             provider: transaction.provider,
                             api: transaction.api,
-                            key: req.params?.key
+                            key: transaction.key
                         }
                     ),
                     transaction.strBody,
@@ -249,7 +249,7 @@ export default function ahReqPersistRespIDR(req, resp, transaction) {
                 );
             }
 
-            return db.query( sSqlInsert, [ JSON.stringify(req.body), transaction.strBody, transaction.resp.status ]);
+            return db.query( sSqlInsert, [ JSON.stringify(transaction.expressReq.body), transaction.strBody, transaction.resp.status ]);
         })
         .then(dbQry => {
             let dbRowID = 0;
@@ -260,7 +260,7 @@ export default function ahReqPersistRespIDR(req, resp, transaction) {
                 dbRowID = dbQry.rows[0].id;
             }
             else {
-                console.error(`Something went wrong persisting IDR request with criteria ${JSON.stringify(req.body)}`)
+                console.error(`Something went wrong persisting IDR request with criteria ${JSON.stringify(transaction.expressReq.body)}`)
             }
 
             resp
@@ -280,7 +280,7 @@ export default function ahReqPersistRespIDR(req, resp, transaction) {
         })
         .catch(err => {
             if(isNumber(err.hubErrorCode)) { //Error of class ApiHubErr was thrown
-                resp.status(err.httpStatus.code).json( err );
+                transaction.expressResp.status(err.httpStatus.code).json( err );
             }
             else {
                 const ahErr = new ApiHubErr(
@@ -290,7 +290,7 @@ export default function ahReqPersistRespIDR(req, resp, transaction) {
                     transaction.strBody
                 );
     
-                resp.status(ahErr.httpStatus.code).json( ahErr );
+                transaction.expressResp.status(ahErr.httpStatus.code).json( ahErr );
             }
         })
 }
