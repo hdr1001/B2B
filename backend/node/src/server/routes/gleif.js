@@ -22,10 +22,8 @@
 
 import express from 'express';
 
-import { isValidLei } from '../../share/utils.js';
-import { leiReqParams } from '../globs.js';
 import { ahReqPersistRespKey, ahReqPersistRespIDR } from '../core.js';
-import { ApiHubErr } from '../err.js';
+import HubTransaction from '../transaction.js';
 
 const router = express.Router();
 
@@ -39,30 +37,18 @@ router.post('/filter', (req, resp) => {
 
 router.get('/:key', (req, resp) => {
     //Transaction parameters
-    const transaction = { provider: 'gleif', api: 'lei' };
+    const transaction = new HubTransaction( req, resp, 'gleif', 'lei' );
 
-    if(!isValidLei(req.params.key)) {
-        const err = new ApiHubErr('invalidParameter', `LEI ${req.params.key} is not valid`);
+    transaction.key = req.params.key;
 
-        resp.status(err.httpStatus.code).json( err );
+    if(!transaction.key) { return }
 
-        return;
-    }
+    transaction.product = req.query?.product; //'00' is the default product key
 
-    transaction.product = req.query?.product || '00'; //'00' is the default product key
-
-    transaction.reqParams = leiReqParams.get(transaction.product);
-
-    if(!transaction.reqParams) {
-        const err = new ApiHubErr('invalidParameter', `Query parameter product ${transaction.product} is not valid`);
-
-        resp.status(err.httpStatus.code).json( err );
-
-        return;
-    }
+    if(!transaction.reqParams) { return }
 
     //Let the API Hub do its thing
-    ahReqPersistRespKey(req, resp, transaction)
+    ahReqPersistRespKey(transaction)
 });
  
 export default router;

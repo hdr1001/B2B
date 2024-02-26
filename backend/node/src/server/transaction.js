@@ -20,9 +20,9 @@
 //
 // *********************************************************************
 
-import { cleanDUNS } from '../share/utils.js';
+import { cleanDUNS, isValidLei } from '../share/utils.js';
 import { ApiHubErr } from './err.js';
-import { dplReqParams } from './globs.js'
+import { dplReqParams, leiReqParams } from './globs.js'
 
 class HubTransaction {
     constructor(expressReq, expressResp, provider, api, idr = false) {
@@ -32,28 +32,26 @@ class HubTransaction {
         this.api = api;
         this.idr = idr;
 
-        if(api === 'dpl') {
-            if(idr) {
-                this.nonCriticalErrs = [ 404 ];
-            }
-            else {
-                this.nonCriticalErrs = [ ];
-            }
+        this.nonCriticalErrs = [];
+
+        if(api === 'dpl' && idr) {
+            this.nonCriticalErrs = [ 404 ];
         }
 
-        if(api === 'lei') {
-            if(idr) {
-                this.nonCriticalErrs = [ ];
-            }
-            else {
-                this.nonCriticalErrs = [ 404 ];
-            }
+        if(api === 'lei' && !idr) {
+            this.nonCriticalErrs = [ 404 ];
         }
     }
 
     set key(keyIn) {
         if(this.provider === 'dnb') {
             this.sKey = cleanDUNS(keyIn)
+        }
+
+        if(this.api === 'lei') {
+            if(isValidLei(keyIn)) {
+                this.sKey = keyIn
+            }
         }
 
         if(!this.sKey) {
@@ -78,7 +76,13 @@ class HubTransaction {
 
     get reqParams() {
         if(!this.oReqParams) {
-            this.oReqParams = dplReqParams.get(this.sProduct);
+            if(this.api === 'dpl') {
+                this.oReqParams = dplReqParams.get(this.sProduct);
+            }
+
+            if(this.api === 'lei') {
+                this.oReqParams = leiReqParams.get(this.sProduct);
+            }
 
             if(!this.oReqParams) {
                 const err = new ApiHubErr('invalidParameter', `Query parameter product ${this.sProduct} is not valid`);
