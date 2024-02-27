@@ -30,7 +30,7 @@ const errNonCritical = new Map([
     [ 'dnb', [ 404 ] ]
 ]);
 
-function ahReqPersistRespKey(transaction) {
+function ahReqPersistRespKey( transaction ) {
     let bForceNew, sSqlSelect, sSqlUpsert;
 
     const sSqlHttpErr = 'INSERT INTO errors_http (req, err, http_status) VALUES ($1, $2, $3)';
@@ -181,7 +181,7 @@ function ahReqPersistRespKey(transaction) {
         })
 }
 
-export default function ahReqPersistRespIDR(transaction) {
+export default function ahReqPersistRespIDR( transaction ) {
     let sSqlInsert;
 
     const sSqlHttpErr = 'INSERT INTO errors_http (req, err, http_status) VALUES ($1, $2, $3)';
@@ -212,7 +212,7 @@ export default function ahReqPersistRespIDR(transaction) {
             //A bit of reporting about the external API transaction
             let msg;
 
-            msg = `IDR request returned with HTTP status code ${transaction?.resp?.status}`;
+            msg = `IDR request returned with HTTP status code ${transaction.resp?.status}`;
 
             if(transaction?.tsResp && transaction?.tsReq) {
                 msg += ` (${transaction.tsResp - transaction.tsReq} ms)`
@@ -224,14 +224,14 @@ export default function ahReqPersistRespIDR(transaction) {
             transaction.strBody = buff ? dcdrUtf8.decode(buff) : null;
         
             //Not all errors should be considered as such
-            if(!(transaction.resp?.ok || transaction.resp?.status === 404)) {
+            if(!(transaction.resp?.ok || transaction.nonCriticalErrs.includes(transaction.resp?.status))) {
                 //Log the HTTP error to the database
                 db.query( sSqlHttpErr, [
                     JSON.stringify(
                         {
                             provider: transaction.provider,
                             api: transaction.api,
-                            key: transaction.key
+                            idr: true
                         }
                     ),
                     transaction.strBody,
@@ -263,7 +263,7 @@ export default function ahReqPersistRespIDR(transaction) {
                 console.error(`Something went wrong persisting IDR request with criteria ${JSON.stringify(transaction.expressReq.body)}`)
             }
 
-            resp
+            transaction.expressResp
                 .header({
                     'X-B2BAH-API-HTTP-Status': transaction.resp?.status,
                     'X-B2BAH-Obtained-At': new Date(transaction.tsResp).toISOString(),

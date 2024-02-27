@@ -41,6 +41,18 @@ class HubTransaction {
         if(api === 'lei' && !idr) {
             this.nonCriticalErrs = [ 404 ];
         }
+
+        if(idr) {
+            if(api === 'dpl') {
+                if(!expressReq.body || expressReq.body.constructor !== Object || Object.keys(expressReq.body).length === 0) {
+                    throw new ApiHubErr('invalidParameter', 'No search criteria specified in the body of the POST transaction');
+                }
+
+                if(!expressReq.body.countryISOAlpha2Code) {
+                    throw new ApiHubErr('invalidParameter', 'No country code specified in the body of the POST transaction');
+                }
+            }
+        }
     }
 
     set key(keyIn) {

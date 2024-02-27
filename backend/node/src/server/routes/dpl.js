@@ -24,32 +24,30 @@ import express from 'express';
 
 import { ahReqPersistRespKey, ahReqPersistRespIDR } from '../core.js';
 import HubTransaction from '../transaction.js';
-import { ApiHubErr } from '../err.js';
+import { ahErrCode } from '../err.js';
+import { isNumber } from '../../share/utils.js';
 
 const router = express.Router();
 
 router.post('/idr', (req, resp) => {
     //Transaction parameters
-    const transaction = { provider: 'dnb', api: 'dpl', idr: true };
-
-    if(!req.body || req.body.constructor !== Object || Object.keys(req.body).length === 0) {
-        const err = new ApiHubErr('invalidParameter', 'No search criteria specified in the body of the POST transaction');
-
-        resp.status(err.httpStatus.code).json( err );
-
-        return;
+    let transaction;
+    
+    try {
+        transaction = new HubTransaction(req, resp, 'dnb', 'dpl', true );
     }
-
-    if(!req.body.countryISOAlpha2Code) {
-        const err = new ApiHubErr('invalidParameter', 'No country code specified in the body of the POST transaction');
-
+    catch(err) {
+        if(!isNumber(err.hubErrorCode)) { //Error of class other than ApiHubErr was thrown
+            err = new ApiHubErr( 'generic', err.message, ahErrCode.get('generic').httpStatus )
+        }
+        
         resp.status(err.httpStatus.code).json( err );
 
         return;
     }
 
     //Let the API Hub do its thing
-    ahReqPersistRespIDR(req, resp, transaction)
+    ahReqPersistRespIDR( transaction );
 });
 
 router.get('/duns/:key', (req, resp) => {
@@ -65,7 +63,7 @@ router.get('/duns/:key', (req, resp) => {
     if(!transaction.reqParams) { return }
 
     //Let the API Hub do its thing
-    ahReqPersistRespKey(transaction)
+    ahReqPersistRespKey( transaction );
 });
  
 export default router;
