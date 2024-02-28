@@ -22,17 +22,17 @@
 
 import express from 'express';
 
-import { ahReqPersistRespKey, ahReqPersistRespIDR } from '../core.js';
 import HubTransaction from '../transaction.js';
+import { ahReqPersistRespKey, ahReqPersistRespIDR } from '../core.js';
 
 const router = express.Router();
 
 router.post('/filter', (req, resp) => {
     //Transaction parameters
-    const transaction = { provider: 'gleif', api: 'lei', idr: true };
+    const transaction = new HubTransaction( req, resp, 'gleif', 'lei', true );
 
     //Let the API Hub do its thing
-    ahReqPersistRespIDR(req, resp, transaction)
+    ahReqPersistRespIDR( transaction );
 });
 
 router.get('/:key', (req, resp) => {
