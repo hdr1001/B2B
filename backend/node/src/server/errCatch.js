@@ -24,7 +24,8 @@ import { isNumber } from '../share/utils.js';
 import { ApiHubErr } from './err.js';
 
 function handleApiHubErr(transaction, err) {
-    if(isNumber(err.hubErrorCode)) { //Error of class ApiHubErr was thrown
+     //Error of class ApiHubErr was thrown
+    if(isNumber(err.hubErrorCode)) {
         transaction.expressResp.status( err.httpStatus.code ).json( err );
     }
     else {

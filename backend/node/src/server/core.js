@@ -25,11 +25,6 @@ import { LeiReq, LeiFilter, DnbDplDBs, DnbDplIDR } from '../share/apiDefs.js';
 import db from './pg.js';
 import { ApiHubErr, httpStatus } from './err.js';
 
-const errNonCritical = new Map([
-    [ 'gleif', [ 404 ] ],
-    [ 'dnb', [ 404 ] ]
-]);
-
 function ahReqPersistRespKey( transaction ) {
     let bForceNew, sSqlSelect, sSqlUpsert;
 
@@ -64,7 +59,8 @@ function ahReqPersistRespKey( transaction ) {
     }
 
     //If not forceNew and data available from database, deliver from stock
-    (bForceNew ? Promise.resolve(null) : db.query( sSqlSelect, [ transaction.key ]))
+    return new Promise((resolve, reject) => {
+        (bForceNew ? Promise.resolve(null) : db.query( sSqlSelect, [ transaction.key ]))
         .then(dbQry => {
             if(dbQry) { //bForceNew === false
                 if(dbQry.rows.length && dbQry.rows[0]['product_' + transaction.product]) { //Requested transaction.product available on the database
@@ -150,23 +146,25 @@ function ahReqPersistRespKey( transaction ) {
             return db.query( sSqlUpsert, [ transaction.key, transaction.strBody, transaction.resp?.status ]);
         })
         .then(dbQry => {
+            let ret;
+
             if(dbQry && dbQry.rowCount === 1) {
-                console.log(`Success executing ${dbQry.command} for key ${transaction.key}`)
+                ret = `Success executing ${dbQry.command} for key ${transaction.key}`
             }
             else {
-                console.error(`Something went wrong upserting key ${transaction.key}`)
+                ret = `Something went wrong upserting key ${transaction.key}`
             }
 
             //Done 🙂✅
+            resolve(ret);
         })
         .catch(err => {
             if(err.cause === 'breakThenChain') {
-                console.log(err.message) //Early escape, not an actual error
+                resolve(err.message) //Early escape, not an actual error
             }
-            else {
-                throw( err )
-            }
+            else { reject(err) }
         })
+    });
 }
 
 export default function ahReqPersistRespIDR( transaction ) {
@@ -188,99 +186,83 @@ export default function ahReqPersistRespIDR( transaction ) {
 
     transaction.tsReq = Date.now(); //Timestamp the HTTP request
 
-    fetch(transaction.req.getReq()) //Request date from external API
-        .then(apiResp => {
-            transaction.tsResp = Date.now(); //Timestamp the receipt of the HTTP response
+    return new Promise((resolve, reject) => {
+        fetch(transaction.req.getReq()) //Request date from external API
+            .then(apiResp => {
+                transaction.tsResp = Date.now(); //Timestamp the receipt of the HTTP response
 
-            transaction.resp = apiResp;
+                transaction.resp = apiResp;
 
-            return apiResp.arrayBuffer();
-        })
-        .then(buff => {
-            //A bit of reporting about the external API transaction
-            let msg;
+                return apiResp.arrayBuffer();
+            })
+            .then(buff => {
+                //A bit of reporting about the external API transaction
+                let msg;
 
-            msg = `IDR request returned with HTTP status code ${transaction.resp?.status}`;
+                msg = `IDR request returned with HTTP status code ${transaction.resp?.status}`;
 
-            if(transaction?.tsResp && transaction?.tsReq) {
-                msg += ` (${transaction.tsResp - transaction.tsReq} ms)`
-            }
-        
-            console.log(msg);
+                if(transaction?.tsResp && transaction?.tsReq) {
+                    msg += ` (${transaction.tsResp - transaction.tsReq} ms)`
+                }
+            
+                console.log(msg);
 
-            //Decode the array buffer returned to a string
-            transaction.strBody = buff ? dcdrUtf8.decode(buff) : null;
-        
-            //Not all errors should be considered as such
-            if(!(transaction.resp?.ok || transaction.nonCriticalErrs.includes(transaction.resp?.status))) {
-                //Log the HTTP error to the database
-                db.query( sSqlHttpErr, [
-                    JSON.stringify(
-                        {
-                            provider: transaction.provider,
-                            api: transaction.api,
-                            idr: true
-                        }
-                    ),
-                    transaction.strBody,
-                    transaction.resp?.status
-                ])
-                    .then(dbQry => {} /* console.log(`Log ${dbQry && dbQry.rowCount > 0 ? '✅' : '❌'}`) */)
-                    .catch(err => console.error(err));
+                //Decode the array buffer returned to a string
+                transaction.strBody = buff ? dcdrUtf8.decode(buff) : null;
+            
+                //Not all errors should be considered as such
+                if(!(transaction.resp?.ok || transaction.nonCriticalErrs.includes(transaction.resp?.status))) {
+                    //Log the HTTP error to the database
+                    db.query( sSqlHttpErr, [
+                        JSON.stringify(
+                            {
+                                provider: transaction.provider,
+                                api: transaction.api,
+                                idr: true
+                            }
+                        ),
+                        transaction.strBody,
+                        transaction.resp?.status
+                    ])
+                        .then(dbQry => {} /* console.log(`Log ${dbQry && dbQry.rowCount > 0 ? '✅' : '❌'}`) */)
+                        .catch(err => console.error(err));
 
-                //Handle the error in the catch clause
-                throw new ApiHubErr(
-                    'httpErrReturn',
-                    msg,
-                    transaction.resp?.status,
-                    transaction.strBody
-                );
-            }
+                    //Handle the error in the catch clause
+                    reject(new ApiHubErr( 'httpErrReturn', msg, transaction.resp?.status, transaction.strBody ));
+                }
 
-            return db.query( sSqlInsert, [ JSON.stringify(transaction.expressReq.body), transaction.strBody, transaction.resp?.status ]);
-        })
-        .then(dbQry => {
-            let dbRowID = 0;
+                return db.query( sSqlInsert, [ JSON.stringify(transaction.expressReq.body), transaction.strBody, transaction.resp?.status ]);
+            })
+            .then(dbQry => {
+                let ret, dbRowID = 0;
 
-            if(dbQry && dbQry.rowCount === 1) {
-                console.log(`Success executing ${dbQry.command}, IDentity Resolution row ${dbQry.rows[0].id} returned`);
+                if(dbQry && dbQry.rowCount === 1) {
+                    ret = `Success executing ${dbQry.command}, IDentity Resolution row ${dbQry.rows[0].id} returned`;
 
-                dbRowID = dbQry.rows[0].id;
-            }
-            else {
-                console.error(`Something went wrong persisting IDR request with criteria ${JSON.stringify(transaction.expressReq.body)}`)
-            }
+                    dbRowID = dbQry.rows[0].id;
+                }
+                else {
+                    ret = `Something went wrong persisting IDR request with criteria ${JSON.stringify(transaction.expressReq.body)}`
+                }
 
-            transaction.expressResp
-                .header({
-                    'X-B2BAH-API-HTTP-Status': transaction.resp?.status,
-                    'X-B2BAH-Obtained-At': new Date(transaction.tsResp).toISOString(),
-                    'X-B2BAH-IDR-ID': dbRowID
-                })
+                transaction.expressResp
+                    .header({
+                        'X-B2BAH-API-HTTP-Status': transaction.resp?.status,
+                        'X-B2BAH-Obtained-At': new Date(transaction.tsResp).toISOString(),
+                        'X-B2BAH-IDR-ID': dbRowID
+                    })
 
-                .type('json')
+                    .type('json')
 
-                .status(httpStatus.okay.code)
+                    .status(httpStatus.okay.code)
 
-                .send(transaction.strBody);
+                    .send(transaction.strBody);
 
-            //Done 🙂✅
-        })
-        .catch(err => {
-            if(isNumber(err.hubErrorCode)) { //Error of class ApiHubErr was thrown
-                transaction.expressResp.status(err.httpStatus.code).json( err );
-            }
-            else {
-                const ahErr = new ApiHubErr(
-                    'generic',
-                    err.message,
-                    transaction.resp?.status,
-                    transaction.strBody
-                );
-    
-                transaction.expressResp.status(ahErr.httpStatus.code).json( ahErr );
-            }
-        })
+                //Done 🙂✅
+                resolve(ret);
+            })
+            .catch(err => reject(err))
+    });
 }
 
 export {

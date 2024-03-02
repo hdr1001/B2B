@@ -23,47 +23,45 @@
 import express from 'express';
 
 import HubTransaction from '../transaction.js';
-import { ahErrCode } from '../err.js';
-import { isNumber } from '../../share/utils.js';
 import { ahReqPersistRespKey, ahReqPersistRespIDR } from '../core.js';
+import handleApiHubErr from '../errCatch.js';
 
 const router = express.Router();
 
 router.post('/idr', (req, resp) => {
-    //Transaction parameters
     let transaction;
     
     try {
+        //Transaction parameters
         transaction = new HubTransaction(req, resp, 'dnb', 'dpl', true );
-    }
-    catch(err) {
-        if(!isNumber(err.hubErrorCode)) { //Error of class other than ApiHubErr was thrown
-            err = new ApiHubErr( 'generic', err.message, ahErrCode.get('generic').httpStatus )
-        }
-        
-        resp.status(err.httpStatus.code).json( err );
 
-        return;
+        //Let the API Hub do its thing
+        ahReqPersistRespIDR( transaction )
+            .then(msg => console.log(msg))
+            .catch(err => handleApiHubErr( transaction, err ));
     }
-
-    //Let the API Hub do its thing
-    ahReqPersistRespIDR( transaction );
+    catch( err ) { //An error might be thrown in the HubTransaction constructor
+        handleApiHubErr( transaction || { expressResp: resp }, err )
+    }
 });
 
 router.get('/duns/:key', (req, resp) => {
-    //Transaction parameters
-    const transaction = new HubTransaction( req, resp, 'dnb', 'dpl' );
+    let transaction;
 
-    transaction.key = req.params.key;
+    try {
+        //Transaction parameters
+        transaction = new HubTransaction( req, resp, 'dnb', 'dpl' );
 
-    if(!transaction.key) { return }
+        transaction.key = req.params.key;
 
-    transaction.product = req.query?.product; //'00' is the default product key
+        transaction.product = req.query?.product; //'00' is the default product key
 
-    if(!transaction.reqParams) { return }
-
-    //Let the API Hub do its thing
-    ahReqPersistRespKey( transaction );
+        //Let the API Hub do its thing
+        ahReqPersistRespKey( transaction )
+            .then(msg => console.log(msg))
+            .catch(err => handleApiHubErr( transaction, err ));
+    }
+    catch( err ) { handleApiHubErr( transaction, err ) }
 });
  
 export default router;
