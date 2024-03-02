@@ -20,7 +20,7 @@
 //
 // *********************************************************************
 
-import { dcdrUtf8, isNumber } from '../share/utils.js';
+import { dcdrUtf8 } from '../share/utils.js';
 import { LeiReq, LeiFilter, DnbDplDBs, DnbDplIDR } from '../share/apiDefs.js';
 import db from './pg.js';
 import { ApiHubErr, httpStatus } from './err.js';
@@ -164,19 +164,7 @@ function ahReqPersistRespKey( transaction ) {
                 console.log(err.message) //Early escape, not an actual error
             }
             else {
-                if(isNumber(err.hubErrorCode)) { //Error of class ApiHubErr was thrown
-                    transaction.expressResp.status(err.httpStatus.code).json( err );
-                }
-                else {
-                    const ahErr = new ApiHubErr(
-                        'generic',
-                        err.message,
-                        transaction.resp?.status,
-                        transaction.strBody
-                    );
-        
-                    transaction.expressResp.status(ahErr.httpStatus.code).json( ahErr );
-                }
+                throw( err )
             }
         })
 }

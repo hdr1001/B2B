@@ -61,15 +61,11 @@ class HubTransaction {
         }
 
         if(this.api === 'lei') {
-            if(isValidLei(keyIn)) {
-                this.sKey = keyIn
-            }
+            if(isValidLei(keyIn)) { this.sKey = keyIn }
         }
 
         if(!this.sKey) {
-            const err = new ApiHubErr('invalidParameter', `Provided key ${keyIn} is not valid`);
-
-            this.expressResp.status(err.httpStatus.code).json( err );    
+            throw new ApiHubErr('invalidParameter', `Provided key ${keyIn} is not valid`);
         }
     }
 
@@ -97,11 +93,7 @@ class HubTransaction {
             }
 
             if(!this.oReqParams) {
-                const err = new ApiHubErr('invalidParameter', `Query parameter product ${this.sProduct} is not valid`);
-    
-                this.expressResp.status(err.httpStatus.code).json( err );
-
-                return null;
+                throw new ApiHubErr('invalidParameter', `Query parameter product ${this.sProduct} is not valid`);
             }
         }
     

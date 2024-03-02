@@ -24,31 +24,38 @@ import express from 'express';
 
 import HubTransaction from '../transaction.js';
 import { ahReqPersistRespKey, ahReqPersistRespIDR } from '../core.js';
+import handleApiHubErr from '../errCatch.js';
 
 const router = express.Router();
 
 router.post('/filter', (req, resp) => {
-    //Transaction parameters
-    const transaction = new HubTransaction( req, resp, 'gleif', 'lei', true );
+    let transaction;
 
-    //Let the API Hub do its thing
-    ahReqPersistRespIDR( transaction );
+    try {
+        //Transaction parameters
+        const transaction = new HubTransaction( req, resp, 'gleif', 'lei', true );
+
+        //Let the API Hub do its thing
+        ahReqPersistRespIDR( transaction );
+    }
+    catch( err ) { handleApiHubErr( transaction, err ) }
 });
 
 router.get('/:key', (req, resp) => {
-    //Transaction parameters
-    const transaction = new HubTransaction( req, resp, 'gleif', 'lei' );
+    let transaction;
 
-    transaction.key = req.params.key;
+    try {
+        //Transaction parameters
+        transaction = new HubTransaction( req, resp, 'gleif', 'lei' );
 
-    if(!transaction.key) { return }
+        transaction.key = req.params.key;
 
-    transaction.product = req.query?.product; //'00' is the default product key
+        transaction.product = req.query?.product; //'00' is the default product key
 
-    if(!transaction.reqParams) { return }
-
-    //Let the API Hub do its thing
-    ahReqPersistRespKey(transaction)
+        //Let the API Hub do its thing
+        ahReqPersistRespKey(transaction);
+    }
+    catch( err ) { handleApiHubErr( transaction, err ) }
 });
  
 export default router;

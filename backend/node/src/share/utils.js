@@ -76,6 +76,9 @@ function cleanDUNS(inDUNS) {
     //Return an empty sting if more than nine or any non-numeric characters
     if(outDUNS.length > 9 || !/^\d*$/.test(outDUNS)) { return '' }
 
+    //An empty string is invalid
+    if(outDUNS.length === 0) { return '' }
+
     //Return the DUNS with, if needed, 0s prepended
     return '000000000'.slice(0, 9 - outDUNS.length) + outDUNS;
 }
