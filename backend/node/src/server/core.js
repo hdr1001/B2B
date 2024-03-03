@@ -26,9 +26,7 @@ import db from './pg.js';
 import { ApiHubErr, httpStatus } from './err.js';
 
 function ahReqPersistRespKey( transaction ) {
-    let bForceNew, sSqlSelect, sSqlUpsert;
-
-    const sSqlHttpErr = 'INSERT INTO errors_http (req, err, http_status) VALUES ($1, $2, $3)';
+    let sSqlSelect, sSqlUpsert;
 
     if(transaction.provider === 'gleif') {
         if(transaction.api === 'lei') {
@@ -38,9 +36,6 @@ function ahReqPersistRespKey( transaction ) {
             sSqlUpsert += `ON CONFLICT ( lei ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
 
             transaction.req = new LeiReq(transaction.key, transaction.reqParams.subSingleton);
-
-            //Don't deliver from the database if forceNew query parameter is set to true
-            bForceNew = transaction.expressReq.query?.forceNew && transaction.expressReq.query.forceNew.toLowerCase() === 'true';
         }
     }
 
@@ -51,137 +46,132 @@ function ahReqPersistRespKey( transaction ) {
             sSqlUpsert  = `INSERT INTO products_dnb (duns, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
             sSqlUpsert += `ON CONFLICT ( duns ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
     
-            //Don't deliver from the database if forceNew query parameter is set to true
-            bForceNew = transaction.expressReq.query?.forceNew && transaction.expressReq.query.forceNew.toLowerCase() === 'true';
-
             transaction.req = new DnbDplDBs(transaction.key, transaction.reqParams);
         }
     }
 
     //If not forceNew and data available from database, deliver from stock
     return new Promise((resolve, reject) => {
-        (bForceNew ? Promise.resolve(null) : db.query( sSqlSelect, [ transaction.key ]))
-        .then(dbQry => {
-            if(dbQry) { //bForceNew === false
-                if(dbQry.rows.length && dbQry.rows[0]['product_' + transaction.product]) { //Requested transaction.product available on the database
+        (transaction.forceNew ? Promise.resolve(null) : db.query( sSqlSelect, [ transaction.key ]))
+            .then(dbQry => {
+                if(dbQry) { //transaction.forceNew === false
+                    if(dbQry.rows.length && dbQry.rows[0]['product_' + transaction.product]) { //Requested transaction.product available on the database
+                        transaction.expressResp
+                            .header({
+                                'X-B2BAH-Cache': true,
+                                'X-B2BAH-Obtained-At': new Date(dbQry.rows[0]['tsz_' + transaction.product]).toISOString()
+                            })
+                
+                            .json(dbQry.rows[0]['product_'+ transaction.product]);
+            
+                        throw new Error( //Skip the rest of the then chain
+                            `Request for key ${transaction.key} delivered from the database`,
+                            { cause: 'breakThenChain' }
+                        );
+                    }
+                }
+
+                transaction.tsReq = Date.now(); //Timestamp the HTTP request
+
+                return fetch(transaction.req.getReq()) //Request date from external API
+            })
+            .then(apiResp => {
+                transaction.tsResp = Date.now(); //Timestamp the receipt of the HTTP response
+
+                transaction.resp = apiResp;
+
+                return apiResp.arrayBuffer();
+            })
+            .then(buff => {
+                //A bit of reporting about the external API transaction
+                let msg = `Request for key ${transaction.key} returned with HTTP status code ${transaction.resp?.status}`;
+
+                if(transaction?.tsResp && transaction?.tsReq) {
+                    msg += ` (${transaction.tsResp - transaction.tsReq} ms)`
+                }
+            
+                console.log(msg);
+
+                //Decode the array buffer returned to a string
+                transaction.strBody = buff ? dcdrUtf8.decode(buff) : null;
+
+                //Happy flow
+                if(transaction.resp?.ok || transaction.nonCriticalErrs.includes(transaction.resp?.status)) {
                     transaction.expressResp
                         .header({
-                            'X-B2BAH-Cache': true,
-                            'X-B2BAH-Obtained-At': new Date(dbQry.rows[0]['tsz_' + transaction.product]).toISOString()
+                            'X-B2BAH-Cache': false,
+                            'X-B2BAH-API-HTTP-Status': transaction.resp?.status,
+                            'X-B2BAH-Obtained-At': new Date(transaction.tsResp).toISOString()
                         })
+
+                        .type('json')
             
-                        .json(dbQry.rows[0]['product_'+ transaction.product]);
-        
-                    throw new Error( //Skip the rest of the then chain
-                        `Request for key ${transaction.key} delivered from the database`,
-                        { cause: 'breakThenChain' }
+                        .status(httpStatus.okay.code)
+            
+                        .send(transaction.strBody);
+                }
+                else { //transaction.resp.ok evaluates to false, start error handling
+                    //Log the HTTP error to the database
+                    db.query( sSqlHttpErr, [
+                        JSON.stringify(
+                            {
+                                provider: transaction.provider,
+                                api: transaction.api,
+                                key: transaction.key
+                            }
+                        ),
+                        transaction.strBody,
+                        transaction.resp?.status
+                    ])
+                        .then(dbQry => {} /* console.log(`Log ${dbQry && dbQry.rowCount > 0 ? '✅' : '❌'}`) */)
+                        .catch(err => console.error(err));
+
+                    //Handle the error in the catch clause
+                    throw new ApiHubErr(
+                        'httpErrReturn',
+                        msg,
+                        transaction.resp?.status,
+                        transaction.strBody
                     );
                 }
-            }
 
-            transaction.tsReq = Date.now(); //Timestamp the HTTP request
+                return db.query( sSqlUpsert, [ transaction.key, transaction.strBody, transaction.resp?.status ]);
+            })
+            .then(dbQry => {
+                let ret;
 
-            return fetch(transaction.req.getReq()) //Request date from external API
-        })
-        .then(apiResp => {
-            transaction.tsResp = Date.now(); //Timestamp the receipt of the HTTP response
+                if(dbQry && dbQry.rowCount === 1) {
+                    ret = `Success executing ${dbQry.command} for key ${transaction.key}`
+                }
+                else {
+                    ret = `Something went wrong upserting key ${transaction.key}`
+                }
 
-            transaction.resp = apiResp;
-
-            return apiResp.arrayBuffer();
-        })
-        .then(buff => {
-            //A bit of reporting about the external API transaction
-            let msg = `Request for key ${transaction.key} returned with HTTP status code ${transaction.resp?.status}`;
-
-            if(transaction?.tsResp && transaction?.tsReq) {
-                msg += ` (${transaction.tsResp - transaction.tsReq} ms)`
-            }
-        
-            console.log(msg);
-
-            //Decode the array buffer returned to a string
-            transaction.strBody = buff ? dcdrUtf8.decode(buff) : null;
-
-            //Happy flow
-            if(transaction.resp?.ok || transaction.nonCriticalErrs.includes(transaction.resp?.status)) {
-                transaction.expressResp
-                    .header({
-                        'X-B2BAH-Cache': false,
-                        'X-B2BAH-API-HTTP-Status': transaction.resp?.status,
-                        'X-B2BAH-Obtained-At': new Date(transaction.tsResp).toISOString()
-                    })
-
-                    .type('json')
-        
-                    .status(httpStatus.okay.code)
-        
-                    .send(transaction.strBody);
-            }
-            else { //transaction.resp.ok evaluates to false, start error handling
-                //Log the HTTP error to the database
-                db.query( sSqlHttpErr, [
-                    JSON.stringify(
-                        {
-                            provider: transaction.provider,
-                            api: transaction.api,
-                            key: transaction.key
-                        }
-                    ),
-                    transaction.strBody,
-                    transaction.resp?.status
-                ])
-                    .then(dbQry => {} /* console.log(`Log ${dbQry && dbQry.rowCount > 0 ? '✅' : '❌'}`) */)
-                    .catch(err => console.error(err));
-
-                //Handle the error in the catch clause
-                throw new ApiHubErr(
-                    'httpErrReturn',
-                    msg,
-                    transaction.resp?.status,
-                    transaction.strBody
-                );
-            }
-
-            return db.query( sSqlUpsert, [ transaction.key, transaction.strBody, transaction.resp?.status ]);
-        })
-        .then(dbQry => {
-            let ret;
-
-            if(dbQry && dbQry.rowCount === 1) {
-                ret = `Success executing ${dbQry.command} for key ${transaction.key}`
-            }
-            else {
-                ret = `Something went wrong upserting key ${transaction.key}`
-            }
-
-            //Done 🙂✅
-            resolve(ret);
-        })
-        .catch(err => {
-            if(err.cause === 'breakThenChain') {
-                resolve(err.message) //Early escape, not an actual error
-            }
-            else { reject(err) }
-        })
+                //Done 🙂✅
+                resolve(ret);
+            })
+            .catch(err => {
+                if(err.cause === 'breakThenChain') {
+                    resolve(err.message) //Early escape, not an actual error
+                }
+                else { reject(err) }
+            })
     });
 }
 
 export default function ahReqPersistRespIDR( transaction ) {
     let sSqlInsert;
 
-    const sSqlHttpErr = 'INSERT INTO errors_http (req, err, http_status) VALUES ($1, $2, $3)';
-
     if(transaction.api === 'lei') {
         sSqlInsert = 'INSERT INTO idr_lei (req_params, resp_idr, http_status, tsz) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id';
 
-        transaction.req = new LeiFilter(transaction.expressReq.body);
+        transaction.req = new LeiFilter(transaction.reqParams);
     }
 
     if(transaction.api === 'dpl') {
         sSqlInsert = 'INSERT INTO idr_dnb_dpl (req_params, resp_idr, http_status, tsz) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id';
 
-        transaction.req = new DnbDplIDR(transaction.expressReq.body);
+        transaction.req = new DnbDplIDR(transaction.reqParams);
     }
 
     transaction.tsReq = Date.now(); //Timestamp the HTTP request

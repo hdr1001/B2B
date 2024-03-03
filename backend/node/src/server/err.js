@@ -38,7 +38,8 @@ const ahErrCode = new Map([
     [ 'extnlApiErr', { code: 3, desc: 'External API returned an error', httpStatus: httpStatus.genericErr } ],
     [ 'httpErrReturn', { code: 4, desc: 'External API returned an HTTP error status', httpStatus: httpStatus.genericErr } ],
     [ 'semanticError', { code: 5, desc: 'Semantically erroneous request', httpStatus: httpStatus.unprocessableEntity } ],
-    [ 'serverError', { code: 6, desc: 'Server error', httpStatus: httpStatus.genericErr } ]
+    [ 'serverError', { code: 6, desc: 'Server error', httpStatus: httpStatus.genericErr } ],
+    [ 'unprocessableEntity', { code: 7, desc: 'Unprocessable entity', httpStatus: httpStatus.unprocessableEntity } ]
 ]);
 
 //API Hub custom error class

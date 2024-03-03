@@ -40,8 +40,8 @@ router.post('/idr', (req, resp) => {
             .then(msg => console.log(msg))
             .catch(err => handleApiHubErr( transaction, err ));
     }
-    catch( err ) { //An error might be thrown in the HubTransaction constructor
-        handleApiHubErr( transaction || { expressResp: resp }, err )
+    catch( err ) {
+        handleApiHubErr( transaction, err )
     }
 });
 
@@ -61,7 +61,9 @@ router.get('/duns/:key', (req, resp) => {
             .then(msg => console.log(msg))
             .catch(err => handleApiHubErr( transaction, err ));
     }
-    catch( err ) { handleApiHubErr( transaction, err ) }
+    catch( err ) {
+        handleApiHubErr( transaction, err )
+    }
 });
  
 export default router;

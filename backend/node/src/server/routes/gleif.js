@@ -36,9 +36,13 @@ router.post('/filter', (req, resp) => {
         const transaction = new HubTransaction( req, resp, 'gleif', 'lei', true );
 
         //Let the API Hub do its thing
-        ahReqPersistRespIDR( transaction );
+        ahReqPersistRespIDR( transaction )
+            .then(msg => console.log(msg))
+            .catch(err => handleApiHubErr( transaction, err ));
     }
-    catch( err ) { handleApiHubErr( transaction, err ) }
+    catch( err ) {
+        handleApiHubErr( transaction, err )
+    }
 });
 
 router.get('/:key', (req, resp) => {
@@ -53,9 +57,13 @@ router.get('/:key', (req, resp) => {
         transaction.product = req.query?.product; //'00' is the default product key
 
         //Let the API Hub do its thing
-        ahReqPersistRespKey(transaction);
+        ahReqPersistRespKey(transaction)
+            .then(msg => console.log(msg))
+            .catch(err => handleApiHubErr( transaction, err ));
     }
-    catch( err ) { handleApiHubErr( transaction, err ) }
+    catch( err ) {
+        handleApiHubErr( transaction, err )
+    }
 });
  
 export default router;

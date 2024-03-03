@@ -42,16 +42,8 @@ class HubTransaction {
             this.nonCriticalErrs = [ 404 ];
         }
 
-        if(idr) {
-            if(api === 'dpl') {
-                if(!expressReq.body || expressReq.body.constructor !== Object || Object.keys(expressReq.body).length === 0) {
-                    throw new ApiHubErr('invalidParameter', 'No search criteria specified in the body of the POST transaction');
-                }
-
-                if(!expressReq.body.countryISOAlpha2Code) {
-                    throw new ApiHubErr('invalidParameter', 'No country code specified in the body of the POST transaction');
-                }
-            }
+        if(expressReq.query?.forceNew && expressReq.query.forceNew.toLowerCase() === 'true') {
+            this.forceNew = true
         }
     }
 
@@ -65,7 +57,9 @@ class HubTransaction {
         }
 
         if(!this.sKey) {
-            throw new ApiHubErr('invalidParameter', `Provided key ${keyIn} is not valid`);
+            this.sKey = keyIn; //Just for logging purposes, throw of error coming up ⬇️
+
+            throw new ApiHubErr('unprocessableEntity', `Provided key ${keyIn} is not valid`);
         }
     }
 
@@ -84,19 +78,45 @@ class HubTransaction {
 
     get reqParams() {
         if(!this.oReqParams) {
-            if(this.api === 'dpl') {
-                this.oReqParams = dplReqParams.get(this.sProduct);
-            }
+            if(this.idr) {
+                if(this.api === 'dpl') {
+                    if(!this.expressReq.body || this.expressReq.body.constructor !== Object || Object.keys(this.expressReq.body).length === 0) {
+                        throw new ApiHubErr('unprocessableEntity', 'No search criteria specified in the body of the POST transaction');
+                    }
+    
+                    if(!this.expressReq.body.countryISOAlpha2Code) {
+                        throw new ApiHubErr('unprocessableEntity', 'No country code specified in the body of the POST transaction');
+                    }
+                }
 
-            if(this.api === 'lei') {
-                this.oReqParams = leiReqParams.get(this.sProduct);
-            }
+                if(this.api === 'lei') {
+                    if(!this.expressReq.body || this.expressReq.body.constructor !== Object) {
+                        throw new ApiHubErr('unprocessableEntity', 'No search criteria specified in the body of the POST transaction');
+                    }
+                }
 
-            if(!this.oReqParams) {
-                throw new ApiHubErr('invalidParameter', `Query parameter product ${this.sProduct} is not valid`);
+                this.oReqParams = this.expressReq.body;
+            }
+            else {
+                if(this.api === 'dpl') {
+                    this.oReqParams = dplReqParams.get(this.sProduct);
+                }
+    
+                if(this.api === 'lei') {
+                    this.oReqParams = leiReqParams.get(this.sProduct);
+                }
             }
         }
     
+        if(!this.oReqParams) {
+            if(this.idr) {
+                throw new ApiHubErr('unprocessableEntity', 'No valid search criteria in transaction POST body');
+            }
+            else {
+                throw new ApiHubErr('unprocessableEntity', `Query parameter product ${this.sProduct} is not valid`);
+            }
+        }
+
         return this.oReqParams;
     }
 }
