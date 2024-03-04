@@ -45,7 +45,7 @@ function handleApiHubErr(transaction, err) {
     }
 
     const errMsg = transaction.strBody || `{ "msg": "${err.addtlMessage || err.message}" }`;
-    const status = transaction.resp?.status || err.httpStatus.code;
+    const status = transaction.resp?.status || err.httpStatus?.code || httpStatus.genericErr.code;
 
     //Log the HTTP error to the database
     db.query( sSqlHttpErr, [ JSON.stringify(oReq), errMsg, status] )

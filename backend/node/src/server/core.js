@@ -97,42 +97,20 @@ function ahReqPersistRespKey( transaction ) {
 
                 //Happy flow
                 if(transaction.resp?.ok || transaction.nonCriticalErrs.includes(transaction.resp?.status)) {
+                    const oHeader = {
+                        'X-B2BAH-Cache': false,
+                        'X-B2BAH-API-HTTP-Status': transaction.resp?.status,
+                        'X-B2BAH-Obtained-At': new Date(transaction.tsResp).toISOString()
+                    };
+
                     transaction.expressResp
-                        .header({
-                            'X-B2BAH-Cache': false,
-                            'X-B2BAH-API-HTTP-Status': transaction.resp?.status,
-                            'X-B2BAH-Obtained-At': new Date(transaction.tsResp).toISOString()
-                        })
-
-                        .type('json')
-            
-                        .status(httpStatus.okay.code)
-            
-                        .send(transaction.strBody);
+                        .type( 'json' )
+                        .header( oHeader )
+                        .status( httpStatus.okay.code )
+                        .send( transaction.strBody );
                 }
-                else { //transaction.resp.ok evaluates to false, start error handling
-                    //Log the HTTP error to the database
-                    db.query( sSqlHttpErr, [
-                        JSON.stringify(
-                            {
-                                provider: transaction.provider,
-                                api: transaction.api,
-                                key: transaction.key
-                            }
-                        ),
-                        transaction.strBody,
-                        transaction.resp?.status
-                    ])
-                        .then(dbQry => {} /* console.log(`Log ${dbQry && dbQry.rowCount > 0 ? '✅' : '❌'}`) */)
-                        .catch(err => console.error(err));
-
-                    //Handle the error in the catch clause
-                    throw new ApiHubErr(
-                        'httpErrReturn',
-                        msg,
-                        transaction.resp?.status,
-                        transaction.strBody
-                    );
+                else { //transaction.resp.ok evaluates to false, throw API Hub error
+                    throw new ApiHubErr( 'httpErrReturn', msg, transaction.resp?.status, transaction.strBody );
                 }
 
                 return db.query( sSqlUpsert, [ transaction.key, transaction.strBody, transaction.resp?.status ]);
@@ -202,23 +180,8 @@ export default function ahReqPersistRespIDR( transaction ) {
             
                 //Not all errors should be considered as such
                 if(!(transaction.resp?.ok || transaction.nonCriticalErrs.includes(transaction.resp?.status))) {
-                    //Log the HTTP error to the database
-                    db.query( sSqlHttpErr, [
-                        JSON.stringify(
-                            {
-                                provider: transaction.provider,
-                                api: transaction.api,
-                                idr: true
-                            }
-                        ),
-                        transaction.strBody,
-                        transaction.resp?.status
-                    ])
-                        .then(dbQry => {} /* console.log(`Log ${dbQry && dbQry.rowCount > 0 ? '✅' : '❌'}`) */)
-                        .catch(err => console.error(err));
-
                     //Handle the error in the catch clause
-                    reject(new ApiHubErr( 'httpErrReturn', msg, transaction.resp?.status, transaction.strBody ));
+                    throw new ApiHubErr( 'httpErrReturn', msg, transaction.resp?.status, transaction.strBody );
                 }
 
                 return db.query( sSqlInsert, [ JSON.stringify(transaction.expressReq.body), transaction.strBody, transaction.resp?.status ]);
@@ -235,18 +198,17 @@ export default function ahReqPersistRespIDR( transaction ) {
                     ret = `Something went wrong persisting IDR request with criteria ${JSON.stringify(transaction.expressReq.body)}`
                 }
 
+                const oHeader = {
+                    'X-B2BAH-API-HTTP-Status': transaction.resp?.status,
+                    'X-B2BAH-Obtained-At': new Date(transaction.tsResp).toISOString(),
+                    'X-B2BAH-IDR-ID': dbRowID,
+                };
+
                 transaction.expressResp
-                    .header({
-                        'X-B2BAH-API-HTTP-Status': transaction.resp?.status,
-                        'X-B2BAH-Obtained-At': new Date(transaction.tsResp).toISOString(),
-                        'X-B2BAH-IDR-ID': dbRowID
-                    })
-
-                    .type('json')
-
-                    .status(httpStatus.okay.code)
-
-                    .send(transaction.strBody);
+                    .header( oHeader )
+                    .type( 'json' )
+                    .status( httpStatus.okay.code )
+                    .send( transaction.strBody );
 
                 //Done 🙂✅
                 resolve(ret);
