@@ -33,7 +33,7 @@ router.post('/idr', (req, resp) => {
     
     try {
         //Transaction parameters
-        transaction = new HubTransaction(req, resp, 'dnb', 'dpl', true );
+        transaction = new HubTransaction( req, resp, 'dnb', 'dpl', true );
 
         //Let the API Hub do its thing
         ahReqPersistRespIDR( transaction )

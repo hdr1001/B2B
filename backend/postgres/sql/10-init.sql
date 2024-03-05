@@ -22,9 +22,17 @@
 
 -- ALTER TABLE public.errors_http DROP CONSTRAINT errors_http_pkey;
 -- DROP TABLE public.errors_http; 
+-- ALTER TABLE public.project_products DROP CONSTRAINT project_products_fkey_3;
+-- ALTER TABLE public.project_products DROP CONSTRAINT project_products_fkey_2;
+-- ALTER TABLE public.project_products DROP CONSTRAINT project_products_fkey_1;
+-- ALTER TABLE public.project_products DROP CONSTRAINT project_products_pkey;
+-- DROP TABLE public.project_products;
 -- ALTER TABLE public.project_keys DROP CONSTRAINT project_keys_fkey;
 -- ALTER TABLE public.project_keys DROP CONSTRAINT project_keys_pkey;
 -- DROP TABLE public.project_keys;
+-- ALTER TABLE public.project_stages DROP CONSTRAINT project_stages_fkey;
+-- ALTER TABLE public.project_stages DROP CONSTRAINT project_stages_pkey;
+-- DROP TABLE public.project_stages;
 -- ALTER TABLE public.projects DROP CONSTRAINT projects_pkey;
 -- DROP TABLE public.projects;
 -- ALTER TABLE public.idr_dnb_dpl DROP CONSTRAINT idr_dnb_dpl_pkey;
@@ -51,6 +59,7 @@
 -- ALTER TABLE public.products_gleif DROP CONSTRAINT products_gleif_pkey;
 -- DROP TABLE public.products_gleif;
 -- DROP SEQUENCE public.errors_http_id_seq;
+-- DROP SEQUENCE public.project_id_seq;
 -- DROP SEQUENCE public.idr_dnb_dpl_id_seq;
 -- DROP SEQUENCE public.archive_dnb_id_seq;
 -- DROP SEQUENCE public.idr_lei_id_seq;
@@ -85,6 +94,14 @@ CREATE SEQUENCE public.archive_dnb_id_seq
 
 -- Create the sequence for the primary key of table D&B Direct+ IDR
 CREATE SEQUENCE public.idr_dnb_dpl_id_seq
+    INCREMENT 1
+    START 1
+    MINVALUE 1
+    MAXVALUE 9223372036854775807
+    CACHE 1;
+
+-- Create the sequence for the primary key of table projects
+CREATE SEQUENCE public.project_id_seq
     INCREMENT 1
     START 1
     MINVALUE 1
@@ -271,20 +288,41 @@ CREATE TABLE public.idr_dnb_dpl (
 
 -- Create table for storing projects 
 CREATE TABLE public.projects (
-   id character(8) COLLATE pg_catalog."default",
+   id integer NOT NULL DEFAULT nextval('project_id_seq'::regclass),
    descr character varying(128) COLLATE pg_catalog."default",
    CONSTRAINT projects_pkey PRIMARY KEY (id)
 );
 
--- Create table for keeping track of keys associated wih projects 
+-- Create table for storing project stages 
+CREATE TABLE public.project_stages (
+   project_id integer NOT NULL,
+   stage smallint NOT NULL,
+   req_params JSONB,
+   CONSTRAINT project_stages_pkey PRIMARY KEY (project_id, stage),
+   CONSTRAINT project_stages_fkey FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+-- Create table for storing project keys
 CREATE TABLE public.project_keys (
-   id character(8) COLLATE pg_catalog."default",
-   rec_key character varying(32) COLLATE pg_catalog."default",
+   project_id integer NOT NULL,
+   req_key character varying(32) NOT NULL,
+   CONSTRAINT project_keys_pkey PRIMARY KEY (project_id, req_key),
+   CONSTRAINT project_keys_fkey FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+-- Create table for storing products retrieved while fulfilling projects
+CREATE TABLE public.project_products (
+   project_id integer NOT NULL,
+   stage smallint NOT NULL,
+   req_key character varying(32) NOT NULL,
+   product JSONB,
+   finished BOOLEAN DEFAULT FALSE,
    http_status smallint,
-   note character varying(256) COLLATE pg_catalog."default",
    tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
-   CONSTRAINT project_keys_pkey PRIMARY KEY (id, rec_key),
-   CONSTRAINT project_keys_fkey FOREIGN KEY(id) REFERENCES projects(id)
+   CONSTRAINT project_products_pkey PRIMARY KEY (project_id, stage, req_key),
+   CONSTRAINT project_products_fkey_1 FOREIGN KEY (project_id) REFERENCES projects(id),
+   CONSTRAINT project_products_fkey_2 FOREIGN KEY (project_id, stage) REFERENCES project_stages(project_id, stage),
+   CONSTRAINT project_products_fkey_3 FOREIGN KEY (project_id, req_key) REFERENCES project_keys(project_id, req_key)
 );
 
 -- Create table for logging HTTP errors
@@ -296,3 +334,11 @@ CREATE TABLE public.errors_http (
    tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
    CONSTRAINT errors_http_pkey PRIMARY KEY (id)
 );
+
+DO $$
+DECLARE p_id integer;
+BEGIN
+   INSERT INTO projects ( descr ) VALUES ('Test project') RETURNING id INTO p_id;
+   INSERT INTO project_stages ( project_id, stage, req_params ) VALUES ( p_id, 1, '{ "blockIDs": "companyinfo_L2_v1,hierarchyconnections_L1_v1", "orderReason": 6332 }' );
+   INSERT INTO project_keys ( project_id, req_key ) VALUES ( p_id, '407809623' ), ( p_id, '372428847' ), ( p_id, '373230036' );
+END $$;
