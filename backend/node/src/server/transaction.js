@@ -74,7 +74,15 @@ class HubTransaction {
         }
     }
 
-    get product() { return this.sProduct }
+    get product() {
+        return this.sProduct
+    }
+
+    set project(projectIn) {
+        this.iProject = projectIn || 0;
+    }
+
+    get project() { return this.iProject }
 
     get reqParams() {
         if(!this.oReqParams) {
@@ -104,6 +112,10 @@ class HubTransaction {
     
                 if(this.api === 'lei') {
                     this.oReqParams = leiReqParams.get(this.sProduct);
+                }
+
+                if(this.project) {
+
                 }
             }
         }

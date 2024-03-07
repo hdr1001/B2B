@@ -25,6 +25,7 @@ import { isObject } from "../share/utils.js";
 //HTTP status codes
 const httpStatus = {
     okay: { description: 'Request succeeded', code: 200 },
+    accepted: { description: 'Accepted', code: 202 },
     notFound: { description: 'Unable to locate', code: 404 },
     unprocessableEntity: { description: 'Unprocessable entity', code: 422 },
     genericErr: { description: 'Server Error', code: 500 }

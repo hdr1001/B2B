@@ -297,6 +297,10 @@ CREATE TABLE public.projects (
 CREATE TABLE public.project_stages (
    project_id integer NOT NULL,
    stage smallint NOT NULL,
+   api_provider character varying(32) COLLATE pg_catalog."default", 
+   api character varying(32) COLLATE pg_catalog."default",
+   idr BOOLEAN,
+   finished BOOLEAN DEFAULT FALSE,
    req_params JSONB,
    CONSTRAINT project_stages_pkey PRIMARY KEY (project_id, stage),
    CONSTRAINT project_stages_fkey FOREIGN KEY (project_id) REFERENCES projects(id)
@@ -316,7 +320,6 @@ CREATE TABLE public.project_products (
    stage smallint NOT NULL,
    req_key character varying(32) NOT NULL,
    product JSONB,
-   finished BOOLEAN DEFAULT FALSE,
    http_status smallint,
    tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
    CONSTRAINT project_products_pkey PRIMARY KEY (project_id, stage, req_key),
@@ -339,6 +342,21 @@ DO $$
 DECLARE p_id integer;
 BEGIN
    INSERT INTO projects ( descr ) VALUES ('Test project') RETURNING id INTO p_id;
-   INSERT INTO project_stages ( project_id, stage, req_params ) VALUES ( p_id, 1, '{ "blockIDs": "companyinfo_L2_v1,hierarchyconnections_L1_v1", "orderReason": 6332 }' );
-   INSERT INTO project_keys ( project_id, req_key ) VALUES ( p_id, '407809623' ), ( p_id, '372428847' ), ( p_id, '373230036' );
+
+   INSERT INTO project_stages
+      ( project_id, stage, api_provider, api, idr, req_params )
+   VALUES
+      (
+         p_id,
+         1,
+         'dnb',
+         'dpl',
+         FALSE,
+         '{ "blockIDs": "companyinfo_L2_v1,hierarchyconnections_L1_v1", "orderReason": 6332 }'
+      );
+
+   INSERT INTO project_keys
+      ( project_id, req_key )
+   VALUES
+      ( p_id, '407809623' ), ( p_id, '372428847' ), ( p_id, '373230036' );
 END $$;

@@ -26,6 +26,7 @@ import { apiProvider } from '../../share/apiDefs.js';
 
 import gleif from './gleif.js';
 import dpl from './dpl.js';
+import project from './project.js';
 
 const router = express.Router();
 
@@ -52,7 +53,10 @@ apiProvider.forEach((provider, key) => {
         if(key === 'dnb' && api === 'dpl') {
             router.use(`/${key}/${api}`, dpl);
         }
-    })
+    });
 });
+
+//Add project endpoints
+router.use('/project', project);
 
 export default router;
