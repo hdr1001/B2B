@@ -297,11 +297,8 @@ CREATE TABLE public.projects (
 CREATE TABLE public.project_stages (
    project_id integer NOT NULL,
    stage smallint NOT NULL,
-   api_provider character varying(32) COLLATE pg_catalog."default", 
-   api character varying(32) COLLATE pg_catalog."default",
-   idr BOOLEAN,
    finished BOOLEAN DEFAULT FALSE,
-   req_params JSONB,
+   params JSONB,
    CONSTRAINT project_stages_pkey PRIMARY KEY (project_id, stage),
    CONSTRAINT project_stages_fkey FOREIGN KEY (project_id) REFERENCES projects(id)
 );
@@ -344,15 +341,12 @@ BEGIN
    INSERT INTO projects ( descr ) VALUES ('Test project') RETURNING id INTO p_id;
 
    INSERT INTO project_stages
-      ( project_id, stage, api_provider, api, idr, req_params )
+      ( project_id, stage, params )
    VALUES
       (
          p_id,
          1,
-         'dnb',
-         'dpl',
-         FALSE,
-         '{ "blockIDs": "companyinfo_L2_v1,hierarchyconnections_L1_v1", "orderReason": 6332 }'
+         '{ "script": "product", "provider": "dnb", "api": "dpl", "reqParams": { "blockIDs": "companyinfo_L2_v1,hierarchyconnections_L1_v1", "orderReason": 6332 }}'
       );
 
    INSERT INTO project_keys

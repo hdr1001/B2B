@@ -20,10 +20,9 @@
 //
 // *********************************************************************
 
-import { parentPort } from 'worker_threads';
+import { parentPort, workerData } from 'worker_threads';
 
-parentPort.on('message', msg => {
-    console.log(msg + ' (in worker)');
-    
-    parentPort.postMessage('Hello from the worker');
-});
+setTimeout(() => {
+        console.log(workerData)
+        parentPort.postMessage('ret msg')
+    }, 10000);

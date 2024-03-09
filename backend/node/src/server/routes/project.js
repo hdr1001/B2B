@@ -21,23 +21,85 @@
 // *********************************************************************
 
 import express from 'express';
-import { Worker } from 'worker_threads';
+import {  Worker } from 'worker_threads';
 import { httpStatus } from '../err.js';
+import db from '../pg.js';
 
 const router = express.Router();
 
+function runProjectStage(dbStage) {
+    return new Promise((resolve, reject) => {
+        const worker = new Worker('./src/server/workers/product.js', { workerData: { stage: dbStage }});
+
+        worker.on('message', ret => resolve(ret));
+
+        worker.on('error', err => reject(err));
+
+        worker.on('exit', (code) => {
+            if (code !== 0) {
+                reject(new Error(`Worker stopped with exit code ${code}`));
+            }
+        })
+    })
+}
+
 router.post('/', (req, resp) => {
+    const project = { id: req.body.id }
+
+    if(project.id) {
+        let sSql = "SELECT projects.descr, project_stages.stage, project_stages.finished, project_stages.params ";
+        sSql    += "FROM projects, project_stages ";
+        sSql    += "WHERE projects.id = $1 AND projects.id = project_stages.project_id ";
+        sSql    += "ORDER BY project_stages.stage ASC;";
+
+        db.query( sSql, [ project.id ] )
+            .then(dbQry => {
+                console.log(`located project ${dbQry.rows[0].descr} first script is ${dbQry.rows[0].params.script}`);
+
+                return runProjectStage(dbQry.rows[0]);
+            })
+            .then(msg => console.log(`Worker message received: ${msg}`))
+    }
+    else {
+
+    }
+/*
     const worker = new Worker('./src/server/workers/product.js');
 
-    worker.postMessage('Hello from the main thread');
-
-    worker.on('msg', msg => {
-        console.log(msg)
+    worker.on("message", msg => {
+        console.log(`Worker message received: ${msg}`);
     });
 
+    worker.on("error", err => console.error(err));
+
+    worker.on("exit", code => console.log(`Worker exited with code ${code}.`));
+*/
     resp.status(httpStatus.accepted.code).json({ status: 'running' });
 });
+
 /*
+    function runProjectStage(workerData) {
+        return new Promise((resolve, reject) => {
+            const worker = new Worker('./src/server/workers/product.js', { workerData });
+
+            worker.on('message', resolve);
+            worker.on('error', reject);
+
+            worker.on('exit', code => {
+                if (code !== 0) {
+                    reject(new Error(`Worker stopped with exit code ${code}`))
+                }
+            });
+        })
+    }
+
+    console.log('Invoking runProjectStage')
+    runProjectStage('hello ')
+        .then(data => console.log(data))
+        .catch(err => console.error(err));
+
+
+
 router.get('/duns/:key', (req, resp) => {
     let transaction;
 
