@@ -27,9 +27,11 @@ import db from '../pg.js';
 
 const router = express.Router();
 
-function runProjectStage(dbStage) {
+function runProjectStage(projectStage) {
+    console.log(`Initiating execution of project stage ${projectStage.stage} using script ${projectStage.params?.script}`);
+
     return new Promise((resolve, reject) => {
-        const worker = new Worker('./src/server/workers/product.js', { workerData: { stage: dbStage }});
+        const worker = new Worker(`./src/server/workers/${projectStage.params?.script}.js`, { workerData: { stage: projectStage }});
 
         worker.on('message', ret => resolve(ret));
 
@@ -47,78 +49,27 @@ router.post('/', (req, resp) => {
     const project = { id: req.body.id }
 
     if(project.id) {
-        let sSql = "SELECT projects.descr, project_stages.stage, project_stages.finished, project_stages.params ";
+        let sSql = "SELECT projects.id, projects.descr, project_stages.stage, project_stages.finished, project_stages.params ";
         sSql    += "FROM projects, project_stages ";
         sSql    += "WHERE projects.id = $1 AND projects.id = project_stages.project_id ";
         sSql    += "ORDER BY project_stages.stage ASC;";
 
         db.query( sSql, [ project.id ] )
             .then(dbQry => {
-                console.log(`located project ${dbQry.rows[0].descr} first script is ${dbQry.rows[0].params.script}`);
+                if(dbQry.rows?.length) {
+                    console.log(`Located project ${dbQry.rows[0]?.id} (${dbQry.rows[0]?.descr})`);
 
-                return runProjectStage(dbQry.rows[0]);
+                    for(let i = 0, p = Promise.resolve(); i < dbQry.rows?.length; i++) {
+                        p.then(() => runProjectStage(dbQry.rows[i])).then(msg => console.log(`Worker message received: ${msg}`));
+                    }                    
+                }
             })
-            .then(msg => console.log(`Worker message received: ${msg}`))
     }
     else {
 
     }
-/*
-    const worker = new Worker('./src/server/workers/product.js');
 
-    worker.on("message", msg => {
-        console.log(`Worker message received: ${msg}`);
-    });
-
-    worker.on("error", err => console.error(err));
-
-    worker.on("exit", code => console.log(`Worker exited with code ${code}.`));
-*/
     resp.status(httpStatus.accepted.code).json({ status: 'running' });
 });
 
-/*
-    function runProjectStage(workerData) {
-        return new Promise((resolve, reject) => {
-            const worker = new Worker('./src/server/workers/product.js', { workerData });
-
-            worker.on('message', resolve);
-            worker.on('error', reject);
-
-            worker.on('exit', code => {
-                if (code !== 0) {
-                    reject(new Error(`Worker stopped with exit code ${code}`))
-                }
-            });
-        })
-    }
-
-    console.log('Invoking runProjectStage')
-    runProjectStage('hello ')
-        .then(data => console.log(data))
-        .catch(err => console.error(err));
-
-
-
-router.get('/duns/:key', (req, resp) => {
-    let transaction;
-
-    try {
-        //Transaction parameters
-        transaction = new HubTransaction( req, resp, 'dnb', 'dpl' );
-
-        transaction.key = req.params.key;
-
-        transaction.product = req.query?.product; //'00' is the default product key
-
-        //Let the API Hub do its thing
-        ahReqPersistRespKey( transaction )
-            .then(msg => console.log(msg))
-            .catch(err => handleApiHubErr( transaction, err ));
-    }
-    catch( err ) {
-        handleApiHubErr( transaction, err )
-    }
-});
-*/ 
 export default router;

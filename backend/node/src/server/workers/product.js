@@ -22,7 +22,8 @@
 
 import { parentPort, workerData } from 'worker_threads';
 
+const { stage } = workerData;
+
 setTimeout(() => {
-        console.log(workerData)
-        parentPort.postMessage('ret msg')
+        parentPort.postMessage('return upon completion of script ' + stage.params?.script)
     }, 10000);
