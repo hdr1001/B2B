@@ -21,9 +21,42 @@
 // *********************************************************************
 
 import { parentPort, workerData } from 'worker_threads';
+import pg from 'pg';
+import Cursor from 'pg-cursor';
+
+pg.defaults.parseInt8 = true;
+
+import { pgConn } from '../globs.js';
 
 const { stage } = workerData;
 
-setTimeout(() => {
-        parentPort.postMessage('return upon completion of script ' + stage.params?.script)
-    }, 10000);
+const { Pool } = pg;
+
+const pool = new Pool({ ...pgConn, ssl: { require: true } });
+
+pool.query('SELECT NOW() as now')
+    .then(sqlRslt => console.log(`Database connection at ${sqlRslt.rows[0].now}`))
+    .catch(err => console.log(err));
+
+const client = await pool.connect();
+const cursor = client.query(new Cursor(`SELECT req_key FROM project_keys WHERE project_id = ${stage.id}`));
+
+let rows = await cursor.read(100);
+
+while(rows.length) {
+    rows.forEach(row => console.log(row.req_key))
+
+    rows = await cursor.read(100);
+}
+
+// the pool will emit an error on behalf of any idle clients
+// it contains if a backend error or network partition happens
+// https://node-postgres.com/features/pooling
+pool.on('error', (err, client) => {
+    console.log(`Unexpected error on idle client ${err.toString()}`);
+    process.exit(-1);
+})
+
+setTimeout(() => { 
+    parentPort.postMessage(`Return upon completion of script ${stage.params.script}`) 
+}, 10000);
