@@ -21,7 +21,7 @@
 // *********************************************************************
 
 import express from 'express';
-import {  Worker } from 'worker_threads';
+import { Worker } from 'worker_threads';
 import { httpStatus } from '../err.js';
 import db from '../pg.js';
 
