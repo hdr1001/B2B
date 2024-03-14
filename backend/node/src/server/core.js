@@ -22,32 +22,28 @@
 
 import { dcdrUtf8 } from '../share/utils.js';
 import { LeiReq, LeiFilter, DnbDplDBs, DnbDplIDR } from '../share/apiDefs.js';
-import db from './pg.js';
 import { ApiHubErr, httpStatus } from './err.js';
+import db from './pg.js';
 
 function ahReqPersistRespKey( transaction ) {
     let sSqlSelect, sSqlUpsert;
 
-    if(transaction.provider === 'gleif') {
-        if(transaction.api === 'lei') {
-            sSqlSelect  = `SELECT lei, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product} FROM products_gleif WHERE lei = $1;`;
+    if(transaction.apiProvider.key === 'lei') {
+        sSqlSelect  = `SELECT lei, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product} FROM products_gleif WHERE lei = $1;`;
 
-            sSqlUpsert  = `INSERT INTO products_gleif (lei, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
-            sSqlUpsert += `ON CONFLICT ( lei ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
+        sSqlUpsert  = `INSERT INTO products_gleif (lei, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
+        sSqlUpsert += `ON CONFLICT ( lei ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
 
-            transaction.req = new LeiReq(transaction.key, transaction.reqParams.subSingleton);
-        }
+        transaction.req = new LeiReq(transaction.key, transaction.reqParams.subSingleton);
     }
 
-    if(transaction.provider === 'dnb') {
-        if(transaction.api === 'dpl') {
-            sSqlSelect  = `SELECT duns, product_${transaction.product}, tsz_${transaction.product}, http_status_${transaction.product} FROM products_dnb WHERE duns = $1;`;
+    if(transaction.apiProvider.key === 'duns') {
+        sSqlSelect  = `SELECT duns, product_${transaction.product}, tsz_${transaction.product}, http_status_${transaction.product} FROM products_dnb WHERE duns = $1;`;
 
-            sSqlUpsert  = `INSERT INTO products_dnb (duns, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
-            sSqlUpsert += `ON CONFLICT ( duns ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
-    
-            transaction.req = new DnbDplDBs(transaction.key, transaction.reqParams);
-        }
+        sSqlUpsert  = `INSERT INTO products_dnb (duns, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
+        sSqlUpsert += `ON CONFLICT ( duns ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
+
+        transaction.req = new DnbDplDBs(transaction.key, transaction.reqParams);
     }
 
     //If not forceNew and data available from database, deliver from stock
@@ -140,13 +136,13 @@ function ahReqPersistRespKey( transaction ) {
 export default function ahReqPersistRespIDR( transaction ) {
     let sSqlInsert;
 
-    if(transaction.api === 'lei') {
+    if(transaction.apiProvider.key === 'lei') {
         sSqlInsert = 'INSERT INTO idr_lei (req_params, resp_idr, http_status, tsz) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id';
 
         transaction.req = new LeiFilter(transaction.reqParams);
     }
 
-    if(transaction.api === 'dpl') {
+    if(transaction.apiProvider.key === 'duns') {
         sSqlInsert = 'INSERT INTO idr_dnb_dpl (req_params, resp_idr, http_status, tsz) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id';
 
         transaction.req = new DnbDplIDR(transaction.reqParams);

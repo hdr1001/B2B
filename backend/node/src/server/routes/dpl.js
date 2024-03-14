@@ -23,17 +23,23 @@
 import express from 'express';
 
 import HubTransaction from '../transaction.js';
+import { apiProvider } from '../../share/apiDefs.js';
 import { ahReqPersistRespKey, ahReqPersistRespIDR } from '../core.js';
 import handleApiHubErr from '../errCatch.js';
 
 const router = express.Router();
 
-router.post('/idr', (req, resp) => {
+const apiProviderDpl = apiProvider.get('dnb');
+
+const idrEndpoint = 'idr';
+const keyEndpoint = 'key';
+
+router.post(`/${idrEndpoint}`, (req, resp) => {
     let transaction;
     
     try {
         //Transaction parameters
-        transaction = new HubTransaction( req, resp, 'dnb', 'dpl', true );
+        transaction = new HubTransaction( req, resp, apiProviderDpl, idrEndpoint );
 
         //Let the API Hub do its thing
         ahReqPersistRespIDR( transaction )
@@ -45,12 +51,12 @@ router.post('/idr', (req, resp) => {
     }
 });
 
-router.get('/duns/:key', (req, resp) => {
+router.get(`/${apiProviderDpl.key}/:${keyEndpoint}`, (req, resp) => {
     let transaction;
 
     try {
         //Transaction parameters
-        transaction = new HubTransaction( req, resp, 'dnb', 'dpl' );
+        transaction = new HubTransaction( req, resp, apiProviderDpl, keyEndpoint );
 
         transaction.key = req.params.key;
 

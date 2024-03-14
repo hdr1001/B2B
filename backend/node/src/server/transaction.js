@@ -25,20 +25,19 @@ import { ApiHubErr } from './err.js';
 import { dplReqParams, leiReqParams } from './globs.js'
 
 class HubTransaction {
-    constructor(expressReq, expressResp, provider, api, idr = false) {
+    constructor(expressReq, expressResp, apiProvider, endpoint) {
         this.expressReq = expressReq;
         this.expressResp = expressResp;
-        this.provider = provider;
-        this.api = api;
-        this.idr = idr;
+        this.apiProvider = apiProvider;
+        this.endpoint = endpoint === 'filter' ? 'idr' : endpoint;
 
         this.nonCriticalErrs = [];
 
-        if(api === 'dpl' && idr) {
+        if(apiProvider.key === 'duns' && endpoint === 'idr') {
             this.nonCriticalErrs = [ 404 ];
         }
 
-        if(api === 'lei' && !idr) {
+        if(apiProvider.key === 'lei' && endpoint !== 'idr') {
             this.nonCriticalErrs = [ 404 ];
         }
 
@@ -48,46 +47,40 @@ class HubTransaction {
     }
 
     set key(keyIn) {
-        if(this.provider === 'dnb') {
-            this.sKey = cleanDUNS(keyIn)
+        if(this.apiProvider.key === 'duns') {
+            this._key = cleanDUNS(keyIn)
         }
 
-        if(this.api === 'lei') {
-            if(isValidLei(keyIn)) { this.sKey = keyIn }
+        if(this.apiProvider.key === 'lei') {
+            if(isValidLei(keyIn)) { this._key = keyIn }
         }
 
-        if(!this.sKey) {
-            this.sKey = keyIn; //Just for logging purposes, throw of error coming up ⬇️
+        if(!this._key) {
+            this._key = keyIn; //Just for logging purposes, throw of error coming up ⬇️
 
             throw new ApiHubErr('unprocessableEntity', `Provided key ${keyIn} is not valid`);
         }
     }
 
-    get key() { return this.sKey }
+    get key() { return this._key }
 
     set product(productIn) {
         if(productIn) {
-            this.sProduct = productIn
+            this._product = productIn
         }
         else {
-            this.sProduct = '00'
+            this._product = '00'
         }
     }
 
     get product() {
-        return this.sProduct
+        return this._product
     }
-
-    set project(projectIn) {
-        this.iProject = projectIn || 0;
-    }
-
-    get project() { return this.iProject }
 
     get reqParams() {
-        if(!this.oReqParams) {
-            if(this.idr) {
-                if(this.api === 'dpl') {
+        if(!this._reqParams) {
+            if(this.endpoint === 'idr') {
+                if(this.apiProvider.key === 'duns') {
                     if(!this.expressReq.body || this.expressReq.body.constructor !== Object || Object.keys(this.expressReq.body).length === 0) {
                         throw new ApiHubErr('unprocessableEntity', 'No search criteria specified in the body of the POST transaction');
                     }
@@ -97,39 +90,35 @@ class HubTransaction {
                     }
                 }
 
-                if(this.api === 'lei') {
+                if(this.apiProvider.key === 'lei') {
                     if(!this.expressReq.body || this.expressReq.body.constructor !== Object) {
                         throw new ApiHubErr('unprocessableEntity', 'No search criteria specified in the body of the POST transaction');
                     }
                 }
 
-                this.oReqParams = this.expressReq.body;
+                this._reqParams = this.expressReq.body;
             }
             else {
-                if(this.api === 'dpl') {
-                    this.oReqParams = dplReqParams.get(this.sProduct);
+                if(this.apiProvider.key === 'duns') {
+                    this._reqParams = dplReqParams.get(this._product);
                 }
     
-                if(this.api === 'lei') {
-                    this.oReqParams = leiReqParams.get(this.sProduct);
-                }
-
-                if(this.project) {
-
+                if(this.apiProvider.key === 'lei') {
+                    this._reqParams = leiReqParams.get(this._product);
                 }
             }
         }
     
-        if(!this.oReqParams) {
+        if(!this._reqParams) {
             if(this.idr) {
                 throw new ApiHubErr('unprocessableEntity', 'No valid search criteria in transaction POST body');
             }
             else {
-                throw new ApiHubErr('unprocessableEntity', `Query parameter product ${this.sProduct} is not valid`);
+                throw new ApiHubErr('unprocessableEntity', `Query parameter product ${this._product} is not valid`);
             }
         }
 
-        return this.oReqParams;
+        return this._reqParams;
     }
 }
 

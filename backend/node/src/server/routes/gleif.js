@@ -23,17 +23,23 @@
 import express from 'express';
 
 import HubTransaction from '../transaction.js';
+import { apiProvider } from '../../share/apiDefs.js';
 import { ahReqPersistRespKey, ahReqPersistRespIDR } from '../core.js';
 import handleApiHubErr from '../errCatch.js';
 
 const router = express.Router();
 
-router.post('/filter', (req, resp) => {
+const apiProviderLei = apiProvider.get('gleif');
+
+const idrEndpoint = 'filter';
+const keyEndpoint = 'key';
+
+router.post(`/${idrEndpoint}`, (req, resp) => {
     let transaction;
 
     try {
         //Transaction parameters
-        const transaction = new HubTransaction( req, resp, 'gleif', 'lei', true );
+        transaction = new HubTransaction( req, resp, apiProviderLei, idrEndpoint );
 
         //Let the API Hub do its thing
         ahReqPersistRespIDR( transaction )
@@ -45,12 +51,12 @@ router.post('/filter', (req, resp) => {
     }
 });
 
-router.get('/:key', (req, resp) => {
+router.get(`/:${keyEndpoint}`, (req, resp) => {
     let transaction;
 
     try {
         //Transaction parameters
-        transaction = new HubTransaction( req, resp, 'gleif', 'lei' );
+        transaction = new HubTransaction( req, resp, apiProviderLei, keyEndpoint );
 
         transaction.key = req.params.key;
 
