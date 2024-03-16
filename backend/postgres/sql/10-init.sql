@@ -58,6 +58,14 @@
 -- DROP TABLE public.archive_gleif;
 -- ALTER TABLE public.products_gleif DROP CONSTRAINT products_gleif_pkey;
 -- DROP TABLE public.products_gleif;
+-- ALTER TABLE public.apis DROP CONSTRAINT apis_fkey_2;
+-- ALTER TABLE public.apis DROP CONSTRAINT apis_fkey_1;
+-- ALTER TABLE public.apis DROP CONSTRAINT apis_pkey;
+-- DROP TABLE public.apis;
+-- ALTER TABLE public.api_keys DROP CONSTRAINT api_keys_pkey;
+-- DROP TABLE public.api_keys;
+-- ALTER TABLE public.api_providers DROP CONSTRAINT api_providers_pkey;
+-- DROP TABLE public.api_providers;
 -- DROP SEQUENCE public.errors_http_id_seq;
 -- DROP SEQUENCE public.project_id_seq;
 -- DROP SEQUENCE public.idr_dnb_dpl_id_seq;
@@ -116,9 +124,40 @@ CREATE SEQUENCE public.errors_http_id_seq
     MAXVALUE 9223372036854775807
     CACHE 1;
 
+-- Create table listing supported API providers
+CREATE TABLE public.api_providers (
+   provider character varying(32) NOT NULL COLLATE pg_catalog."default",
+   full_name character varying(128),
+   acronym character varying(16),
+   url character varying(128),
+   CONSTRAINT api_providers_pkey PRIMARY KEY (provider)
+);
+
+-- Create table listing supported API keys
+CREATE TABLE public.api_keys (
+   api_key character varying(16) NOT NULL COLLATE pg_catalog."default",
+   full_name character varying(128),
+   acronym character varying(16),
+   url character varying(128),
+   CONSTRAINT api_keys_pkey PRIMARY KEY (api_key)
+);
+
+-- Create table listing supported APIs
+CREATE TABLE public.apis (
+   api character varying(32) NOT NULL COLLATE pg_catalog."default",
+   provider character varying(32),
+   api_key character varying(1632),
+   full_name character varying(128),
+   acronym character varying(16),
+   url character varying(128),
+   CONSTRAINT apis_pkey PRIMARY KEY (api),
+   CONSTRAINT apis_fkey_1 FOREIGN KEY (provider) REFERENCES api_providers(provider),
+   CONSTRAINT apis_fkey_2 FOREIGN KEY (api_key) REFERENCES api_keys(api_key)
+);
+
 -- Create table for storing GLEIF data products
 CREATE TABLE public.products_gleif (
-   lei character varying(32) COLLATE pg_catalog."default",
+   lei character varying(32) NOT NULL COLLATE pg_catalog."default",
    product_00 JSONB,
    http_status_00 smallint,
    tsz_00 timestamptz,
@@ -192,7 +231,7 @@ CREATE TABLE public.idr_lei (
 
 -- Create table for storing D&B data products
 CREATE TABLE public.products_dnb (
-   duns character varying(9) COLLATE pg_catalog."default",
+   duns character varying(9) NOT NULL COLLATE pg_catalog."default",
    product_00 JSONB,
    http_status_00 smallint,
    tsz_00 timestamptz,
@@ -338,6 +377,24 @@ CREATE TABLE public.errors_http (
 DO $$
 DECLARE p_id integer;
 BEGIN
+   INSERT INTO api_providers
+      ( provider, full_name, acronym, url )
+   VALUES
+      ( 'gleif', 'Global Legal Entity Identifier Foundation', 'GLEIF', 'https://www.gleif.org' ),
+      ( 'dnb', 'Dun & Bradstreet', 'D&B', 'https://www.dnb.com' );
+
+   INSERT INTO api_keys
+      ( api_key, full_name, acronym, url )
+   VALUES
+      ( 'lei', 'Legal Entity Identifier', 'LEI', 'https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei' ),
+      ( 'duns', 'D&B Data Universal Numbering System', 'D‑U‑N‑S', 'https://www.dnb.com/duns/what-is-a-DUNS-number.html' );
+
+   INSERT INTO apis
+      ( api, provider, api_key, full_name, acronym, url )
+   VALUES
+      ( 'lei', 'gleif', 'lei', 'Global Legal Entity Identifier Foundation API', 'GLEIF API', 'https://www.gleif.org/en/lei-data/gleif-api' ),
+      ( 'dpl', 'dnb', 'duns', 'D&B Direct+', 'D+', 'https://directplus.documentation.dnb.com/' );
+
    INSERT INTO projects ( descr ) VALUES ('Test project') RETURNING id INTO p_id;
 
    INSERT INTO project_stages
