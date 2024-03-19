@@ -21,9 +21,7 @@
 // *********************************************************************
 
 import express from 'express';
-
-import { apiProvider } from '../../share/apiDefs.js';
-
+import { config } from '../globs.js';
 import gleif from './gleif.js';
 import dpl from './dpl.js';
 import project from './project.js';
@@ -41,19 +39,18 @@ router.get('/about', (req, resp) =>
     })
 );
 
-//Add provider endpoints
-apiProvider.forEach((provider, key) => {
-    router.get(`/${key}`, (req, resp) => resp.json( provider ));
+config.hubProviders.forEach(provider => {
+    router.get(`/${provider.provider}`, (req, resp) => resp.json( provider ));
+});
 
-    provider.apis.forEach(api => {
-        if(api === 'lei') {
-            router.use(`/${key}/lei`, gleif);
-        }
-    
-        if(key === 'dnb' && api === 'dpl') {
-            router.use(`/${key}/${api}`, dpl);
-        }
-    });
+config.hubAPIs.forEach(api => {
+    if(api.api === 'lei') {
+        router.use(`/${api.provider}/${api.api_key}`, gleif)
+    }
+
+    if(api.api === 'dpl') {
+        router.use(`/${api.provider}/${api.api}`, dpl)
+    }
 });
 
 //Add project endpoints

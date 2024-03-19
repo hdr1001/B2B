@@ -22,6 +22,7 @@
 
 import express from 'express';
 import { Worker } from 'worker_threads';
+import HubTransaction from '../transaction.js';
 import { httpStatus } from '../err.js';
 import db from '../pg.js';
 
@@ -70,6 +71,26 @@ router.post('/', (req, resp) => {
     }
 
     resp.status(httpStatus.accepted.code).json({ status: 'running' });
+});
+
+router.post('/product', (req, resp) => {
+    let transaction;
+
+    const { provider, api, project_id, key } = req.body;
+    try {
+        //Transaction parameters
+        transaction = new HubTransaction( req, resp, provider, api, false, p_id );
+
+        transaction.key = req.body.key;
+
+        //Let the API Hub do its thing
+        ahReqPersistRespKey( transaction )
+            .then(msg => console.log(msg))
+            .catch(err => handleApiHubErr( transaction, err ));
+    }
+    catch( err ) {
+        handleApiHubErr( transaction, err )
+    }
 });
 
 export default router;

@@ -21,16 +21,20 @@
 // *********************************************************************
 
 import express from 'express';
+import 'dotenv/config'; //.env configuration
+import { initConfig } from './globs.js';
 import { ApiHubErr } from './err.js';
 import DplAuthToken from '../share/dnbDplAuth.js'
-import hub from './routes/hub.js';
 
 const app = express();
 app.use( express.json() );
 
-const port = process.env.API_SERVER_PORT || 8080; //Server port
+//Load, when the database connection is ready, the API Hub routes
+await initConfig()
+    .then( () => (async () => await import('./routes/hub.js'))() )
+    .then( hub => app.use('/hub', hub.default) );
 
-app.use('/hub', hub); //Base URL
+const port = process.env.API_SERVER_PORT || 8080; //Server port
 
 app.use((req, resp) => { //An HTTP request catch-all
     const err = new ApiHubErr('unableToLocate', `Requested: ${req.path}`);
@@ -48,9 +52,7 @@ const server = app.listen(port, err => {
     }
 });
 
-//Get a D&B Direct+ Authorization token
-const dplAuthToken = new DplAuthToken('v2', false);
-
+//Handle SIGINT (i.e. Ctrl+C) interrupt
 process.on('SIGINT', () => {
     console.log('\nServer received SIGINT');
 
@@ -60,3 +62,5 @@ process.on('SIGINT', () => {
         process.exit(0);
     });
 });
+
+const dplAuthToken = new DplAuthToken('v2', false);

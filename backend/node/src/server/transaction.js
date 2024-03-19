@@ -22,7 +22,7 @@
 
 import { cleanDUNS, isValidLei } from '../share/utils.js';
 import { ApiHubErr } from './err.js';
-import { dplReqParams, leiReqParams } from './globs.js'
+import { config } from './globs.js'
 
 class HubTransaction {
     constructor(expressReq, expressResp, apiProvider, endpoint) {
@@ -100,11 +100,11 @@ class HubTransaction {
             }
             else {
                 if(this.apiProvider.key === 'duns') {
-                    this._reqParams = dplReqParams.get(this._product);
+                    this._reqParams = config.reqParams.dpl.get(this._product);
                 }
     
                 if(this.apiProvider.key === 'lei') {
-                    this._reqParams = leiReqParams.get(this._product);
+                    this._reqParams = config.reqParams.lei.get(this._product);
                 }
             }
         }

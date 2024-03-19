@@ -23,13 +23,11 @@
 import express from 'express';
 
 import HubTransaction from '../transaction.js';
-import { apiProvider } from '../../share/apiDefs.js';
+import { config } from '../globs.js';
 import { ahReqPersistRespKey, ahReqPersistRespIDR } from '../core.js';
 import handleApiHubErr from '../errCatch.js';
 
 const router = express.Router();
-
-const apiProviderDpl = apiProvider.get('dnb');
 
 const idrEndpoint = 'idr';
 const keyEndpoint = 'key';
@@ -39,7 +37,7 @@ router.post(`/${idrEndpoint}`, (req, resp) => {
     
     try {
         //Transaction parameters
-        transaction = new HubTransaction( req, resp, apiProviderDpl, idrEndpoint );
+        transaction = new HubTransaction( req, resp, config.hubAPIs.get('dnb'), idrEndpoint );
 
         //Let the API Hub do its thing
         ahReqPersistRespIDR( transaction )
@@ -51,12 +49,12 @@ router.post(`/${idrEndpoint}`, (req, resp) => {
     }
 });
 
-router.get(`/${apiProviderDpl.key}/:${keyEndpoint}`, (req, resp) => {
+router.get(`/${config.hubAPIs.get('dpl').api_key}/:${keyEndpoint}`, (req, resp) => {
     let transaction;
 
     try {
         //Transaction parameters
-        transaction = new HubTransaction( req, resp, apiProviderDpl, keyEndpoint );
+        transaction = new HubTransaction( req, resp, config.hubAPIs.get('dnb'), keyEndpoint );
 
         transaction.key = req.params.key;
 
@@ -71,5 +69,5 @@ router.get(`/${apiProviderDpl.key}/:${keyEndpoint}`, (req, resp) => {
         handleApiHubErr( transaction, err )
     }
 });
- 
+
 export default router;

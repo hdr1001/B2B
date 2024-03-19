@@ -20,53 +20,74 @@
 //
 // *********************************************************************
 
-//Import the fs module for interacting with the file system
-import { readFileSync } from 'fs';
+import db from './pg.js';
 
-const { PG_HOST, PG_DATABASE, PG_USER, PG_PASSWORD } = process.env;
+const config = {
+    hubProviders: null, //Read from database table api_providers
 
-let pg_pwd = '';
+    hubAPIs: null, //Read from database table apis
 
-if(!PG_PASSWORD) {
-    try {
-        pg_pwd = readFileSync('/run/secrets/pg_password', 'utf8').trim()
+    reqParams: {
+        dpl: new Map([
+            [
+                '00',
+                {
+                    blockIDs: 'companyinfo_L2_v1,principalscontacts_L1_v2,hierarchyconnections_L1_v1',
+                    orderReason: 6332
+                }
+            ],
+            [
+                '01',
+                {
+                    blockIDs: 'financialstrengthinsight_L2_v1,paymentinsight_L1_v1',
+                    tradeUp: 'hq',
+                    orderReason: 6332
+                }
+            ]
+        ]),
+
+        lei: new Map([
+            ['00', { subSingleton: null }],
+            ['01', { subSingleton: 'ultimate-parent-relationship' }]
+        ])
     }
-    catch(err) {
-        console.error(err)
-    }
+};
+
+async function initConfig() {
+    const sql = [ 
+        'SELECT provider, full_name, acronym, url FROM api_providers',
+        'SELECT api, provider, api_key, full_name, acronym, url FROM apis'
+    ];
+
+    return Promise.all([ db.query(sql[0]), db.query(sql[1]) ])
+        .then(arr => {
+            config.hubProviders = new Map(arr[0].rows.map(row => [
+                    row.provider,
+                    { 
+                        provider: row.provider,
+                        full_name: row.full_name,
+                        acronym: row.acronym,
+                        url: row.url
+                    }
+                ]
+            ));
+    
+            config.hubAPIs = new Map(arr[1].rows.map(row => [
+                    row.api,
+                    { 
+                        api: row.api,
+                        provider: row.provider,
+                        api_key: row.api_key,
+                        full_name: row.full_name,
+                        acronym: row.acronym,
+                        url: row.url
+                    }
+                ]
+            ));
+        });
 }
-
-const pgConn = {
-    host: PG_HOST,
-    database: PG_DATABASE,
-    user: PG_USER,
-    password: PG_PASSWORD || pg_pwd,
-    port: 5432,
-    max: 10, //set pool max size to 10
-    idleTimeoutMillis: 1000, //close idle clients after 1 second
-    connectionTimeoutMillis: 9999, //return an error after 10 seconds if connection could not be established
-    maxUses: 7500, //close (and replace) a connection after it has been used 7500 times
-}
-
-const dplReqParams = new Map([
-    ['00', {
-        blockIDs: 'companyinfo_L2_v1,principalscontacts_L1_v2,hierarchyconnections_L1_v1',
-        orderReason: 6332
-    }],
-    ['01', {
-        blockIDs: 'financialstrengthinsight_L2_v1,paymentinsight_L1_v1',
-        tradeUp: 'hq',
-        orderReason: 6332
-    }]
-]);
-
-const leiReqParams = new Map([
-    ['00', { subSingleton: null }],
-    ['01', { subSingleton: 'ultimate-parent-relationship' }]
-]);
 
 export {
-    pgConn,
-    dplReqParams,
-    leiReqParams
+    config,
+    initConfig
 };

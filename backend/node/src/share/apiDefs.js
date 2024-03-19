@@ -31,13 +31,7 @@ const baseURL = url => `${url.scheme}://${url.domainSub}.${url.domain}.${url.dom
 
 //Shared HTTP headers
 const sharedHeaders = { 'Content-Type': 'application/json' };
-
-//API providers
-const apiProvider = new Map([
-    ['gleif', { fullName: 'Global Legal Entity Identifier Foundation', acronym: 'GLEIF', url: 'https://www.gleif.org', key: 'lei', apis: ['lei'] }],
-    ['dnb', { fullName: 'Dun & Bradstreet', acronym: 'D&B', url: 'https://www.dnb.com', key: 'duns', apis: ['dpl'] }]
-]);
-
+/*
 //Parse the API & its provider out of an Express request object baseUrl
 apiProvider.baseUrlProviderApi = function(baseUrl) {
     const providers = this.keys();
@@ -70,7 +64,7 @@ apiProvider.baseUrlProviderApi = function(baseUrl) {
 
     return ret;
 }
-
+*/
 //Supported APIs
 const api = {
     lei: {
@@ -317,7 +311,6 @@ class DnbDplIDR {
 }
 
 export {
-    apiProvider,
     LeiReq,
     LeiFilter,
     DnbDplAuth,

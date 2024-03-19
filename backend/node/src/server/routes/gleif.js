@@ -23,13 +23,11 @@
 import express from 'express';
 
 import HubTransaction from '../transaction.js';
-import { apiProvider } from '../../share/apiDefs.js';
+import { config } from '../globs.js';
 import { ahReqPersistRespKey, ahReqPersistRespIDR } from '../core.js';
 import handleApiHubErr from '../errCatch.js';
 
 const router = express.Router();
-
-const apiProviderLei = apiProvider.get('gleif');
 
 const idrEndpoint = 'filter';
 const keyEndpoint = 'key';
@@ -39,7 +37,7 @@ router.post(`/${idrEndpoint}`, (req, resp) => {
 
     try {
         //Transaction parameters
-        transaction = new HubTransaction( req, resp, apiProviderLei, idrEndpoint );
+        transaction = new HubTransaction( req, resp, config.hubAPIs.get('gleif'), idrEndpoint );
 
         //Let the API Hub do its thing
         ahReqPersistRespIDR( transaction )
@@ -56,7 +54,7 @@ router.get(`/:${keyEndpoint}`, (req, resp) => {
 
     try {
         //Transaction parameters
-        transaction = new HubTransaction( req, resp, apiProviderLei, keyEndpoint );
+        transaction = new HubTransaction( req, resp, config.hubAPIs.get('gleif'), keyEndpoint );
 
         transaction.key = req.params.key;
 
