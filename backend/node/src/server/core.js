@@ -28,16 +28,16 @@ import db from './pg.js';
 function ahReqPersistRespKey( transaction ) {
     let sSqlSelect, sSqlUpsert;
 
-    if(transaction.apiProvider.key === 'lei') {
+    if(transaction.hubAPI.api_key === 'lei') {
         sSqlSelect  = `SELECT lei, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product} FROM products_gleif WHERE lei = $1;`;
 
         sSqlUpsert  = `INSERT INTO products_gleif (lei, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
         sSqlUpsert += `ON CONFLICT ( lei ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
 
-        transaction.req = new LeiReq(transaction.key, transaction.reqParams.subSingleton);
+        transaction.req = new LeiReq(transaction.key, transaction.reqParams );
     }
 
-    if(transaction.apiProvider.key === 'duns') {
+    if(transaction.hubAPI.api_key === 'duns') {
         sSqlSelect  = `SELECT duns, product_${transaction.product}, tsz_${transaction.product}, http_status_${transaction.product} FROM products_dnb WHERE duns = $1;`;
 
         sSqlUpsert  = `INSERT INTO products_dnb (duns, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
@@ -136,13 +136,13 @@ function ahReqPersistRespKey( transaction ) {
 export default function ahReqPersistRespIDR( transaction ) {
     let sSqlInsert;
 
-    if(transaction.apiProvider.key === 'lei') {
+    if(transaction.hubAPI.api === 'lei') {
         sSqlInsert = 'INSERT INTO idr_lei (req_params, resp_idr, http_status, tsz) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id';
 
         transaction.req = new LeiFilter(transaction.reqParams);
     }
 
-    if(transaction.apiProvider.key === 'duns') {
+    if(transaction.hubAPI.api === 'dpl') {
         sSqlInsert = 'INSERT INTO idr_dnb_dpl (req_params, resp_idr, http_status, tsz) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id';
 
         transaction.req = new DnbDplIDR(transaction.reqParams);

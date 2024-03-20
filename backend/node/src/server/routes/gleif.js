@@ -37,7 +37,7 @@ router.post(`/${idrEndpoint}`, (req, resp) => {
 
     try {
         //Transaction parameters
-        transaction = new HubTransaction( req, resp, config.hubAPIs.get('gleif'), idrEndpoint );
+        transaction = new HubTransaction( req, resp, config.hubAPIs.get('lei'), idrEndpoint );
 
         //Let the API Hub do its thing
         ahReqPersistRespIDR( transaction )
@@ -54,14 +54,14 @@ router.get(`/:${keyEndpoint}`, (req, resp) => {
 
     try {
         //Transaction parameters
-        transaction = new HubTransaction( req, resp, config.hubAPIs.get('gleif'), keyEndpoint );
+        transaction = new HubTransaction( req, resp, config.hubAPIs.get('lei'), keyEndpoint );
 
         transaction.key = req.params.key;
 
         transaction.product = req.query?.product; //'00' is the default product key
 
         //Let the API Hub do its thing
-        ahReqPersistRespKey(transaction)
+        ahReqPersistRespKey( transaction )
             .then(msg => console.log(msg))
             .catch(err => handleApiHubErr( transaction, err ));
     }

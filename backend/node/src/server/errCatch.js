@@ -28,7 +28,7 @@ function handleApiHubErr(transaction, err) {
     const sSqlHttpErr = 'INSERT INTO errors_http (req, err, http_status) VALUES ($1, $2, $3) RETURNING id';
 
     const oReq = {
-        provider: transaction.apiProvider,
+        provider: transaction.hubAPI,
         endpoint: transaction.endpoint
     };
 

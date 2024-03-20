@@ -25,20 +25,20 @@ import { ApiHubErr } from './err.js';
 import { config } from './globs.js'
 
 class HubTransaction {
-    constructor(expressReq, expressResp, apiProvider, endpoint) {
+    constructor(expressReq, expressResp, hubAPI, endpoint) {
         this.expressReq = expressReq;
         this.expressResp = expressResp;
-        this.apiProvider = apiProvider;
+        this.hubAPI = hubAPI;
         this.endpoint = endpoint === 'filter' ? 'idr' : endpoint;
 
         this.nonCriticalErrs = [];
 
-        if(apiProvider.key === 'duns' && endpoint === 'idr') {
-            this.nonCriticalErrs = [ 404 ];
+        if(hubAPI.api === 'dpl' && endpoint === 'idr') {
+            this.nonCriticalErrs = [ 404 ]
         }
 
-        if(apiProvider.key === 'lei' && endpoint !== 'idr') {
-            this.nonCriticalErrs = [ 404 ];
+        if(hubAPI.api === 'lei' && endpoint !== 'idr') {
+            this.nonCriticalErrs = [ 404 ]
         }
 
         if(expressReq.query?.forceNew && expressReq.query.forceNew.toLowerCase() === 'true') {
@@ -47,11 +47,11 @@ class HubTransaction {
     }
 
     set key(keyIn) {
-        if(this.apiProvider.key === 'duns') {
+        if(this.hubAPI.api_key === 'duns') {
             this._key = cleanDUNS(keyIn)
         }
 
-        if(this.apiProvider.key === 'lei') {
+        if(this.hubAPI.api_key === 'lei') {
             if(isValidLei(keyIn)) { this._key = keyIn }
         }
 
@@ -80,7 +80,7 @@ class HubTransaction {
     get reqParams() {
         if(!this._reqParams) {
             if(this.endpoint === 'idr') {
-                if(this.apiProvider.key === 'duns') {
+                if(this.hubAPI.api === 'dpl') {
                     if(!this.expressReq.body || this.expressReq.body.constructor !== Object || Object.keys(this.expressReq.body).length === 0) {
                         throw new ApiHubErr('unprocessableEntity', 'No search criteria specified in the body of the POST transaction');
                     }
@@ -90,7 +90,7 @@ class HubTransaction {
                     }
                 }
 
-                if(this.apiProvider.key === 'lei') {
+                if(this.hubAPI.api === 'lei') {
                     if(!this.expressReq.body || this.expressReq.body.constructor !== Object) {
                         throw new ApiHubErr('unprocessableEntity', 'No search criteria specified in the body of the POST transaction');
                     }
@@ -99,11 +99,11 @@ class HubTransaction {
                 this._reqParams = this.expressReq.body;
             }
             else {
-                if(this.apiProvider.key === 'duns') {
+                if(this.hubAPI.api === 'dpl') {
                     this._reqParams = config.reqParams.dpl.get(this._product);
                 }
-    
-                if(this.apiProvider.key === 'lei') {
+
+                if(this.hubAPI.api === 'lei') {
                     this._reqParams = config.reqParams.lei.get(this._product);
                 }
             }
