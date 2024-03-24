@@ -47,8 +47,8 @@ const config = {
         ]),
 
         lei: new Map([
-            ['00', { subSingleton: null }],
-            ['01', { subSingleton: 'ultimate-parent-relationship' }]
+            ['00', {} ],
+            ['01', { qryParams: {}, subSingleton: 'ultimate-parent-relationship' }]
         ])
     }
 };

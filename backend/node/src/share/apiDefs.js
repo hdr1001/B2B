@@ -24,7 +24,7 @@
 import 'dotenv/config';
 
 //Persist updated key values in the .env file
-import { setEnvValue, getCreds } from './utils.js';
+import { objEmpty, setEnvValue, getCreds } from './utils.js';
 
 //Construct the base URL for an API
 const baseURL = url => `${url.scheme}://${url.domainSub}.${url.domain}.${url.domainTop}${url.port ? ':' + url.port : ''}/`;
@@ -106,8 +106,11 @@ const apiEndpoint = {
             getReq: function() {
                 let qryString = '';
 
-                if(this.params) {
+                if(this.filter) {
                     qryString = new URLSearchParams({ ...this.params, ...api.lei.leiPageSizeNum })
+                }
+                else {
+                    if(!objEmpty(this.params)) { qryString = new URLSearchParams( this.params ) }
                 }
 
                 let uri = `${apiEndpoint.lei.baseURL}${this.path}`;
@@ -165,7 +168,7 @@ const apiEndpoint = {
         dbs: { //D&B Direct+ data blocks
             getReq: function() {
                 return new Request(
-                    `${apiEndpoint.dpl.baseURL}${this.path}/${this.resource}?${new URLSearchParams({ ...this.qryParameters })}`,
+                    `${apiEndpoint.dpl.baseURL}${this.path}/${this.resource}?${new URLSearchParams(this.qryParameters)}`,
                     {
                         headers: api.dpl.headers,
                     }
@@ -176,7 +179,7 @@ const apiEndpoint = {
         famTree: { //D&B Direct+ family tree
             getReq: function() {
                 return new Request(
-                    `${apiEndpoint.dpl.baseURL}${this.path}/${this.resource}?${new URLSearchParams({ ...this.qryParameters })}`,
+                    `${apiEndpoint.dpl.baseURL}${this.path}/${this.resource}?${new URLSearchParams(this.qryParameters)}`,
                     {
                         headers: api.dpl.headers,
                     }
@@ -198,7 +201,7 @@ const apiEndpoint = {
         idr: { //D&B Direct+ IDentity Resolution
             getReq: function() {
                 return new Request(
-                    `${apiEndpoint.dpl.baseURL}${this.path}?${new URLSearchParams({ ...this.qryParameters })}`,
+                    `${apiEndpoint.dpl.baseURL}${this.path}?${new URLSearchParams(this.qryParameters)}`,
                     {
                         headers: api.dpl.headers,
                     }
@@ -209,9 +212,13 @@ const apiEndpoint = {
 };
 
 class LeiReq { //Get LEI record by ID 
-    constructor(resource, subSingleton) {
+    constructor(resource, qryParameters = {}, subSingleton = null) {
         this.resource = resource;
-        this.subSingleton = subSingleton;
+        this.params = qryParameters
+
+        if(subSingleton) {
+            this.subSingleton = subSingleton
+        } 
     }
 
     def = { api: 'lei', endpoint: 'leiRecs' };

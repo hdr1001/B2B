@@ -20,6 +20,8 @@
 //
 // *********************************************************************
 
+import { objEmpty } from './utils.js';
+
 //API Hub URI components
 const url = {
     scheme: 'http',
@@ -50,7 +52,9 @@ const apiEndpoint = {
                     opts.body = JSON.stringify(this.params);
                 }
                 else {
-                    if(this.params) { uri += `?${new URLSearchParams({ ...this.params })}` } 
+                    if(!objEmpty( this.params )) {
+                        uri += `?${new URLSearchParams( this.params )}`
+                    } 
                 }
 
                 return new Request( uri, opts );

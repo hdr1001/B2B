@@ -35,7 +35,7 @@ const leiReqs = [];
 if(useHub) { //Request the LEI examples through the API Hub
     leiReqs.push(new LeiReqHub('529900F4SNCR9BEWFZ60'));
 
-    leiReqs.push(new LeiReqHub('5493004SYPRAVRVNK561', { forceNew: true, product: '01' }));
+    leiReqs.push(new LeiReqHub('JLS56RAMYQZECFUF2G44', { forceNew: true, product: '01' }));
     
     leiReqs.push(new LeiFilterHub({
         'filter[entity.registeredAs]': '33302453',
@@ -50,7 +50,7 @@ if(useHub) { //Request the LEI examples through the API Hub
 else { //Request the LEI examples directly from GLEIF
     leiReqs.push(new LeiReq('529900F4SNCR9BEWFZ60'));
 
-    leiReqs.push(new LeiReq('5493004SYPRAVRVNK561', 'ultimate-parent-relationship'));
+    leiReqs.push(new LeiReq('JLS56RAMYQZECFUF2G44', {}, 'ultimate-parent-relationship'));
     
     leiReqs.push(new LeiFilter({
         'filter[entity.registeredAs]': '33302453',

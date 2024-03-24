@@ -34,7 +34,7 @@ function ahReqPersistRespKey( transaction ) {
         sSqlUpsert  = `INSERT INTO products_gleif (lei, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
         sSqlUpsert += `ON CONFLICT ( lei ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
 
-        transaction.req = new LeiReq(transaction.key, transaction.reqParams );
+        transaction.req = new LeiReq( transaction.key, transaction.reqParams.qryParams, transaction.reqParams.subSingleton );
     }
 
     if(transaction.hubAPI.api_key === 'duns') {
@@ -43,7 +43,7 @@ function ahReqPersistRespKey( transaction ) {
         sSqlUpsert  = `INSERT INTO products_dnb (duns, product_${transaction.product}, http_status_${transaction.product}, tsz_${transaction.product}) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) `;
         sSqlUpsert += `ON CONFLICT ( duns ) DO UPDATE SET product_${transaction.product} = $2, http_status_${transaction.product} = $3, tsz_${transaction.product} = CURRENT_TIMESTAMP;`;
 
-        transaction.req = new DnbDplDBs(transaction.key, transaction.reqParams);
+        transaction.req = new DnbDplDBs( transaction.key, transaction.reqParams );
     }
 
     //If not forceNew and data available from database, deliver from stock

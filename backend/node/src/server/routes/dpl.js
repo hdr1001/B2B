@@ -37,7 +37,7 @@ router.post(`/${idrEndpoint}`, (req, resp) => {
     
     try {
         //Transaction parameters
-        transaction = new HubTransaction( req, resp, config.hubAPIs.get('dnb'), idrEndpoint );
+        transaction = new HubTransaction( req, resp, config.hubAPIs.get('dpl'), idrEndpoint );
 
         //Let the API Hub do its thing
         ahReqPersistRespIDR( transaction )
@@ -54,7 +54,7 @@ router.get(`/${config.hubAPIs.get('dpl').api_key}/:${keyEndpoint}`, (req, resp) 
 
     try {
         //Transaction parameters
-        transaction = new HubTransaction( req, resp, config.hubAPIs.get('dnb'), keyEndpoint );
+        transaction = new HubTransaction( req, resp, config.hubAPIs.get('dpl'), keyEndpoint );
 
         transaction.key = req.params.key;
 
