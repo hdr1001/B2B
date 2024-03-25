@@ -29,10 +29,10 @@ import db from '../pg.js';
 const router = express.Router();
 
 function runProjectStage(projectStage) {
-    console.log(`Initiating execution of project stage ${projectStage.stage} using script ${projectStage.params?.script}`);
+    console.log(`Initiating execution of project stage ${projectStage.stage} using script ${projectStage.script}`);
 
     return new Promise((resolve, reject) => {
-        const worker = new Worker(`./src/server/workers/${projectStage.params?.script}.js`, { workerData: { stage: projectStage }});
+        const worker = new Worker(`./src/server/workers/${projectStage.script}.js`, { workerData: { stage: projectStage }});
 
         worker.on('message', ret => resolve(ret));
 
@@ -50,10 +50,10 @@ router.post('/', (req, resp) => {
     const project = { id: req.body.id }
 
     if(project.id) {
-        let sSql = "SELECT projects.id, projects.descr, project_stages.stage, project_stages.finished, project_stages.params ";
-        sSql    += "FROM projects, project_stages ";
-        sSql    += "WHERE projects.id = $1 AND projects.id = project_stages.project_id ";
-        sSql    += "ORDER BY project_stages.stage ASC;";
+        let sSql = "SELECT projects.id, projects.descr, ps.stage, ps.api, ps.script, ps.params, ps.finished ";
+        sSql    += "FROM projects, project_stages AS ps ";
+        sSql    += "WHERE projects.id = $1 AND projects.id = ps.project_id ";
+        sSql    += "ORDER BY ps.stage ASC;";
 
         db.query( sSql, [ project.id ] )
             .then(dbQry => {
@@ -62,7 +62,7 @@ router.post('/', (req, resp) => {
 
                     for(let i = 0, p = Promise.resolve(); i < dbQry.rows?.length; i++) {
                         p.then(() => runProjectStage(dbQry.rows[i])).then(msg => console.log(`Worker message received: ${msg}`));
-                    }                    
+                    }
                 }
             })
     }
@@ -77,6 +77,7 @@ router.post('/product', (req, resp) => {
     let transaction;
 
     const { provider, api, project_id, key } = req.body;
+
     try {
         //Transaction parameters
         transaction = new HubTransaction( req, resp, provider, api, false, p_id );

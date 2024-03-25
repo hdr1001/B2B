@@ -30,7 +30,8 @@
 -- ALTER TABLE public.project_keys DROP CONSTRAINT project_keys_fkey;
 -- ALTER TABLE public.project_keys DROP CONSTRAINT project_keys_pkey;
 -- DROP TABLE public.project_keys;
--- ALTER TABLE public.project_stages DROP CONSTRAINT project_stages_fkey;
+-- ALTER TABLE public.project_stages DROP CONSTRAINT project_stages_fkey_2;
+-- ALTER TABLE public.project_stages DROP CONSTRAINT project_stages_fkey_1;
 -- ALTER TABLE public.project_stages DROP CONSTRAINT project_stages_pkey;
 -- DROP TABLE public.project_stages;
 -- ALTER TABLE public.projects DROP CONSTRAINT projects_pkey;
@@ -336,10 +337,13 @@ CREATE TABLE public.projects (
 CREATE TABLE public.project_stages (
    project_id integer NOT NULL,
    stage smallint NOT NULL,
-   finished BOOLEAN DEFAULT FALSE,
+   api character varying(32),
+   script character varying(32),
    params JSONB,
+   finished BOOLEAN DEFAULT FALSE,
    CONSTRAINT project_stages_pkey PRIMARY KEY (project_id, stage),
-   CONSTRAINT project_stages_fkey FOREIGN KEY (project_id) REFERENCES projects(id)
+   CONSTRAINT project_stages_fkey_1 FOREIGN KEY (project_id) REFERENCES projects(id),
+   CONSTRAINT project_stages_fkey_2 FOREIGN KEY (api) REFERENCES apis(api)
 );
 
 -- Create table for storing project keys
@@ -398,12 +402,14 @@ BEGIN
    INSERT INTO projects ( descr ) VALUES ('Test project') RETURNING id INTO p_id;
 
    INSERT INTO project_stages
-      ( project_id, stage, params )
+      ( project_id, stage, api, script, params )
    VALUES
       (
          p_id,
          1,
-         '{ "script": "product", "provider": "dnb", "api": "dpl", "reqParams": { "blockIDs": "companyinfo_L2_v1,hierarchyconnections_L1_v1", "orderReason": 6332 }}'
+         'dpl',
+         'product',
+         '{ "reqParams": { "blockIDs": "companyinfo_L2_v1,hierarchyconnections_L1_v1", "orderReason": 6332 } }'
       );
 
    INSERT INTO project_keys

@@ -21,18 +21,33 @@
 // *********************************************************************
 
 import { parentPort, workerData } from 'worker_threads';
-import { gleifLimiter, dnbDplLimiter } from '../../share/limiters.js';
-import { DnbDplDBsHub, LeiReqHub } from '../../share/apiDefsHub.js';
-import pg from 'pg';
-import Cursor from 'pg-cursor';
+//import { gleifLimiter, dnbDplLimiter } from '../../share/limiters.js';
+//import { DnbDplDBsHub, LeiReqHub } from '../../share/apiDefsHub.js';
+//import pg from 'pg';
+//import Cursor from 'pg-cursor';
 
-pg.defaults.parseInt8 = true;
-
-import { pgConn } from '../globs.js';
+//import 'dotenv/config'; //.env configuration
+//pg.defaults.parseInt8 = true;
 
 const { stage } = workerData;
 
+console.log(stage);
+/*
 const { Pool } = pg;
+
+const { PG_HOST, PG_DATABASE, PG_USER, PG_PASSWORD } = process.env;
+
+const pgConn = {
+    host: PG_HOST,
+    database: PG_DATABASE,
+    user: PG_USER,
+    password: PG_PASSWORD || pg_pwd,
+    port: 5432,
+    max: 10, //set pool max size to 10
+    idleTimeoutMillis: 1000, //close idle clients after 1 second
+    connectionTimeoutMillis: 9999, //return an error after 10 seconds if connection could not be established
+    maxUses: 7500, //close (and replace) a connection after it has been used 7500 times
+};
 
 const pool = new Pool({ ...pgConn, ssl: { require: true } });
 
@@ -81,10 +96,10 @@ let rows = await cursor.read(100);
 
 while(rows.length) {
     const reqs = rows.map(row => {
-        if(stage.params.api === 'dpl') {
+        if(stage.api === 'dpl') {
             return new DnbDplDBsHub(row.req_key, stage.params.reqParams)
         }
-        else if(stage.params.api === 'lei') {
+        else if(stage.api === 'lei') {
             return new LeiReqHub(row.req_key, stage.params.reqParams)
         }
     })
@@ -105,7 +120,7 @@ pool.on('error', (err, client) => {
     console.log(`Unexpected error on idle client ${err.toString()}`);
     process.exit(-1);
 })
-
+*/
 setTimeout(() => { 
-    parentPort.postMessage(`Return upon completion of script ${stage.params.script}`) 
+    parentPort.postMessage(`Return upon completion of script ${stage.script}`) 
 }, 10000);
