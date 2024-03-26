@@ -20,107 +20,37 @@
 //
 // *********************************************************************
 
+import 'dotenv/config'; //.env configuration
 import { parentPort, workerData } from 'worker_threads';
-//import { gleifLimiter, dnbDplLimiter } from '../../share/limiters.js';
-//import { DnbDplDBsHub, LeiReqHub } from '../../share/apiDefsHub.js';
-//import pg from 'pg';
-//import Cursor from 'pg-cursor';
 
-//import 'dotenv/config'; //.env configuration
-//pg.defaults.parseInt8 = true;
+//Postgres modules & connection parameters
+import pg from 'pg';
+import Cursor from 'pg-cursor';
+import pgConn from '../pgGlobs.js';
 
+pg.defaults.parseInt8 = true;
+
+//The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
 const { stage } = workerData;
 
-console.log(stage);
-/*
-const { Pool } = pg;
+//Create a new database client, connect & instantiate a new cursor
+const client = new pg.Client( { ...pgConn, ssl: { require: true }} );
+await client.connect();
+const cursor = client.query( new Cursor(`SELECT req_key FROM project_keys WHERE project_id = ${stage.id}`) );
 
-const { PG_HOST, PG_DATABASE, PG_USER, PG_PASSWORD } = process.env;
-
-const pgConn = {
-    host: PG_HOST,
-    database: PG_DATABASE,
-    user: PG_USER,
-    password: PG_PASSWORD || pg_pwd,
-    port: 5432,
-    max: 10, //set pool max size to 10
-    idleTimeoutMillis: 1000, //close idle clients after 1 second
-    connectionTimeoutMillis: 9999, //return an error after 10 seconds if connection could not be established
-    maxUses: 7500, //close (and replace) a connection after it has been used 7500 times
-};
-
-const pool = new Pool({ ...pgConn, ssl: { require: true } });
-
-pool.query('SELECT NOW() as now')
-    .then(sqlRslt => console.log(`Database connection at ${sqlRslt.rows[0].now}`))
-    .catch(err => console.log(err));
-
-let limiter;
-
-if(stage.params.api === 'dpl') {
-    limiter = dnbDplLimiter;
-}
-else if(stage.params.api === 'lei') {
-    limiter = gleifLimiter;
-}
-
-//Asynchronous function for processing the API requests
-async function process(reqs) {
-    return Promise.allSettled(reqs.map(req => {
-        const ret = { key: req.resource }; //Start building the return object
-
-        return new Promise((resolve, reject) => {
-            limiter.removeTokens(1) //Respect the API rate limits
-                .then(() => fetch(req.getReq())) //The actual API call
-                .then(resp => {
-                    ret.httpStatus = resp.status; //Return the HTTP status code
-
-                    if(resp.ok) {
-                        ret.ok = true;
-
-                        resolve(ret);
-                    }
-                    else {
-                        reject(new Error(`Fetch response not okay, HTTP status: ${ret.httpStatus}`))
-                    }
-                })
-                .catch(err => reject(err))
-        });
-    }))
-}
-
-const client = await pool.connect();
-const cursor = client.query(new Cursor(`SELECT req_key FROM project_keys WHERE project_id = ${stage.id}`));
-
+//Use the cursor to read the 1st 100 rows
 let rows = await cursor.read(100);
 
+//Iterate over the available rows
 while(rows.length) {
     const reqs = rows.map(row => {
-        if(stage.api === 'dpl') {
-            return new DnbDplDBsHub(row.req_key, stage.params.reqParams)
-        }
-        else if(stage.api === 'lei') {
-            return new LeiReqHub(row.req_key, stage.params.reqParams)
-        }
-    })
-
-    const results = await process(reqs);
-
-    results.forEach(result => {
-        console.log(`Settled ${result.value.key} with status ${result.status}`)
+        console.log(`Request key = ${row.req_key}`)
     });
 
     rows = await cursor.read(100);
 }
 
-// the pool will emit an error on behalf of any idle clients
-// it contains if a backend error or network partition happens
-// https://node-postgres.com/features/pooling
-pool.on('error', (err, client) => {
-    console.log(`Unexpected error on idle client ${err.toString()}`);
-    process.exit(-1);
-})
-*/
-setTimeout(() => { 
+setTimeout(() => {
+    //Send a message to the code where the worker was spawned
     parentPort.postMessage(`Return upon completion of script ${stage.script}`) 
 }, 10000);

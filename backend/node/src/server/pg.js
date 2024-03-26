@@ -23,32 +23,9 @@
 import pg from 'pg';
 pg.defaults.parseInt8 = true;
 
-const { PG_HOST, PG_DATABASE, PG_USER, PG_PASSWORD } = process.env;
-
-let pg_pwd = '';
-
-if(!PG_PASSWORD) {
-    try {
-        pg_pwd = readFileSync('~/.secrets/pg_password', 'utf8').trim()
-    }
-    catch(err) {
-        console.error(err)
-    }
-}
+import pgConn from './pgGlobs.js';
 
 const { Pool } = pg;
-
-const pgConn = {
-    host: PG_HOST,
-    database: PG_DATABASE,
-    user: PG_USER,
-    password: PG_PASSWORD || pg_pwd,
-    port: 5432,
-    max: 10, //set pool max size to 10
-    idleTimeoutMillis: 1000, //close idle clients after 1 second
-    connectionTimeoutMillis: 9999, //return an error after 10 seconds if connection could not be established
-    maxUses: 7500, //close (and replace) a connection after it has been used 7500 times
-};
 
 //const pool = new Pool({ ...pgConn, ssl: false });
 const pool = new Pool({ ...pgConn, ssl: { require: true } });
