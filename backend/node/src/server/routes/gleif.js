@@ -22,7 +22,7 @@
 
 import express from 'express';
 
-import HubTransaction from '../transaction.js';
+import { HubTransaction } from '../transaction.js';
 import { config } from '../globs.js';
 import { ahReqPersistRespKey, ahReqPersistRespIDR } from '../core.js';
 import handleApiHubErr from '../errCatch.js';

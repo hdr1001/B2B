@@ -24,10 +24,8 @@ import { cleanDUNS, isValidLei } from '../share/utils.js';
 import { ApiHubErr } from './err.js';
 import { config } from './globs.js'
 
-class HubTransaction {
-    constructor(expressReq, expressResp, hubAPI, endpoint) {
-        this.expressReq = expressReq;
-        this.expressResp = expressResp;
+class Transaction {
+    constructor(hubAPI, endpoint) {
         this.hubAPI = hubAPI;
         this.endpoint = endpoint === 'filter' ? 'idr' : endpoint;
 
@@ -39,10 +37,6 @@ class HubTransaction {
 
         if(hubAPI.api === 'lei' && endpoint !== 'idr') {
             this.nonCriticalErrs = [ 404 ]
-        }
-
-        if(expressReq.query?.forceNew && expressReq.query.forceNew.toLowerCase() === 'true') {
-            this.forceNew = true
         }
     }
 
@@ -63,6 +57,19 @@ class HubTransaction {
     }
 
     get key() { return this._key }
+}
+
+class HubTransaction extends Transaction {
+    constructor(expressReq, expressResp, hubAPI, endpoint) {
+        super(hubAPI, endpoint);
+
+        this.expressReq = expressReq;
+        this.expressResp = expressResp;
+
+        if(expressReq.query?.forceNew && expressReq.query.forceNew.toLowerCase() === 'true') {
+            this.forceNew = true
+        }
+    }
 
     set product(productIn) {
         if(productIn) {
@@ -122,4 +129,19 @@ class HubTransaction {
     }
 }
 
-export default HubTransaction;
+class HubProjectTransaction extends Transaction {
+    constructor(hubAPI, endpoint, projectStage) {
+        super(hubAPI, endpoint);
+
+        this.projectStage = projectStage;
+    }
+
+    get reqParams() {
+        return this.projectStage.params.reqParams;
+    }
+}
+
+export {
+    HubTransaction,
+    HubProjectTransaction
+};

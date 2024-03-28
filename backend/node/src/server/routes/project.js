@@ -22,7 +22,7 @@
 
 import express from 'express';
 import { Worker } from 'worker_threads';
-import HubTransaction from '../transaction.js';
+//import { HubTransaction } from '../transaction.js';
 import { httpStatus } from '../err.js';
 import db from '../pg.js';
 
@@ -72,7 +72,7 @@ router.post('/', (req, resp) => {
 
     resp.status(httpStatus.accepted.code).json({ status: 'running' });
 });
-
+/*
 router.post('/product', (req, resp) => {
     let transaction;
 
@@ -93,5 +93,5 @@ router.post('/product', (req, resp) => {
         handleApiHubErr( transaction, err )
     }
 });
-
+*/
 export default router;

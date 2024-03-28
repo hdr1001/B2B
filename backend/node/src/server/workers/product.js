@@ -28,6 +28,8 @@ import pg from 'pg';
 import Cursor from 'pg-cursor';
 import pgConn from '../pgGlobs.js';
 
+import { HubProjectTransaction } from '../transaction.js';
+
 pg.defaults.parseInt8 = true;
 
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
@@ -43,9 +45,7 @@ let rows = await cursor.read(100);
 
 //Iterate over the available rows
 while(rows.length) {
-    const reqs = rows.map(row => {
-        console.log(`Request key = ${row.req_key}`)
-    });
+    console.log(rows.map(row => (`Request key = ${JSON.stringify(new HubProjectTransaction('dpl', stage.script, stage), null, 3)}`)));
 
     rows = await cursor.read(100);
 }
