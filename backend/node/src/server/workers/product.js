@@ -28,29 +28,31 @@ import pg from 'pg';
 import Cursor from 'pg-cursor';
 import pgConn from '../pgGlobs.js';
 
-import { HubProjectTransaction } from '../transaction.js';
-
 pg.defaults.parseInt8 = true;
 
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
-const { stage } = workerData;
+const { hpt } = workerData;
 
 //Create a new database client, connect & instantiate a new cursor
 const client = new pg.Client( { ...pgConn, ssl: { require: true }} );
 await client.connect();
-const cursor = client.query( new Cursor(`SELECT req_key FROM project_keys WHERE project_id = ${stage.id}`) );
+const cursor = client.query( new Cursor(`SELECT req_key FROM project_keys WHERE project_id = ${hpt.projectStage.id}`) );
 
 //Use the cursor to read the 1st 100 rows
 let rows = await cursor.read(100);
 
 //Iterate over the available rows
 while(rows.length) {
-    console.log(rows.map(row => (`Request key = ${JSON.stringify(new HubProjectTransaction('dpl', stage.script, stage), null, 3)}`)));
+    console.log(rows.map(row => {
+        hpt.key = row.req_key;
+
+        return `Request key = ${JSON.stringify(hpt)}`;
+    }));
 
     rows = await cursor.read(100);
 }
 
 setTimeout(() => {
     //Send a message to the code where the worker was spawned
-    parentPort.postMessage(`Return upon completion of script ${stage.script}`) 
+    parentPort.postMessage(`Return upon completion of script ${hpt.projectStage.script}`) 
 }, 10000);
