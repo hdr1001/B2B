@@ -28,10 +28,14 @@ import pg from 'pg';
 import Cursor from 'pg-cursor';
 import pgConn from '../pgGlobs.js';
 
+import { gleifLimiter, dnbDplLimiter } from '../../share/limiters.js';
+
 pg.defaults.parseInt8 = true;
 
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
 const { hpt } = workerData;
+
+const limiter = hpt.hubAPI.api === 'dpl' ? dnbDplLimiter : gleifLimiter;
 
 //Create a new database client, connect & instantiate a new cursor
 const client = new pg.Client( { ...pgConn, ssl: { require: true }} );
@@ -41,18 +45,28 @@ const cursor = client.query( new Cursor(`SELECT req_key FROM project_keys WHERE 
 //Use the cursor to read the 1st 100 rows
 let rows = await cursor.read(100);
 
+function process(rows) {
+    return Promise.allSettled(rows.map(row => {
+        return new Promise((resolve, reject) => {
+            limiter.removeTokens(1) //Respect the API rate limits
+                .then(() => {
+                    hpt.key = row.req_key;
+
+                    resolve(`Request key = ${JSON.stringify(hpt)}`);
+                    
+                    return;
+                })
+        })
+    }))
+}
+
 //Iterate over the available rows
 while(rows.length) {
-    console.log(rows.map(row => {
-        hpt.key = row.req_key;
+    const arrSettled = await process(rows);
 
-        return `Request key = ${JSON.stringify(hpt)}`;
-    }));
+    console.log(arrSettled);
 
     rows = await cursor.read(100);
 }
 
-setTimeout(() => {
-    //Send a message to the code where the worker was spawned
-    parentPort.postMessage(`Return upon completion of script ${hpt.projectStage.script}`) 
-}, 10000);
+parentPort.postMessage(`Return upon completion of script ${hpt.projectStage.script}`) 
