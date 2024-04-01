@@ -28,37 +28,77 @@ import pg from 'pg';
 import Cursor from 'pg-cursor';
 import pgConn from '../pgGlobs.js';
 
+import { dcdrUtf8 } from '../../share/utils.js';
 import { gleifLimiter, dnbDplLimiter } from '../../share/limiters.js';
-
-pg.defaults.parseInt8 = true;
+import { DnbDplDBs } from '../../share/apiDefs.js';
 
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
 const { hpt } = workerData;
 
+const { Pool } = pg;
+const pool = new Pool({ ...pgConn, ssl: { require: true } });
+
+const pgClient = await pool.connect()
+
+const cursor = pgClient.query( new Cursor(`SELECT req_key FROM project_keys WHERE project_id = ${hpt.projectStage.id}`) );
+
+const sqlInsert = 
+    `INSERT INTO project_products (
+        project_id, stage, req_key, product, http_status
+    )
+    VALUES (
+        ${hpt.projectStage.id}, ${hpt.projectStage.stage}, $1, $2, $3
+    );`
+
 const limiter = hpt.hubAPI.api === 'dpl' ? dnbDplLimiter : gleifLimiter;
 
 //Create a new database client, connect & instantiate a new cursor
-const client = new pg.Client( { ...pgConn, ssl: { require: true }} );
+/* const client = new pg.Client( { ...pgConn, ssl: { require: true }} );
 await client.connect();
 const cursor = client.query( new Cursor(`SELECT req_key FROM project_keys WHERE project_id = ${hpt.projectStage.id}`) );
 
-//Use the cursor to read the 1st 100 rows
-let rows = await cursor.read(100);
-
+//Create a client for persisting API responses
+const clntApiResp = new pg.Client( { ...pgConn, ssl: { require: true }} );
+await clntApiResp.connect();
+*/
 function process(rows) {
-    return Promise.allSettled(rows.map(row => {
-        return new Promise((resolve, reject) => {
-            limiter.removeTokens(1) //Respect the API rate limits
-                .then(() => {
-                    hpt.key = row.req_key;
+    return Promise.allSettled(
+        rows.map(row => new Promise((resolve, reject) => {
+            const transaction = { req: new DnbDplDBs( row.req_key, hpt.projectStage.params.reqParams ) };
 
-                    resolve(`Request key = ${JSON.stringify(hpt)}`);
-                    
-                    return;
+            limiter.removeTokens(1) //Respect the API rate limits
+                .then(() => fetch(transaction.req.getReq()))
+                .then(apiResp => {
+                    transaction.resp = apiResp;
+
+                    return apiResp.arrayBuffer();
+                })
+                .then(buff => {
+                    if(transaction.resp?.ok || transaction.nonCriticalErrs.includes(transaction.resp?.status)) {
+                        return pool.query(sqlInsert, [ row.req_key, dcdrUtf8.decode(buff), transaction.resp?.status ])
+                    }
+                    else {
+
+                    }
+                })
+                .then(dbQry => {
+                    let ret;
+
+                    if(dbQry && dbQry.rowCount === 1) {
+                        ret = `Success executing ${dbQry.command}`
+                    }
+                    else {
+                        ret = `Something went wrong upserting key ${row.req_key}`
+                    }
+
+                    resolve({ key: row.req_key, status: transaction.resp?.status} );
                 })
         })
-    }))
+    ))
 }
+
+//Use the cursor to read the 1st 100 rows
+let rows = await cursor.read(100);
 
 //Iterate over the available rows
 while(rows.length) {
