@@ -35,13 +35,18 @@ import { DnbDplDBs } from '../../share/apiDefs.js';
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
 const { hpt } = workerData;
 
+//Setup a reusable pool of database clients
 const { Pool } = pg;
 const pool = new Pool({ ...pgConn, ssl: { require: true } });
 
+//Acquire a database client from the pool
 const pgClient = await pool.connect()
 
-const cursor = pgClient.query( new Cursor(`SELECT req_key FROM project_keys WHERE project_id = ${hpt.projectStage.id}`) );
+//Use a cursor to read the keys included in the project in chunks
+const sqlKeys = `SELECT req_key FROM project_keys WHERE project_id = ${hpt.projectStage.id}`;
+const cursor = pgClient.query( new Cursor( sqlKeys ) );
 
+//SQL insert statement for persisting the API responses
 const sqlInsert = 
     `INSERT INTO project_products (
         project_id, stage, req_key, product, http_status
@@ -50,17 +55,10 @@ const sqlInsert =
         ${hpt.projectStage.id}, ${hpt.projectStage.stage}, $1, $2, $3
     );`
 
+//Make sure we stay within the set API TPS limitations
 const limiter = hpt.hubAPI.api === 'dpl' ? dnbDplLimiter : gleifLimiter;
 
-//Create a new database client, connect & instantiate a new cursor
-/* const client = new pg.Client( { ...pgConn, ssl: { require: true }} );
-await client.connect();
-const cursor = client.query( new Cursor(`SELECT req_key FROM project_keys WHERE project_id = ${hpt.projectStage.id}`) );
-
-//Create a client for persisting API responses
-const clntApiResp = new pg.Client( { ...pgConn, ssl: { require: true }} );
-await clntApiResp.connect();
-*/
+//Process a chunk of keys read using a database cursor
 function process(rows) {
     return Promise.allSettled(
         rows.map(row => new Promise((resolve, reject) => {
