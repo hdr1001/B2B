@@ -1,6 +1,6 @@
 // *********************************************************************
 //
-// Worker code to retrieve mult products in multi-stage projects
+// Worker code to retrieve data products in multi-stage projects
 // JavaScript code file: product.js
 //
 // Copyright 2024 Hans de Rooij
@@ -109,8 +109,8 @@ function process(rows) {
                     resolve({ key: row.req_key, status: hpt.resp?.status} );
                 })
                 .catch(err => {
-                    console.log(Object.getPrototypeOf(err))
-                    console.log(err)
+                    console.log(err.constructor)
+                    reject(err);
                 })
         })
     ))
@@ -128,4 +128,4 @@ while(rows.length) {
     rows = await cursor.read(100);
 }
 
-parentPort.postMessage(`Return upon completion of script ${hpt.projectStage.script}`) 
+parentPort.postMessage(`Return upon completion of script ${projectStage.script}`) 

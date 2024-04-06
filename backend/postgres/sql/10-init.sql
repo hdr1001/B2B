@@ -20,8 +20,8 @@
 --
 -- *********************************************************************
 
--- ALTER TABLE public.errors_http DROP CONSTRAINT errors_http_pkey;
--- DROP TABLE public.errors_http; 
+-- ALTER TABLE public.hub_errors DROP CONSTRAINT hub_errors_pkey;
+-- DROP TABLE public.hub_errors; 
 -- ALTER TABLE public.project_products DROP CONSTRAINT project_products_fkey_3;
 -- ALTER TABLE public.project_products DROP CONSTRAINT project_products_fkey_2;
 -- ALTER TABLE public.project_products DROP CONSTRAINT project_products_fkey_1;
@@ -67,7 +67,7 @@
 -- DROP TABLE public.api_keys;
 -- ALTER TABLE public.api_providers DROP CONSTRAINT api_providers_pkey;
 -- DROP TABLE public.api_providers;
--- DROP SEQUENCE public.errors_http_id_seq;
+-- DROP SEQUENCE public.hub_errors_id_seq;
 -- DROP SEQUENCE public.project_id_seq;
 -- DROP SEQUENCE public.idr_dnb_dpl_id_seq;
 -- DROP SEQUENCE public.archive_dnb_id_seq;
@@ -117,8 +117,8 @@ CREATE SEQUENCE public.project_id_seq
     MAXVALUE 9223372036854775807
     CACHE 1;
 
--- Create the sequence for the primary key of table errors_http
-CREATE SEQUENCE public.errors_http_id_seq
+-- Create the sequence for the primary key of table hub_errors
+CREATE SEQUENCE public.hub_errors_id_seq
     INCREMENT 1
     START 1
     MINVALUE 1
@@ -369,13 +369,13 @@ CREATE TABLE public.project_products (
 );
 
 -- Create table for logging HTTP errors
-CREATE TABLE public.errors_http (
-   id integer NOT NULL DEFAULT nextval('errors_http_id_seq'::regclass),
+CREATE TABLE public.hub_errors (
+   id integer NOT NULL DEFAULT nextval('hub_errors_id_seq'::regclass),
    req JSONB,
    err JSONB,
    http_status smallint,
    tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
-   CONSTRAINT errors_http_pkey PRIMARY KEY (id)
+   CONSTRAINT hub_errors_pkey PRIMARY KEY (id)
 );
 
 DO $$
