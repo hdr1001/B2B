@@ -22,7 +22,6 @@
 
 import express from 'express';
 import { Worker } from 'worker_threads';
-import { HubProjectTransaction } from '../transaction.js';
 import { config } from '../globs.js';
 import { httpStatus } from '../err.js';
 import db from '../pg.js';
@@ -36,7 +35,7 @@ function runProjectStage(projectStage) {
         const worker = new Worker(
             `./src/server/workers/${projectStage.script}.js`,
             { 
-                workerData: { hpt: new HubProjectTransaction(config.hubAPIs.get(projectStage.api), projectStage.script, projectStage) }
+                workerData: { hubAPI: config.hubAPIs.get(projectStage.api), projectStage }
             }
         );
 

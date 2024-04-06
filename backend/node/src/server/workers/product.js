@@ -31,9 +31,11 @@ import pgConn from '../pgGlobs.js';
 import { dcdrUtf8 } from '../../share/utils.js';
 import { gleifLimiter, dnbDplLimiter } from '../../share/limiters.js';
 import { DnbDplDBs } from '../../share/apiDefs.js';
+import { HubProjectTransaction } from '../transaction.js';
+import { ahErrCode, ApiHubErr } from '../err.js';
 
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
-const { hpt } = workerData;
+const { hubAPI, projectStage } = workerData;
 
 //Setup a reusable pool of database clients
 const { Pool } = pg;
@@ -43,7 +45,7 @@ const pool = new Pool({ ...pgConn, ssl: { require: true } });
 const pgClient = await pool.connect()
 
 //Use a cursor to read the keys included in the project in chunks
-const sqlKeys = `SELECT req_key FROM project_keys WHERE project_id = ${hpt.projectStage.id}`;
+const sqlKeys = `SELECT req_key FROM project_keys WHERE project_id = ${projectStage.id}`;
 const cursor = pgClient.query( new Cursor( sqlKeys ) );
 
 //SQL insert statement for persisting the API responses
@@ -52,31 +54,46 @@ const sqlInsert =
         project_id, stage, req_key, product, http_status
     )
     VALUES (
-        ${hpt.projectStage.id}, ${hpt.projectStage.stage}, $1, $2, $3
+        ${projectStage.id}, ${projectStage.stage}, $1, $2, $3
     );`
 
+//Instantiate a new project level HubProjectTransaction object
+const project_hpt = new HubProjectTransaction(hubAPI, projectStage.script, projectStage);
+
 //Make sure we stay within the set API TPS limitations
-const limiter = hpt.hubAPI.api === 'dpl' ? dnbDplLimiter : gleifLimiter;
+const limiter = hubAPI.api === 'dpl' ? dnbDplLimiter : gleifLimiter;
 
 //Process a chunk of keys read using a database cursor
 function process(rows) {
     return Promise.allSettled(
         rows.map(row => new Promise((resolve, reject) => {
-            const transaction = { req: new DnbDplDBs( row.req_key, hpt.projectStage.params.reqParams ) };
+            //Instantiate hub project transaction for processing an individual key
+            const hpt = Object.create(project_hpt);
 
             limiter.removeTokens(1) //Respect the API rate limits
-                .then(() => fetch(transaction.req.getReq()))
+                .then(() => {
+                    //Now set the appropriate key
+                    hpt.key = row.req_key;
+
+                    //Execute fetch and return the promise
+                    return fetch(new DnbDplDBs( hpt.key, hpt.projectStage.params.reqParams ).getReq())
+                })
                 .then(apiResp => {
-                    transaction.resp = apiResp;
+                    hpt.resp = apiResp;
 
                     return apiResp.arrayBuffer();
                 })
                 .then(buff => {
-                    if(transaction.resp?.ok || transaction.nonCriticalErrs.includes(transaction.resp?.status)) {
-                        return pool.query(sqlInsert, [ row.req_key, dcdrUtf8.decode(buff), transaction.resp?.status ])
+                    if(hpt.resp?.ok || hpt.nonCriticalErrs.includes(hpt.resp?.status)) {
+                        return pool.query(sqlInsert, [ hpt.key, dcdrUtf8.decode(buff), hpt.resp?.status ])
                     }
                     else {
-
+                        throw new ApiHubErr(
+                            'httpErrReturn',
+                            { project: {id: hpt.projectStage.id, stage: hpt.projectStage.stage, key: row.req_key} },
+                            hpt.resp?.status,
+                            dcdrUtf8.decode(buff)
+                        )
                     }
                 })
                 .then(dbQry => {
@@ -89,7 +106,11 @@ function process(rows) {
                         ret = `Something went wrong upserting key ${row.req_key}`
                     }
 
-                    resolve({ key: row.req_key, status: transaction.resp?.status} );
+                    resolve({ key: row.req_key, status: hpt.resp?.status} );
+                })
+                .catch(err => {
+                    console.log(Object.getPrototypeOf(err))
+                    console.log(err)
                 })
         })
     ))
