@@ -26,6 +26,7 @@ import { HubTransaction } from '../transaction.js';
 import { config } from '../globs.js';
 import { ahReqPersistRespKey, ahReqPersistRespIDR } from '../core.js';
 import handleApiHubErr from '../errCatch.js';
+import db from '../pg.js';
 
 const router = express.Router();
 
@@ -42,10 +43,10 @@ router.post(`/${idrEndpoint}`, (req, resp) => {
         //Let the API Hub do its thing
         ahReqPersistRespIDR( transaction )
             .then(msg => console.log(msg))
-            .catch(err => handleApiHubErr( transaction, err ));
+            .catch(err => handleApiHubErr( transaction, err, db ));
     }
     catch( err ) {
-        handleApiHubErr( transaction, err )
+        handleApiHubErr( transaction, err, db )
     }
 });
 
@@ -63,10 +64,10 @@ router.get(`/:${keyEndpoint}`, (req, resp) => {
         //Let the API Hub do its thing
         ahReqPersistRespKey( transaction )
             .then(msg => console.log(msg))
-            .catch(err => handleApiHubErr( transaction, err ));
+            .catch(err => handleApiHubErr( transaction, err, db ));
     }
     catch( err ) {
-        handleApiHubErr( transaction, err )
+        handleApiHubErr( transaction, err, db )
     }
 });
  

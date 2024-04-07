@@ -22,32 +22,53 @@
 
 import { isNumber } from '../share/utils.js';
 import { ApiHubErr, httpStatus } from './err.js';
-import db from './pg.js';
 
-function handleApiHubErr(transaction, err) {
-    const sSqlHttpErr = 'INSERT INTO hub_errors (req, err, http_status) VALUES ($1, $2, $3) RETURNING id';
-
+//List the request parameters
+function getReq(transaction) {
     const oReq = {
         provider: transaction.hubAPI,
         endpoint: transaction.endpoint
     };
 
+    //Product transaction parameters
+    if(transaction.key) { oReq.key = transaction.key }
+
+    if(typeof transaction.forceNew === 'boolean') {
+        oReq.forceNew = transaction.forceNew
+    }
+
+    if(transaction.product) { oReq.product = transaction.product }
+
+    //Project parameters
+    if(transaction.projectStage) {
+        oReq.projectStage = transaction.projectStage
+    }
+
+    //IDentity Resolution / filter transaction parameters
     if(oReq.endpoint === 'idr' || oReq.endpoint === 'filter') {
         if(transaction.expressReq?.body) {
             oReq.body = transaction.expressReq.body
         }    
     }
-    else {
-        oReq.forceNew = transaction.forceNew;
-        oReq.key = transaction.key;
-        oReq.product = transaction.product;
-    }
 
-    const errMsg = transaction.strBody || `{ "msg": "${err.addtlMessage || err.message}" }`;
-    const status = transaction.resp?.status || err.httpStatus?.code || httpStatus.genericErr.code;
+    return oReq;
+}
+
+//Get the HTTP status code associated with the error
+const getStatus = (transaction, err) => transaction.resp?.status || err.httpStatus?.code || httpStatus.genericErr.code;
+
+function handleApiHubErr(transaction, err, db) {
+    const status = getStatus(transaction, err);
 
     //Log the HTTP error to the database
-    db.query( sSqlHttpErr, [ JSON.stringify(oReq), errMsg, status] )
+    db.query( 
+                'INSERT INTO hub_errors (req, err, http_status) VALUES ($1, $2, $3) RETURNING id',
+                [
+                    JSON.stringify(getReq(transaction)),
+                    transaction.strBody || `{ "msg": "${err.addtlMessage || err.message}" }`,
+                    status
+                ]
+        )
         .then(dbQry => {
             let dbRowID;
 
@@ -60,19 +81,21 @@ function handleApiHubErr(transaction, err) {
                 console.log(`Something went wrong persisting an API Hub error`);
             }
 
-            const ts = transaction.tsResp ? new Date(transaction.tsResp) : new Date();
+            if(transaction.expressResp) {
+                const ts = transaction.tsResp ? new Date(transaction.tsResp) : new Date();
 
-            const oHeader = {
-                'X-B2BAH-API-HTTP-Status': status,
-                'X-B2BAH-Obtained-At': ts.toISOString(),
-                'X-B2BAH-Error-ID': dbRowID
-            };
-
-            if(!isNumber(err.hubErrorCode)) { //Error of class other than ApiHubErr was thrown
-                err = new ApiHubErr( 'generic', err.message, status, transaction.strBody )
+                const oHeader = {
+                    'X-B2BAH-API-HTTP-Status': status,
+                    'X-B2BAH-Obtained-At': ts.toISOString(),
+                    'X-B2BAH-Error-ID': dbRowID
+                };
+    
+                if(!isNumber(err.hubErrorCode)) { //Error of class other than ApiHubErr was thrown
+                    err = new ApiHubErr( 'generic', err.message, status, transaction.strBody )
+                }
+    
+                transaction.expressResp.header( oHeader ).status( status ).json( err );
             }
-
-            transaction.expressResp.header( oHeader ).status( status ).json( err );
         })
         .catch(err => console.error(err));
 }

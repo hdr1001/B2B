@@ -32,7 +32,8 @@ import { dcdrUtf8 } from '../../share/utils.js';
 import { gleifLimiter, dnbDplLimiter } from '../../share/limiters.js';
 import { DnbDplDBs } from '../../share/apiDefs.js';
 import { HubProjectTransaction } from '../transaction.js';
-import { ahErrCode, ApiHubErr } from '../err.js';
+import { ApiHubErr } from '../err.js';
+import handleApiHubErr from '../errCatch.js';
 
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
 const { hubAPI, projectStage } = workerData;
@@ -76,7 +77,7 @@ function process(rows) {
                     hpt.key = row.req_key;
 
                     //Execute fetch and return the promise
-                    return fetch(new DnbDplDBs( hpt.key, hpt.projectStage.params.reqParams ).getReq())
+                    return fetch(new DnbDplDBs( hpt.key, hpt.reqParams ).getReq())
                 })
                 .then(apiResp => {
                     hpt.resp = apiResp;
@@ -109,8 +110,11 @@ function process(rows) {
                     resolve({ key: row.req_key, status: hpt.resp?.status} );
                 })
                 .catch(err => {
-                    console.log(err.constructor)
-                    reject(err);
+                    if(err instanceof ApiHubErr) { //Persist the API Hub error
+                        handleApiHubErr(hpt, err, pool)
+                    }
+
+                    reject(err.addtlMessage || err.message);
                 })
         })
     ))
