@@ -30,7 +30,7 @@ import pgConn from '../pgGlobs.js';
 
 import { dcdrUtf8 } from '../../share/utils.js';
 import { gleifLimiter, dnbDplLimiter } from '../../share/limiters.js';
-import { DnbDplDBs } from '../../share/apiDefs.js';
+import { LeiReq, DnbDplDBs } from '../../share/apiDefs.js';
 import { HubProjectTransaction } from '../transaction.js';
 import { ApiHubErr } from '../err.js';
 import handleApiHubErr from '../errCatch.js';
@@ -76,38 +76,46 @@ function process(rows) {
                     //Now set the appropriate key
                     hpt.key = row.req_key;
 
+                    let apiReq;
+
+                    if(hubAPI.api === 'dpl') {
+                        apiReq = new DnbDplDBs( hpt.key, hpt.reqParams )
+                    }
+                    else {
+                        apiReq = new LeiReq( hpt.key )
+                    }
+
                     //Execute fetch and return the promise
-                    return fetch(new DnbDplDBs( hpt.key, hpt.reqParams ).getReq())
+                    return fetch(apiReq.getReq())
                 })
                 .then(apiResp => {
-                    hpt.resp = apiResp;
+                    hpt.resp = apiResp; //Store a reference to the API response
 
+                    //Read the fetch response stream to completion
                     return apiResp.arrayBuffer();
                 })
                 .then(buff => {
+                    //If okay, persist the JSON API response in database table project_products
                     if(hpt.resp?.ok || hpt.nonCriticalErrs.includes(hpt.resp?.status)) {
                         return pool.query(sqlInsert, [ hpt.key, dcdrUtf8.decode(buff), hpt.resp?.status ])
                     }
-                    else {
+                    else { //HTTP status API response deemed not okay
                         throw new ApiHubErr(
                             'httpErrReturn',
-                            { project: {id: hpt.projectStage.id, stage: hpt.projectStage.stage, key: row.req_key} },
+                            `Request for key ${hpt.key} returned with HTTP status code ${hpt.resp?.status}`,
                             hpt.resp?.status,
                             dcdrUtf8.decode(buff)
                         )
                     }
                 })
-                .then(dbQry => {
-                    let ret;
-
-                    if(dbQry && dbQry.rowCount === 1) {
-                        ret = `Success executing ${dbQry.command}`
-                    }
-                    else {
-                        ret = `Something went wrong upserting key ${row.req_key}`
-                    }
-
-                    resolve({ key: row.req_key, status: hpt.resp?.status} );
+                .then(dbQry => { //Database insert query promise now resolved
+                    resolve(
+                        {
+                            key: hpt.key,
+                            status: hpt.resp?.status,
+                            rowCount: dbQry.rowCount //In case row count is equal to 1 ➡️ success
+                        }
+                    )
                 })
                 .catch(err => {
                     if(err instanceof ApiHubErr) { //Persist the API Hub error

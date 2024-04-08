@@ -399,7 +399,7 @@ BEGIN
       ( 'lei', 'gleif', 'lei', 'Global Legal Entity Identifier Foundation API', 'GLEIF API', 'https://www.gleif.org/en/lei-data/gleif-api' ),
       ( 'dpl', 'dnb', 'duns', 'D&B Direct+', 'D+', 'https://directplus.documentation.dnb.com/' );
 
-   INSERT INTO projects ( descr ) VALUES ('Test project') RETURNING id INTO p_id;
+   INSERT INTO projects ( descr ) VALUES ('Test project D&B') RETURNING id INTO p_id;
 
    INSERT INTO project_stages
       ( project_id, stage, api, script, params )
@@ -416,4 +416,22 @@ BEGIN
       ( project_id, req_key )
    VALUES
       ( p_id, '407809623' ), ( p_id, '372428847' ), ( p_id, '373230036' );
+
+   INSERT INTO projects ( descr ) VALUES ('Test project LEI') RETURNING id INTO p_id;
+
+   INSERT INTO project_stages
+      ( project_id, stage, api, script, params )
+   VALUES
+      (
+         p_id,
+         1,
+         'lei',
+         'product',
+         '{ "reqParams": null }'
+      );
+
+   INSERT INTO project_keys
+      ( project_id, req_key )
+   VALUES
+      ( p_id, '529900F4SNCR9BEWFZ60' ), ( p_id, 'JLS56RAMYQZECFUF2G44' ), ( p_id, '724500SNT1MK246AHP04' );
 END $$;
