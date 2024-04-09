@@ -78,11 +78,20 @@ function process(rows) {
 
                     let apiReq;
 
+                    //Create the relevant API request objects
                     if(hubAPI.api === 'dpl') {
                         apiReq = new DnbDplDBs( hpt.key, hpt.reqParams )
                     }
-                    else {
+
+                    if(hubAPI.api === 'lei') {
                         apiReq = new LeiReq( hpt.key )
+                    }
+
+                    if(!apiReq) { 
+                        throw new ApiHubErr(
+                            'invalidParameter',
+                            `Unable to create an request object for API ${hubAPI.api}`
+                        )
                     }
 
                     //Execute fetch and return the promise
@@ -140,4 +149,13 @@ while(rows.length) {
     rows = await cursor.read(100);
 }
 
-parentPort.postMessage(`Return upon completion of script ${projectStage.script}`) 
+pool.query(`UPDATE project_stages SET finished = TRUE WHERE project_id = ${projectStage.id} AND stage = ${projectStage.stage} RETURNING *`)
+    .then(dbQry => {
+        if(dbQry.rowCount === 1) {
+            parentPort.postMessage(`Return upon completion of script ${projectStage.script}`);
+        }
+        else {
+            throw new Error('UPDATE database table project_stages somehow failed 🤔');
+        }
+    })
+    .catch(err => console.error(err.message))
