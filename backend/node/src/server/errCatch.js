@@ -65,7 +65,7 @@ function handleApiHubErr(transaction, err, db) {
                 'INSERT INTO hub_errors (req, err, http_status) VALUES ($1, $2, $3) RETURNING id',
                 [
                     JSON.stringify(getReq(transaction)),
-                    transaction.strBody || `{ "msg": "${err.addtlMessage || err.message}" }`,
+                    transaction.strBody || JSON.stringify({ msg: err.addtlMessage || err.message }),
                     status
                 ]
         )

@@ -130,6 +130,9 @@ function process(rows) {
                     if(err instanceof ApiHubErr) { //Persist the API Hub error
                         handleApiHubErr(hpt, err, pool)
                     }
+                    else {
+                        handleApiHubErr(hpt, new ApiHubErr('generic', err.message), pool)
+                    }
 
                     reject(err.addtlMessage || err.message);
                 })
