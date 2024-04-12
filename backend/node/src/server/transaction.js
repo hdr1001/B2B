@@ -137,7 +137,7 @@ class HubProjectTransaction extends Transaction {
     }
 
     get reqParams() {
-        return this.projectStage.params.reqParams;
+        return this.projectStage.params;
     }
 }
 

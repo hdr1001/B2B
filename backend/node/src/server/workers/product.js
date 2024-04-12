@@ -80,11 +80,26 @@ function process(rows) {
 
                     //Create the relevant API request objects
                     if(hubAPI.api === 'dpl') {
-                        apiReq = new DnbDplDBs( hpt.key, hpt.reqParams )
+                        if(hpt.reqParams.endpoint === 'dbs' || !hpt.reqParams.endpoint) {
+                            apiReq = new DnbDplDBs( hpt.key, hpt.reqParams?.qryParameters )
+                        }
+
+                        if(hpt.reqParams.endpoint === 'famTree') {
+                            apiReq = new DnbDplFamTree( hpt.key, hpt.reqParams?.qryParameters )
+                        }
+
+                        if(hpt.reqParams.endpoint === 'benOwner') {
+                            apiReq = new DnbDplBenOwner( hpt.key, hpt.reqParams?.qryParameters )
+                        }
                     }
 
                     if(hubAPI.api === 'lei') {
-                        apiReq = new LeiReq( hpt.key )
+                        if(hpt.reqParams?.subSingleton) {
+                            apiReq = new LeiReq( hpt.key, hpt.reqParams?.qryParameters || {}, hpt.reqParams.subSingleton )
+                        }
+                        else {
+                            apiReq = new LeiReq( hpt.key )
+                        }
                     }
 
                     if(!apiReq) { 
@@ -162,3 +177,29 @@ pool.query(`UPDATE project_stages SET finished = TRUE WHERE project_id = ${proje
         }
     })
     .catch(err => console.error(err.message))
+
+//SQL script fo parameterizing product projects
+/*
+➡️ Create an entry in table projects & describe the project in field descr
+➡️ A unique project identifier will be created & assigned to variable p_id
+INSERT INTO projects ( descr ) VALUES ('Test project D&B') RETURNING id INTO p_id;
+
+➡️ The product script is intended to be a stage in a sequence of stages
+INSERT INTO project_stages
+   ( project_id, stage, api, script, params )
+VALUES
+   (
+      p_id,      ➡️ Project identifier
+      1,         ➡️ Stage
+      'dpl',     ➡️ The API to be used (foreign key referencing table apis)
+      'product', ➡️ Parameter identifying this script
+      ➡️ Miscellaneous project parameters
+      ➡️ reqParams 
+      '{ "reqParams": { "blockIDs": "companyinfo_L2_v1,hierarchyconnections_L1_v1", "orderReason": 6332 } }'
+   );
+
+INSERT INTO project_keys
+   ( project_id, req_key )
+VALUES
+   ( p_id, '407809623' ), ( p_id, '372428847' ), ( p_id, '373230036' );
+*/

@@ -409,7 +409,7 @@ BEGIN
          1,
          'dpl',
          'product',
-         '{ "reqParams": { "blockIDs": "companyinfo_L2_v1,hierarchyconnections_L1_v1", "orderReason": 6332 } }'
+         '{ "qryParameters": { "blockIDs": "companyinfo_L2_v1,hierarchyconnections_L1_v1", "orderReason": 6332 } }'
       );
 
    INSERT INTO project_keys
@@ -427,7 +427,7 @@ BEGIN
          1,
          'lei',
          'product',
-         '{ "reqParams": null }'
+         '{}'
       );
 
    INSERT INTO project_keys
