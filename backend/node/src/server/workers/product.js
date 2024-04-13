@@ -30,7 +30,7 @@ import pgConn from '../pgGlobs.js';
 
 import { dcdrUtf8 } from '../../share/utils.js';
 import { gleifLimiter, dnbDplLimiter } from '../../share/limiters.js';
-import { LeiReq, DnbDplDBs } from '../../share/apiDefs.js';
+import { LeiReq, DnbDplDBs, DnbDplFamTree, DnbDplBenOwner } from '../../share/apiDefs.js';
 import { HubProjectTransaction } from '../transaction.js';
 import { ApiHubErr } from '../err.js';
 import handleApiHubErr from '../errCatch.js';
@@ -194,8 +194,12 @@ VALUES
       'dpl',     ➡️ The API to be used (foreign key referencing table apis)
       'product', ➡️ Parameter identifying this script
       ➡️ Miscellaneous project parameters
-      ➡️ reqParams 
-      '{ "reqParams": { "blockIDs": "companyinfo_L2_v1,hierarchyconnections_L1_v1", "orderReason": 6332 } }'
+      ➡️ endpoint, for specifying dbs (data blocks, optional), benOwner (beneficial ownership) & famTree (full family tree)
+      '{ "endpoint": "benOwner", "qryParameters": { "productId": "cmpbol", "versionId": "v1", "ownershipPercentage": 2.5 } }'
+      ➡️ qryParameters, API request query parameters
+      '{ "qryParameters": { "blockIDs": "companyinfo_L2_v1,hierarchyconnections_L1_v1", "orderReason": 6332 } }'
+      ➡️ subSingleton, to add to a API REST request
+      '{ "subSingleton": "ultimate-parent-relationship" }'
    );
 
 INSERT INTO project_keys
