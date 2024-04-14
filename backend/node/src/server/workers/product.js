@@ -61,6 +61,11 @@ const sqlInsert =
 //Instantiate a new project level HubProjectTransaction object
 const project_hpt = new HubProjectTransaction(hubAPI, projectStage.script, projectStage);
 
+//Make a 404 HTTP status return, for family tree transactions, a non-critical error
+if(hubAPI.api === 'dpl' && project_hpt.reqParams.endpoint === 'famTree') { 
+    project_hpt.nonCriticalErrs.push(404)
+}
+
 //Make sure we stay within the set API TPS limitations
 const limiter = hubAPI.api === 'dpl' ? dnbDplLimiter : gleifLimiter;
 
@@ -84,10 +89,12 @@ function process(rows) {
                             apiReq = new DnbDplDBs( hpt.key, hpt.reqParams?.qryParameters )
                         }
 
+                        //To-do, pagination
                         if(hpt.reqParams.endpoint === 'famTree') {
                             apiReq = new DnbDplFamTree( hpt.key, hpt.reqParams?.qryParameters )
                         }
 
+                        //To-do, pagination
                         if(hpt.reqParams.endpoint === 'benOwner') {
                             apiReq = new DnbDplBenOwner( hpt.key, hpt.reqParams?.qryParameters )
                         }

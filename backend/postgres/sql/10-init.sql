@@ -440,6 +440,25 @@ BEGIN
    -- VALUES
    --    ( p_id, '' ), ( p_id, '' );
 
+   -- Test projects ➡️ D&B full family tree
+   INSERT INTO projects ( descr ) VALUES ('Test project D&B full family tree') RETURNING id INTO p_id;
+
+   INSERT INTO project_stages
+      ( project_id, stage, api, script, params )
+   VALUES
+      (
+         p_id,
+         1,
+         'dpl',
+         'product',
+         '{ "endpoint": "famTree", "qryParameters": { "customerReference": "FFT" } }'
+      );
+
+   -- INSERT INTO project_keys
+   --    ( project_id, req_key )
+   -- VALUES
+   --    ( p_id, '' ), ( p_id, '' );
+
    -- Test project ➡️ Level 1 GLEIF LEI data
    INSERT INTO projects ( descr ) VALUES ('Test project LEI') RETURNING id INTO p_id;
 
