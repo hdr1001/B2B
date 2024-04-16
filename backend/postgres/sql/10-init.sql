@@ -22,6 +22,10 @@
 
 -- ALTER TABLE public.hub_errors DROP CONSTRAINT hub_errors_pkey;
 -- DROP TABLE public.hub_errors; 
+-- ALTER TABLE public.project_idr DROP CONSTRAINT project_idr_fkey_2;
+-- ALTER TABLE public.project_idr DROP CONSTRAINT project_idr_fkey_1;
+-- ALTER TABLE public.project_idr DROP CONSTRAINT project_idr_pkey;
+-- DROP TABLE public.project_idr;
 -- ALTER TABLE public.project_products DROP CONSTRAINT project_products_fkey_3;
 -- ALTER TABLE public.project_products DROP CONSTRAINT project_products_fkey_2;
 -- ALTER TABLE public.project_products DROP CONSTRAINT project_products_fkey_1;
@@ -68,6 +72,7 @@
 -- ALTER TABLE public.api_providers DROP CONSTRAINT api_providers_pkey;
 -- DROP TABLE public.api_providers;
 -- DROP SEQUENCE public.hub_errors_id_seq;
+-- DROP SEQUENCE public.project_idr_id_seq;
 -- DROP SEQUENCE public.project_id_seq;
 -- DROP SEQUENCE public.idr_dnb_dpl_id_seq;
 -- DROP SEQUENCE public.archive_dnb_id_seq;
@@ -111,6 +116,14 @@ CREATE SEQUENCE public.idr_dnb_dpl_id_seq
 
 -- Create the sequence for the primary key of table projects
 CREATE SEQUENCE public.project_id_seq
+    INCREMENT 1
+    START 1
+    MINVALUE 1
+    MAXVALUE 9223372036854775807
+    CACHE 1;
+
+-- Create the sequence for the primary key of table project_idr
+CREATE SEQUENCE public.project_idr_id_seq
     INCREMENT 1
     START 1
     MINVALUE 1
@@ -366,6 +379,20 @@ CREATE TABLE public.project_products (
    CONSTRAINT project_products_fkey_1 FOREIGN KEY (project_id) REFERENCES projects(id),
    CONSTRAINT project_products_fkey_2 FOREIGN KEY (project_id, stage) REFERENCES project_stages(project_id, stage),
    CONSTRAINT project_products_fkey_3 FOREIGN KEY (project_id, req_key) REFERENCES project_keys(project_id, req_key)
+);
+
+-- Create table for storing identity resolution API requests & responses
+CREATE TABLE public.project_idr (
+   id integer NOT NULL DEFAULT nextval('project_idr_id_seq'::regclass),
+   project_id integer NOT NULL,
+   stage smallint NOT NULL,
+   params JSONB,
+   resp JSONB,
+   http_status smallint,
+   tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
+   CONSTRAINT project_idr_pkey PRIMARY KEY (id),
+   CONSTRAINT project_idr_fkey_1 FOREIGN KEY (project_id) REFERENCES projects(id),
+   CONSTRAINT project_idr_fkey_2 FOREIGN KEY (project_id, stage) REFERENCES project_stages(project_id, stage)
 );
 
 -- Create table for logging HTTP errors
