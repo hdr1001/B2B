@@ -408,12 +408,14 @@ CREATE TABLE public.hub_errors (
 DO $$
 DECLARE p_id integer;
 BEGIN
+
    -- List the hub supported API providers
    INSERT INTO api_providers
       ( provider, full_name, acronym, url )
    VALUES
       ( 'gleif', 'Global Legal Entity Identifier Foundation', 'GLEIF', 'https://www.gleif.org' ),
       ( 'dnb', 'Dun & Bradstreet', 'D&B', 'https://www.dnb.com' );
+
 
    -- List the hub supported API keys
    INSERT INTO api_keys
@@ -422,12 +424,14 @@ BEGIN
       ( 'lei', 'Legal Entity Identifier', 'LEI', 'https://www.gleif.org/en/about-lei/introducing-the-legal-entity-identifier-lei' ),
       ( 'duns', 'D&B Data Universal Numbering System', 'D‑U‑N‑S', 'https://www.dnb.com/duns/what-is-a-DUNS-number.html' );
 
+
    -- List the hub supported APIs
    INSERT INTO apis
       ( api, provider, api_key, full_name, acronym, url )
    VALUES
       ( 'lei', 'gleif', 'lei', 'Global Legal Entity Identifier Foundation API', 'GLEIF API', 'https://www.gleif.org/en/lei-data/gleif-api' ),
       ( 'dpl', 'dnb', 'duns', 'D&B Direct+', 'D+', 'https://directplus.documentation.dnb.com/' );
+
 
    -- Create a couple test projects, 1st off ➡️ D&B data blocks
    INSERT INTO projects ( descr ) VALUES ('Test project D&B') RETURNING id INTO p_id;
@@ -448,6 +452,7 @@ BEGIN
    VALUES
       ( p_id, '407809623' ), ( p_id, '372428847' ), ( p_id, '373230036' );
 
+
    -- Test projects ➡️ D&B beneficial ownership
    INSERT INTO projects ( descr ) VALUES ('Test project D&B beneficial ownership') RETURNING id INTO p_id;
 
@@ -466,6 +471,7 @@ BEGIN
    --    ( project_id, req_key )
    -- VALUES
    --    ( p_id, '' ), ( p_id, '' );
+
 
    -- Test projects ➡️ D&B full family tree
    INSERT INTO projects ( descr ) VALUES ('Test project D&B full family tree') RETURNING id INTO p_id;
@@ -486,6 +492,7 @@ BEGIN
    -- VALUES
    --    ( p_id, '' ), ( p_id, '' );
 
+
    -- Test project ➡️ Level 1 GLEIF LEI data
    INSERT INTO projects ( descr ) VALUES ('Test project LEI') RETURNING id INTO p_id;
 
@@ -505,6 +512,7 @@ BEGIN
    VALUES
       ( p_id, '529900F4SNCR9BEWFZ60' ), ( p_id, 'JLS56RAMYQZECFUF2G44' ), ( p_id, '724500SNT1MK246AHP04' );
 
+
    -- Test project ➡️ Level 2 GLEIF who owns whom data
    INSERT INTO projects ( descr ) VALUES ('Test project LEI ultimate') RETURNING id INTO p_id;
 
@@ -523,5 +531,50 @@ BEGIN
       ( project_id, req_key )
    VALUES
       ( p_id, '213800G63T4ER4MSVR22' ), ( p_id, '3TK20IVIUJ8J3ZU0QE75' ), ( p_id, '724500SNT1MK246AHP04' ), ( p_id, '9598000FRJET85LFYB70' );
+
+
+   -- Test projects ➡️ D&B IDentity Resolution
+   INSERT INTO projects ( descr ) VALUES ('Test project D&B IDentity Resolution') RETURNING id INTO p_id;
+
+   INSERT INTO project_stages
+      ( project_id, stage, api, script )
+   VALUES
+      (
+         p_id,
+         1,
+         'dpl',
+         'idr'
+      );
+
+   INSERT INTO project_idr
+      ( project_id, stage, params )
+   VALUES
+      ( p_id, 1, '{ "name": "de librije", "addressLocality": "Zwolle", "countryISOAlpha2Code": "NL" }' ),
+      ( p_id, 1, '{ "registrationNumber": "33302453", "countryISOAlpha2Code":"NL" }' ),
+      ( p_id, 1, '{ "name": "bestaeg nie", "addressLocality": "wimbritsseradeel", "countryISOAlpha2Code": "NL" }' );
+
+
+   -- Test projects ➡️ D&B IDentity Resolution
+   INSERT INTO projects ( descr ) VALUES ('Test project GLEIf filter') RETURNING id INTO p_id;
+
+   INSERT INTO project_stages
+      ( project_id, stage, api, script )
+   VALUES
+      (
+         p_id,
+         1,
+         'lei',
+         'idr'
+      );
+
+   INSERT INTO project_idr
+      ( project_id, stage, params )
+   VALUES
+      ( p_id, 1, '{ "filter[entity.registeredAs]": "33302453", "filter[entity.legalAddress.country]": "NL" }' ),
+      ( p_id, 1, '{ "filter[entity.registeredAs]": "40341567", "filter[entity.legalAddress.country]": "NL" }' ),
+      ( p_id, 1, '{ "filter[entity.legalName]": "flow traders", "filter[entity.legalAddress.country]": "NL"}' ),
+      ( p_id, 1, '{ "filter[entity.legalName]": "bestaeg nie traders", "filter[entity.legalAddress.country]": "NL"}' ),
+      ( p_id, 1, '{ "filter[entity.legalName]": "ACT Commodities", "filter[entity.legalAddress.country]": "NL"}' ),
+      ( p_id, 1, '{ "filter[entity.legalName]": "optiver holding", "filter[entity.legalAddress.country]": "NL"}' );
 
 END $$;
