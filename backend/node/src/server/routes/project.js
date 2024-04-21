@@ -28,7 +28,7 @@ import db from '../pg.js';
 
 const router = express.Router();
 
-function runProjectStage(projectStage) {
+function execProjectStage(projectStage) {
     console.log(`Initiating execution of project stage ${projectStage.stage} using script ${projectStage.script}`);
 
     return new Promise((resolve, reject) => {
@@ -61,12 +61,12 @@ router.post('/', (req, resp) => {
         sSql    += "ORDER BY ps.stage ASC;";
 
         db.query( sSql, [ project.id ] )
-            .then(dbQry => {
+            .then(async dbQry => {
                 if(dbQry.rows?.length) {
                     console.log(`Located project ${dbQry.rows[0]?.id} (${dbQry.rows[0]?.descr})`);
 
-                    for(let i = 0, p = Promise.resolve(); i < dbQry.rows?.length; i++) {
-                        p.then(() => runProjectStage(dbQry.rows[i])).then(msg => console.log(`Worker message received: ${msg}`));
+                    for(let i = 0; i < dbQry.rows.length; i++) {
+                        console.log(`Worker message received: ${await execProjectStage(dbQry.rows[i])}`);
                     }
                 }
             })
