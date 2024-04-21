@@ -39,9 +39,6 @@ const { hubAPI, projectStage } = workerData;
 const { Pool } = pg;
 const pool = new Pool({ ...pgConn, ssl: { require: true } });
 
-//Acquire a database client from the pool
-const pgClient = await pool.connect()
-
 //Confidence code auto accept
 const sqlCcAutoAccept = `UPDATE project_idr
     SET
@@ -54,9 +51,9 @@ const sqlCcAutoAccept = `UPDATE project_idr
         AND http_status = 200
         AND (resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode')::int > ${projectStage.params.ccAutoAccept.cc};`;
 
-let results = pool.query(sqlCcAutoAccept);
-
-console.log(`Number of confidence code based auto accepted IDR transactions ${results.rowCount}`);
+await pool
+    .query(sqlCcAutoAccept)
+    .then(qry => console.log(`Number of confidence code based auto accepted IDR transactions ${qry.rowCount}`));
 
 pool.query(`UPDATE project_stages SET finished = TRUE WHERE project_id = ${projectStage.id} AND stage = ${projectStage.stage}`)
     .then(dbQry => {
