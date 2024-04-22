@@ -40,7 +40,7 @@ const { Pool } = pg;
 const pool = new Pool({ ...pgConn, ssl: { require: true } });
 
 //Confidence code auto accept
-const sqlCcAutoAccept = `UPDATE project_idr
+let sql = `UPDATE project_idr
     SET
         key = resp->'matchCandidates'->0->'organization'->>'duns',
         quality = (resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode')::int * 10,
@@ -52,8 +52,24 @@ const sqlCcAutoAccept = `UPDATE project_idr
         AND (resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode')::int > ${projectStage.params.ccAutoAccept.cc};`;
 
 await pool
-    .query(sqlCcAutoAccept)
+    .query(sql)
     .then(qry => console.log(`Number of confidence code based auto accepted IDR transactions ${qry.rowCount}`));
+
+//Reject out-of-business candidates
+sql = `UPDATE project_idr
+    SET
+        key = NULL,
+        quality = NULL,
+        remark = 'Top candidate is out-of-business'
+    WHERE
+        project_id = ${projectStage.id}
+        AND stage = ${projectStage.params.idrStage}
+        AND http_status = 200
+        AND (resp->'matchCandidates'->0->'organization'->'dunsControlStatus'->'operatingStatus'->>'dnbCode')::int = 403;`;
+
+await pool
+    .query(sql)
+    .then(qry => console.log(`Number of top candidates rejected because OOB ${qry.rowCount}`));
 
 pool.query(`UPDATE project_stages SET finished = TRUE WHERE project_id = ${projectStage.id} AND stage = ${projectStage.stage}`)
     .then(dbQry => {
