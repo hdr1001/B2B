@@ -33,7 +33,7 @@ import { ApiHubErr } from '../err.js';
 import handleApiHubErr from '../errCatch.js';
 
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
-const { hubAPI, projectStage } = workerData;
+const { projectStage } = workerData;
 
 //Setup a reusable pool of database clients
 const { Pool } = pg;
@@ -55,6 +55,21 @@ await pool
     .query(sql)
     .then(qry => console.log(`Number of confidence code based auto accepted IDR transactions ${qry.rowCount}`));
 
+//Generate a remark for API responses with a HTTP error status
+sql = `UPDATE project_idr
+    SET
+        key = NULL,
+        quality = NULL,
+        remark = resp->'error'->>'errorMessage'
+    WHERE
+        project_id = ${projectStage.id}
+        AND stage = ${projectStage.params.idrStage}
+        AND http_status != 200;`
+
+await pool
+    .query(sql)
+    .then(qry => console.log(`Number of API responses with a HTTP error status ${qry.rowCount}`));
+
 //Reject out-of-business candidates
 sql = `UPDATE project_idr
     SET
@@ -70,6 +85,23 @@ sql = `UPDATE project_idr
 await pool
     .query(sql)
     .then(qry => console.log(`Number of top candidates rejected because OOB ${qry.rowCount}`));
+
+//Reject confidence code tie-breakers
+sql = `UPDATE project_idr
+	SET
+        key = NULL,
+        quality = NULL,
+        remark = 'Top candidate is a tie-breaker'
+	WHERE
+        project_id = ${projectStage.id}
+        AND stage = ${projectStage.params.idrStage}
+        AND http_status = 200
+		AND resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode' = resp->'matchCandidates'->1->'matchQualityInformation'->>'confidenceCode'
+		AND (resp->'matchCandidates'->1->'organization'->'dunsControlStatus'->'operatingStatus'->>'dnbCode')::int = 9074;`;
+
+await pool
+    .query(sql)
+    .then(qry => console.log(`Number of top candidates rejected because tie-breaker ${qry.rowCount}`));
 
 pool.query(`UPDATE project_stages SET finished = TRUE WHERE project_id = ${projectStage.id} AND stage = ${projectStage.stage}`)
     .then(dbQry => {
