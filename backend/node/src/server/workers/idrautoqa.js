@@ -39,69 +39,83 @@ const { projectStage } = workerData;
 const { Pool } = pg;
 const pool = new Pool({ ...pgConn, ssl: { require: true } });
 
-//Confidence code auto accept
-let sql = `UPDATE project_idr
-    SET
-        key = resp->'matchCandidates'->0->'organization'->>'duns',
-        quality = (resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode')::int * 10,
-        remark = 'Confidence code auto accept'
-    WHERE
-        project_id = ${projectStage.id}
-        AND stage = ${projectStage.params.idrStage}
-        AND http_status = 200
-        AND (resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode')::int > ${projectStage.params.ccAutoAccept.cc};`;
+//D&B confidence code based match candidate auto accept
+const ccAutoAccept = {
+    sql: `UPDATE project_idr
+        SET
+            key = resp->'matchCandidates'->0->'organization'->>'duns',
+            quality = (resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode')::int * 10,
+            remark = 'Confidence code auto accept'
+        WHERE
+            project_id = ${projectStage.id}
+            AND stage = ${projectStage.params.idrStage}
+            AND http_status = 200
+            AND (resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode')::int >= ${projectStage.params.ccAutoAccept.cc};`,
 
-await pool
-    .query(sql)
-    .then(qry => console.log(`Number of confidence code based auto accepted IDR transactions ${qry.rowCount}`));
+    consoleMsg: 'Number of confidence code based auto accepted IDR transactions '
+};
 
-//Generate a remark for API responses with a HTTP error status
-sql = `UPDATE project_idr
-    SET
-        key = NULL,
-        quality = NULL,
-        remark = resp->'error'->>'errorMessage'
-    WHERE
-        project_id = ${projectStage.id}
-        AND stage = ${projectStage.params.idrStage}
-        AND http_status != 200;`
+//If available, replicate the error message out of a JSON response returned with a HTTP error status
+const httpErrRemark = {
+    sql: `UPDATE project_idr
+        SET
+            key = NULL,
+            quality = NULL,
+            remark = resp->'error'->>'errorMessage'
+        WHERE
+            project_id = ${projectStage.id}
+            AND stage = ${projectStage.params.idrStage}
+            AND http_status != 200;`,
 
-await pool
-    .query(sql)
-    .then(qry => console.log(`Number of API responses with a HTTP error status ${qry.rowCount}`));
+    consoleMsg: 'Number of API responses with a HTTP error status '
+};
 
-//Reject out-of-business candidates
-sql = `UPDATE project_idr
-    SET
-        key = NULL,
-        quality = NULL,
-        remark = 'Top candidate is out-of-business'
-    WHERE
-        project_id = ${projectStage.id}
-        AND stage = ${projectStage.params.idrStage}
-        AND http_status = 200
-        AND (resp->'matchCandidates'->0->'organization'->'dunsControlStatus'->'operatingStatus'->>'dnbCode')::int = 403;`;
+//Reject auto accepted out-of-business candidates
+const rejectOobCandidates = {
+    sql: `UPDATE project_idr
+        SET
+            key = NULL,
+            quality = NULL,
+            remark = 'Auto accepted candidate is out-of-business'
+        WHERE
+            project_id = ${projectStage.id}
+            AND stage = ${projectStage.params.idrStage}
+            AND http_status = 200
+            AND key IS NOT NULL
+            AND (resp->'matchCandidates'->0->'organization'->'dunsControlStatus'->'operatingStatus'->>'dnbCode')::int = 403;`,
 
-await pool
-    .query(sql)
-    .then(qry => console.log(`Number of top candidates rejected because OOB ${qry.rowCount}`));
+    consoleMsg: 'Number of auto accepted candidates rejected because OOB '
+};
 
-//Reject confidence code tie-breakers
-sql = `UPDATE project_idr
-	SET
-        key = NULL,
-        quality = NULL,
-        remark = 'Top candidate is a tie-breaker'
-	WHERE
-        project_id = ${projectStage.id}
-        AND stage = ${projectStage.params.idrStage}
-        AND http_status = 200
-		AND resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode' = resp->'matchCandidates'->1->'matchQualityInformation'->>'confidenceCode'
-		AND (resp->'matchCandidates'->1->'organization'->'dunsControlStatus'->'operatingStatus'->>'dnbCode')::int = 9074;`;
+//Reject auto accepted tie-breakers
+const rejectTiebreakers = {
+    sql: `UPDATE project_idr
+        SET
+            key = NULL,
+            quality = NULL,
+            remark = 'Auto accepted candidate is a tie-breaker'
+        WHERE
+            project_id = ${projectStage.id}
+            AND stage = ${projectStage.params.idrStage}
+            AND http_status = 200
+            AND key IS NOT NULL
+            AND resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode' = resp->'matchCandidates'->1->'matchQualityInformation'->>'confidenceCode'
+            AND (resp->'matchCandidates'->1->'organization'->'dunsControlStatus'->'operatingStatus'->>'dnbCode')::int = 9074;`,
 
-await pool
-    .query(sql)
-    .then(qry => console.log(`Number of top candidates rejected because tie-breaker ${qry.rowCount}`));
+    consoleMsg: 'Number of auto accepted candidates rejected because tie-breaker '
+};
+
+//Always execute these steps
+const autoAcceptSteps = [ccAutoAccept, httpErrRemark];
+
+//Configure ptional steps
+autoAcceptSteps.push(rejectOobCandidates);
+//autoAcceptSteps.push(rejectTiebreakers);
+
+//Execute the auto accept steps configured
+for(let i = 0; i < autoAcceptSteps.length; i++) {
+    await pool.query(autoAcceptSteps[i].sql).then(qry => console.log(autoAcceptSteps[i].consoleMsg + qry.rowCount))
+}
 
 pool.query(`UPDATE project_stages SET finished = TRUE WHERE project_id = ${projectStage.id} AND stage = ${projectStage.stage}`)
     .then(dbQry => {
