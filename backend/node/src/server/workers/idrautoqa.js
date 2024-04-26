@@ -50,7 +50,7 @@ const ccAutoAccept = {
             project_id = ${projectStage.id}
             AND stage = ${projectStage.params.idrStage}
             AND http_status = 200
-            AND (resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode')::int >= ${projectStage.params.ccAutoAccept.cc};`,
+            AND (resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode')::int >= ${projectStage.params.ccAutoAccept};`,
 
     consoleMsg: 'Number of confidence code based auto accepted IDR transactions '
 };
@@ -70,47 +70,53 @@ const httpErrRemark = {
     consoleMsg: 'Number of API responses with a HTTP error status '
 };
 
-//Reject auto accepted out-of-business candidates
-const rejectOobCandidates = {
-    sql: `UPDATE project_idr
-        SET
-            key = NULL,
-            quality = NULL,
-            remark = 'Auto accepted candidate is out-of-business'
-        WHERE
-            project_id = ${projectStage.id}
-            AND stage = ${projectStage.params.idrStage}
-            AND http_status = 200
-            AND key IS NOT NULL
-            AND (resp->'matchCandidates'->0->'organization'->'dunsControlStatus'->'operatingStatus'->>'dnbCode')::int = 403;`,
-
-    consoleMsg: 'Number of auto accepted candidates rejected because OOB '
-};
-
-//Reject auto accepted tie-breakers
-const rejectTiebreakers = {
-    sql: `UPDATE project_idr
-        SET
-            key = NULL,
-            quality = NULL,
-            remark = 'Auto accepted candidate is a tie-breaker'
-        WHERE
-            project_id = ${projectStage.id}
-            AND stage = ${projectStage.params.idrStage}
-            AND http_status = 200
-            AND key IS NOT NULL
-            AND resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode' = resp->'matchCandidates'->1->'matchQualityInformation'->>'confidenceCode'
-            AND (resp->'matchCandidates'->1->'organization'->'dunsControlStatus'->'operatingStatus'->>'dnbCode')::int = 9074;`,
-
-    consoleMsg: 'Number of auto accepted candidates rejected because tie-breaker '
-};
+const optionalSteps = new Map([
+    [
+        //Reject auto accepted out-of-business candidates
+        'rejectOobCandidates',
+        {
+            sql: `UPDATE project_idr
+                SET
+                    key = NULL,
+                    quality = NULL,
+                    remark = 'Auto accepted candidate is out-of-business'
+                WHERE
+                    project_id = ${projectStage.id}
+                    AND stage = ${projectStage.params.idrStage}
+                    AND http_status = 200
+                    AND key IS NOT NULL
+                    AND (resp->'matchCandidates'->0->'organization'->'dunsControlStatus'->'operatingStatus'->>'dnbCode')::int = 403;`,
+        
+            consoleMsg: 'Number of auto accepted candidates rejected because OOB '
+        }
+    ],
+    [
+        //Reject auto accepted tie-breakers
+        'rejectTiebreakers',
+        {
+            sql: `UPDATE project_idr
+                SET
+                    key = NULL,
+                    quality = NULL,
+                    remark = 'Auto accepted candidate is a tie-breaker'
+                WHERE
+                    project_id = ${projectStage.id}
+                    AND stage = ${projectStage.params.idrStage}
+                    AND http_status = 200
+                    AND key IS NOT NULL
+                    AND resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode' = resp->'matchCandidates'->1->'matchQualityInformation'->>'confidenceCode'
+                    AND (resp->'matchCandidates'->1->'organization'->'dunsControlStatus'->'operatingStatus'->>'dnbCode')::int = 9074;`,
+        
+            consoleMsg: 'Number of auto accepted candidates rejected because tie-breaker '
+        }
+    ]
+]);
 
 //Always execute these steps
 const autoAcceptSteps = [ccAutoAccept, httpErrRemark];
 
-//Configure ptional steps
-autoAcceptSteps.push(rejectOobCandidates);
-//autoAcceptSteps.push(rejectTiebreakers);
+//Configure optional steps
+projectStage.params.optionalSteps.forEach(step => autoAcceptSteps.push(optionalSteps.get(step)));
 
 //Execute the auto accept steps configured
 for(let i = 0; i < autoAcceptSteps.length; i++) {

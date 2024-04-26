@@ -542,12 +542,12 @@ BEGIN
    INSERT INTO project_stages
       ( project_id, stage, api, script )
    VALUES
-      (
-         p_id,
-         1,
-         'dpl',
-         'idr'
-      );
+      ( p_id, 1, 'dpl', 'idr' );
+
+   INSERT INTO project_stages
+      ( project_id, stage, api, script, params )
+   VALUES
+      ( p_id, 2, 'dpl', 'idrautoqa', '{ "idrStage": 1, "ccAutoAccept": 7, "optionalSteps": [ "rejectOobCandidates", "rejectTiebreakers" ] }' );
 
    INSERT INTO project_idr
       ( project_id, stage, params )
@@ -558,7 +558,7 @@ BEGIN
 
 
    -- Test projects ➡️ D&B IDentity Resolution
-   INSERT INTO projects ( descr ) VALUES ('Test project GLEIf filter') RETURNING id INTO p_id;
+   INSERT INTO projects ( descr ) VALUES ('Test project GLEIF filter') RETURNING id INTO p_id;
 
    INSERT INTO project_stages
       ( project_id, stage, api, script )
