@@ -392,6 +392,7 @@ CREATE TABLE public.project_idr (
    key character varying(32),
    quality smallint,
    remark character varying(64),
+   addtlInfo JSONB,
    tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
    CONSTRAINT project_idr_pkey PRIMARY KEY (id),
    CONSTRAINT project_idr_fkey_1 FOREIGN KEY (project_id) REFERENCES projects(id),
