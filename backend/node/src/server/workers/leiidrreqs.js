@@ -29,7 +29,7 @@ import Cursor from 'pg-cursor';
 import pgConn from '../pgGlobs.js';
 
 import { dcdrUtf8 } from '../../share/utils.js';
-import { gleifLimiter, dnbDplLimiter } from '../../share/limiters.js';
+import { pgDbLimiter } from '../../share/limiters.js';
 import { LeiReq, DnbDplDBs, DnbDplFamTree, DnbDplBenOwner } from '../../share/apiDefs.js';
 import { HubProjectTransaction } from '../transaction.js';
 import { ApiHubErr } from '../err.js';
@@ -44,16 +44,16 @@ const pool = new Pool({ ...pgConn, ssl: { require: true } });
 
 //Acquire a database client from the pool
 const pgClient = await pool.connect()
-console.log(projectStage);
+
 //Use a cursor to read the keys included in the project in chunks
 const sqlKeys = `SELECT 
                     req_key,
-                    product->'organization'->'registrationNumbers' AS regNums,
-                    product->'organization'->>'countryISOAlpha2Code' AS isoCtry
+                    product->'organization'->'registrationNumbers' AS reg_nums,
+                    product->'organization'->>'countryISOAlpha2Code' AS iso_ctry
                 FROM project_products
                 WHERE
-                    project_id = ${projectStage.params.productProjectID}
-                    AND stage = ${projectStage.params.productStage};`;
+                    project_id = ${projectStage.params.product.project_id}
+                    AND stage = ${projectStage.params.product.stage};`;
 
 const cursor = pgClient.query( new Cursor( sqlKeys ) );
 
@@ -71,7 +71,33 @@ const sqlInsert =
 function process(rows) {
     return Promise.allSettled(
         rows.map(row => new Promise((resolve, reject) => {
-            resolve({ duns: row.req_key });
+            let regNum = { value: '' };
+
+            if(row.reg_nums.length) {
+                const preferredRegNum = row.reg_nums.filter(reg_num => reg_num.isPreferredRegistrationNumber);
+
+                if(preferredRegNum.length) {
+                    regNum.value = preferredRegNum[0].registrationNumber;
+                    regNum.typeCode = preferredRegNum[0].typeDnBCode;
+                }
+                else { //No preferred registration number assigned
+                    regNum.value = row.reg_nums[0].registrationNumber;
+                    regNum.typeCode = row.reg_nums[0].typeDnBCode;
+                }
+            }
+
+            const leiFilterReq = {
+                'filter[entity.registeredAs]': regNum.value,
+                'filter[entity.legalAddress.country]': row.iso_ctry
+            };
+
+            pgDbLimiter.removeTokens(1) //Throttle the number of SQL statements
+                .then(() => {
+                    return pool.query(sqlInsert, [ leiFilterReq ])
+                })
+                .then(dbQry => {
+                    resolve({ ...regNum, duns: row.req_key })
+                })
         }))
     )
 }

@@ -33,4 +33,7 @@ const dnbDplLimiter = new RateLimiter({ tokensPerInterval: 4, interval: 'second'
 //Max bandwidth for reading files
 const readFileLimiter = new RateLimiter({ tokensPerInterval: 50, interval: 'second' });
 
-export { gleifLimiter, dnbDplLimiter, readFileLimiter };
+//Max bandwidth for executing SQL statements
+const pgDbLimiter = new RateLimiter({ tokensPerInterval: 50, interval: 'second' });
+
+export { gleifLimiter, dnbDplLimiter, readFileLimiter, pgDbLimiter };
