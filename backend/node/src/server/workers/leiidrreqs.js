@@ -35,6 +35,9 @@ import { HubProjectTransaction } from '../transaction.js';
 import { ApiHubErr } from '../err.js';
 import handleApiHubErr from '../errCatch.js';
 
+const stagePreferredRegNum = 1;
+const stageOptimizedRegNum = 2;
+
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
 const { hubAPI, projectStage } = workerData;
 
@@ -43,7 +46,7 @@ const { Pool } = pg;
 const pool = new Pool({ ...pgConn, ssl: { require: true } });
 
 //Acquire a database client from the pool
-const pgClient = await pool.connect()
+const pgClient = await pool.connect();
 
 //Use a cursor to read the keys included in the project in chunks
 const sqlKeys = `SELECT 
@@ -60,140 +63,112 @@ const cursor = pgClient.query( new Cursor( sqlKeys ) );
 //SQL insert statement for persisting the API responses
 const sqlInsert = 
     `INSERT INTO project_idr (
-        project_id, stage, params
+        project_id, stage, params, addtl_info
     )
     VALUES (
-        ${projectStage.id}, ${projectStage.stage}, $1
+        ${projectStage.id}, ${projectStage.stage}, $1, $2
     )
-    RETURNING id;`
+    RETURNING id;`;
+/*
+const regNumCtry = new Map(
+    ['at', (regNums, regNum, stage) => {
+        if(stage !== 1) { return null }
 
-//Process a chunk of keys read using a database cursor
-function process(rows) {
-    return Promise.allSettled(
-        rows.map(row => new Promise((resolve, reject) => {
-            let regNum = { value: '' };
+        const regNum1336 = regNums.filter(atRegNum => atRegNum.typeDnBCode === 1336);
 
-            if(row.reg_nums.length) {
-                const preferredRegNum = row.reg_nums.filter(reg_num => reg_num.isPreferredRegistrationNumber);
+        if(regNum1336.length && regNum1336[0].registrationNumber.slice(0, 2) === 'FN') {
+            regNum.value = regNum1336[0].registrationNumber.slice(2);
+            regNum.typeCode = regNum1336[0].typeDnBCode;
+        }
 
-                if(preferredRegNum.length) {
-                    regNum.value = preferredRegNum[0].registrationNumber;
-                    regNum.typeCode = preferredRegNum[0].typeDnBCode;
-                }
-                else { //No preferred registration number assigned
-                    regNum.value = row.reg_nums[0].registrationNumber;
-                    regNum.typeCode = row.reg_nums[0].typeDnBCode;
-                }
+        return regNum;
+    }],
+
+    ['be', (regNums, regNum, stage) => {
+        if(stage === 1) {
+            const regNum800 = regNums.filter(beRegNum => beRegNum.typeDnBCode === 800);
+            
+            if(regNum800.length && regNum800[0].registrationNumber.length === 10) {
+                regNum.value  = regNum800[0].registrationNumber.slice(0, 4);
+                regNum.value += '.' + regNum800[0].registrationNumber.slice(4, 7);
+                regNum.value += '.' + regNum800[0].registrationNumber.slice(-3);
+
+                regNum.typeCode = regNum800[0].typeDnBCode;
             }
+    
+            return regNum;    
+        }
 
-            const leiFilterReq = {
-                'filter[entity.registeredAs]': regNum.value,
-                'filter[entity.legalAddress.country]': row.iso_ctry
-            };
+        if(stage === 2) {
+            const regNum800 = regNums.filter(beRegNum => beRegNum.typeDnBCode === 800);
+            
+            if(regNum800.length) {
+                regNum.value  = regNum800[0].registrationNumber;
 
+                regNum.typeCode = regNum800[0].typeDnBCode;
+            }
+    
+            return regNum;    
+        }
+
+        return null
+    }],
+);
+
+//Pre-process registration numbers
+function preProcessRegNum(regNums, regNum, stage) {
+
+}
+*/
+//Process a chunk of keys read using a database cursor
+function prepareReqs(reqs) {
+    return Promise.allSettled(
+        reqs.map(req => new Promise((resolve, reject) => {
             pgDbLimiter.removeTokens(1) //Throttle the number of SQL statements
                 .then(() => {
-                    return pool.query(sqlInsert, [ leiFilterReq ])
+                    return pool.query(sqlInsert, [ req.leiFilterReq, req.addtlInfo ])
                 })
                 .then(dbQry => {
-                    resolve({ ...regNum, duns: row.req_key })
+                    resolve({ ...req.leiFilterReq, duns: req.addtlInfo.duns })
                 })
         }))
     )
 }
-/*
-            limiter.removeTokens(1) //Respect the API rate limits
-                .then(() => {
-                    //Now set the appropriate key
-                    hpt.key = row.req_key;
 
-                    let apiReq;
-
-                    //Create the relevant API request objects
-                    if(hubAPI.api === 'dpl') {
-                        if(hpt.reqParams.endpoint === 'dbs' || !hpt.reqParams.endpoint) {
-                            apiReq = new DnbDplDBs( hpt.key, hpt.reqParams?.qryParameters )
-                        }
-
-                        //To-do, pagination
-                        if(hpt.reqParams.endpoint === 'famTree') {
-                            apiReq = new DnbDplFamTree( hpt.key, hpt.reqParams?.qryParameters )
-                        }
-
-                        //To-do, pagination
-                        if(hpt.reqParams.endpoint === 'benOwner') {
-                            apiReq = new DnbDplBenOwner( hpt.key, hpt.reqParams?.qryParameters )
-                        }
-                    }
-
-                    if(hubAPI.api === 'lei') {
-                        if(hpt.reqParams?.subSingleton) {
-                            apiReq = new LeiReq( hpt.key, hpt.reqParams?.qryParameters || {}, hpt.reqParams.subSingleton )
-                        }
-                        else {
-                            apiReq = new LeiReq( hpt.key )
-                        }
-                    }
-
-                    if(!apiReq) { 
-                        throw new ApiHubErr(
-                            'invalidParameter',
-                            `Unable to create an request object for API ${hubAPI.api}`
-                        )
-                    }
-
-                    //Execute fetch and return the promise
-                    return fetch(apiReq.getReq())
-                })
-                .then(apiResp => {
-                    hpt.resp = apiResp; //Store a reference to the API response
-
-                    //Read the fetch response stream to completion
-                    return apiResp.arrayBuffer();
-                })
-                .then(buff => {
-                    //If okay, persist the JSON API response in database table project_products
-                    if(hpt.resp?.ok || hpt.nonCriticalErrs.includes(hpt.resp?.status)) {
-                        return pool.query(sqlInsert, [ hpt.key, dcdrUtf8.decode(buff), hpt.resp?.status ])
-                    }
-                    else { //HTTP status API response deemed not okay
-                        throw new ApiHubErr(
-                            'httpErrReturn',
-                            `Request for key ${hpt.key} returned with HTTP status code ${hpt.resp?.status}`,
-                            hpt.resp?.status,
-                            dcdrUtf8.decode(buff)
-                        )
-                    }
-                })
-                .then(dbQry => { //Database insert query promise now resolved
-                    resolve(
-                        {
-                            key: hpt.key,
-                            status: hpt.resp?.status,
-                            rowCount: dbQry.rowCount //In case row count is equal to 1 ➡️ success
-                        }
-                    )
-                })
-                .catch(err => {
-                    if(err instanceof ApiHubErr) { //Persist the API Hub error
-                        handleApiHubErr(hpt, err, pool)
-                    }
-                    else {
-                        handleApiHubErr(hpt, new ApiHubErr('generic', err.message), pool)
-                    }
-
-                    reject(err.addtlMessage || err.message);
-                })
-        })
-    ))
-}
-*/
 //Use the cursor to read the 1st 100 rows
 let rows = await cursor.read(100);
 
 //Iterate over the available rows
 while(rows.length) {
-    const arrSettled = await process(rows);
+    const reqs = rows.map(row => {
+        let regNum = { value: '' };
+
+        if(row.reg_nums.length) {
+            if(projectStage.params.idrStage === 1) {
+                const preferredRegNum = row.reg_nums.filter(reg_num => reg_num.isPreferredRegistrationNumber);
+
+                if(preferredRegNum.length) {
+                    regNum.value = preferredRegNum[0].registrationNumber;
+                    regNum.preferred = true;
+                }
+                else { //No preferred registration number assigned
+                    regNum.value = row.reg_nums[0].registrationNumber;
+                }    
+            }
+        }
+
+        return {
+            leiFilterReq: {
+                'filter[entity.registeredAs]': regNum.value,
+                'filter[entity.legalAddress.country]': row.iso_ctry
+            },
+            addtlInfo: {
+                duns: row.req_key
+            }
+        };
+    }).filter(req => req.leiFilterReq['filter[entity.registeredAs]']);
+
+    const arrSettled = await prepareReqs(reqs);
 
     console.log(arrSettled);
 

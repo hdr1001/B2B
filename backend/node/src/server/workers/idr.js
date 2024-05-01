@@ -45,7 +45,7 @@ const { Pool } = pg;
 const pool = new Pool({ ...pgConn, ssl: { require: true } });
 
 //Acquire a database client from the pool
-const pgClient = await pool.connect()
+const pgClient = await pool.connect();
 
 //Use a cursor to read the keys included in the project in chunks
 const sqlReqs = `SELECT id, params FROM project_idr WHERE project_id = ${projectStage.id} AND stage = ${projectStage.stage};`;

@@ -43,7 +43,7 @@ const { Pool } = pg;
 const pool = new Pool({ ...pgConn, ssl: { require: true } });
 
 //Acquire a database client from the pool
-const pgClient = await pool.connect()
+const pgClient = await pool.connect();
 
 //Use a cursor to read the keys included in the project in chunks
 const sqlKeys = `SELECT req_key FROM project_keys WHERE project_id = ${projectStage.id}`;
@@ -56,7 +56,7 @@ const sqlInsert =
     )
     VALUES (
         ${projectStage.id}, ${projectStage.stage}, $1, $2, $3
-    );`
+    );`;
 
 //Instantiate a new project level HubProjectTransaction object
 const project_hpt = new HubProjectTransaction(hubAPI, projectStage.script, projectStage);
