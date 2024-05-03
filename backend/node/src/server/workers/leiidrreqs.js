@@ -144,7 +144,7 @@ while(rows.length) {
         let regNum = { value: '' };
 
         if(row.reg_nums.length) {
-            if(projectStage.params.idrStage === 1) {
+            if(projectStage.params.idrStage === stagePreferredRegNum) {
                 const preferredRegNum = row.reg_nums.filter(reg_num => reg_num.isPreferredRegistrationNumber);
 
                 if(preferredRegNum.length) {

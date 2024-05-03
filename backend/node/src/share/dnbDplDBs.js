@@ -63,6 +63,7 @@ const appConsts = {
         component: {
             num: {attr: 'registrationNumber', desc: 'value'},
             type: {attr: 'typeDescription', desc: 'type'},
+            preferred: {attr: 'isPreferredRegistrationNumber', desc: 'preferred'},
             vat: {attr: 'vat', desc: 'is VAT'} //Custom attribute
         }
     },

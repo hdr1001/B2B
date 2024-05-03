@@ -410,7 +410,9 @@ CREATE TABLE public.hub_errors (
 );
 
 DO $$
-DECLARE p_id integer;
+DECLARE
+   p_id integer;
+   p_id_dnbdbs integer;
 BEGIN
 
    -- List the hub supported API providers
@@ -438,13 +440,13 @@ BEGIN
 
 
    -- Create a couple test projects, 1st off ➡️ D&B data blocks
-   INSERT INTO projects ( descr ) VALUES ('Test project D&B') RETURNING id INTO p_id;
+   INSERT INTO projects ( descr ) VALUES ('Test project D&B') RETURNING id INTO p_id_dnbdbs;
 
    INSERT INTO project_stages
       ( project_id, stage, api, script, params )
    VALUES
       (
-         p_id,
+         p_id_dnbdbs,
          1,
          'dpl',
          'product',
@@ -454,7 +456,7 @@ BEGIN
    INSERT INTO project_keys
       ( project_id, req_key )
    VALUES
-      ( p_id, '407809623' ), ( p_id, '372428847' ), ( p_id, '373230036' );
+      ( p_id_dnbdbs, '407809623' ), ( p_id_dnbdbs, '372428847' ), ( p_id_dnbdbs, '373230036' );
 
 
    -- Test projects ➡️ D&B beneficial ownership
@@ -503,13 +505,7 @@ BEGIN
    INSERT INTO project_stages
       ( project_id, stage, api, script, params )
    VALUES
-      (
-         p_id,
-         1,
-         'lei',
-         'product',
-         '{}'
-      );
+      ( p_id, 1, 'lei', 'product', '{}' );
 
    INSERT INTO project_keys
       ( project_id, req_key )
@@ -558,18 +554,13 @@ BEGIN
       ( p_id, 1, '{ "name": "bestaeg nie", "addressLocality": "wimbritsseradeel", "countryISOAlpha2Code": "NL" }' );
 
 
-   -- Test projects ➡️ D&B IDentity Resolution
+   -- Test projects ➡️ GLEIF IDentity Resolution (a.k.a. filtering)
    INSERT INTO projects ( descr ) VALUES ('Test project GLEIF filter') RETURNING id INTO p_id;
 
    INSERT INTO project_stages
       ( project_id, stage, api, script )
    VALUES
-      (
-         p_id,
-         1,
-         'lei',
-         'idr'
-      );
+      ( p_id, 1, 'lei', 'idr' );
 
    INSERT INTO project_idr
       ( project_id, stage, params )
@@ -580,5 +571,19 @@ BEGIN
       ( p_id, 1, '{ "filter[entity.legalName]": "bestaeg nie traders", "filter[entity.legalAddress.country]": "NL"}' ),
       ( p_id, 1, '{ "filter[entity.legalName]": "ACT Commodities", "filter[entity.legalAddress.country]": "NL"}' ),
       ( p_id, 1, '{ "filter[entity.legalName]": "optiver holding", "filter[entity.legalAddress.country]": "NL"}' );
+
+
+   -- Test projects ➡️ GLEIF multi-stage IDentity Resolution based on D&B product info
+   INSERT INTO projects ( descr ) VALUES ('Test project multi-stage GLEIF filter') RETURNING id INTO p_id;
+
+   INSERT INTO project_stages
+      ( project_id, stage, api, script, params )
+   VALUES
+      ( p_id, 1, 'lei', 'leiidrreqs', CONCAT('{ "product": { "project_id": ', p_id_dnbdbs, ', "stage": 1 }, "idrStage": 1 }')::jsonb );
+
+   INSERT INTO project_stages
+      ( project_id, stage, api, script, params )
+   VALUES
+      ( p_id, 2, 'lei', 'idr', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 } }')::jsonb );
 
 END $$;

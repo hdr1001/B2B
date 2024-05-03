@@ -48,7 +48,10 @@ const pool = new Pool({ ...pgConn, ssl: { require: true } });
 const pgClient = await pool.connect();
 
 //Use a cursor to read the keys included in the project in chunks
-const sqlReqs = `SELECT id, params FROM project_idr WHERE project_id = ${projectStage.id} AND stage = ${projectStage.stage};`;
+const sqlReqs = `SELECT id, params FROM project_idr
+    WHERE project_id = ${projectStage.params?.idr?.project_id || projectStage.id}
+    AND stage = ${projectStage.params?.idr?.stage || projectStage.stage};`;
+
 const cursor = pgClient.query( new Cursor( sqlReqs ) );
 
 //SQL insert statement for persisting the API responses
