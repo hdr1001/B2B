@@ -40,16 +40,40 @@ const { Pool } = pg;
 const pool = new Pool({ ...pgConn, ssl: { require: true } });
 
 //D&B confidence code based match candidate auto accept
-const ccAutoAccept = {
+const ccAutoAcceptIDs = {
     sql: `UPDATE project_idr
         SET
             key = resp->'matchCandidates'->0->'organization'->>'duns',
-            quality = (resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode')::int * 10,
+            quality = CONCAT(
+                '{ "cc": ', (resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode')::int * 10,
+                ', "id": 100 }'
+            )::jsonb,
             remark = 'Confidence code auto accept'
         WHERE
             project_id = ${projectStage.id}
             AND stage = ${projectStage.params.idrStage}
             AND http_status = 200
+            AND resp->>'matchDataCriteria' = 'National ID Lookup'
+            AND (resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode')::int >= ${projectStage.params.ccAutoAccept};`,
+
+    consoleMsg: 'Number of confidence code based ID matches '
+};
+
+const ccAutoAccept = {
+    sql: `UPDATE project_idr
+        SET
+            key = resp->'matchCandidates'->0->'organization'->>'duns',
+            quality = CONCAT(
+                '{ "mg": "', resp->'matchCandidates'->0->'matchQualityInformation'->>'matchGrade',
+                '", "cc": ', (resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode')::int * 10,
+                ', "name": ', (resp->'matchCandidates'->0->'matchQualityInformation'->>'nameMatchScore')::numeric::int,
+            ' }')::jsonb,
+            remark = 'Confidence code auto accept'
+        WHERE
+            project_id = ${projectStage.id}
+            AND stage = ${projectStage.params.idrStage}
+            AND http_status = 200
+            AND resp->>'matchDataCriteria' != 'National ID Lookup'
             AND (resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode')::int >= ${projectStage.params.ccAutoAccept};`,
 
     consoleMsg: 'Number of confidence code based auto accepted IDR transactions '
@@ -113,7 +137,7 @@ const optionalSteps = new Map([
 ]);
 
 //Always execute these steps
-const autoAcceptSteps = [ccAutoAccept, httpErrRemark];
+const autoAcceptSteps = [ccAutoAcceptIDs, ccAutoAccept, httpErrRemark];
 
 //Configure optional steps
 projectStage.params.optionalSteps.forEach(step => autoAcceptSteps.push(optionalSteps.get(step)));

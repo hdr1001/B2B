@@ -390,7 +390,7 @@ CREATE TABLE public.project_idr (
    resp JSONB,
    http_status smallint,
    key character varying(32),
-   quality smallint,
+   quality JSONB,
    remark character varying(64),
    addtl_info JSONB,
    tsz timestamptz DEFAULT CURRENT_TIMESTAMP,
