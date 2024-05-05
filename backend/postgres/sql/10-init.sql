@@ -544,7 +544,7 @@ BEGIN
    INSERT INTO project_stages
       ( project_id, stage, api, script, params )
    VALUES
-      ( p_id, 2, 'dpl', 'idrautoqa', '{ "idrStage": 1, "ccAutoAccept": 7, "optionalSteps": [ "rejectOobCandidates", "rejectTiebreakers" ] }' );
+      ( p_id, 2, 'dpl', 'idrautoqadpl', '{ "idrStage": 1, "ccAutoAccept": 7, "optionalSteps": [ "rejectOobCandidates", "rejectTiebreakers" ] }' );
 
    INSERT INTO project_idr
       ( project_id, stage, params )
@@ -585,5 +585,10 @@ BEGIN
       ( project_id, stage, api, script, params )
    VALUES
       ( p_id, 2, 'lei', 'idr', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 } }')::jsonb );
+
+   INSERT INTO project_stages
+      ( project_id, stage, api, script, params )
+   VALUES
+      ( p_id, 3, 'lei', 'idrautoqalei', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 } }')::jsonb );
 
 END $$;

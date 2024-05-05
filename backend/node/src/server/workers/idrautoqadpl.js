@@ -3,7 +3,7 @@
 // Worker code to automatically perform quality assurance on the D&B
 // IDentity Resolution responses generated in multi-stage projects
 //
-// JavaScript code file: idrautoqa.js
+// JavaScript code file: idrautoqadpl.js
 //
 // Copyright 2024 Hans de Rooij
 //
@@ -28,9 +28,6 @@ import { parentPort, workerData } from 'worker_threads';
 //Postgres modules & connection parameters
 import pg from 'pg';
 import pgConn from '../pgGlobs.js';
-
-import { ApiHubErr } from '../err.js';
-import handleApiHubErr from '../errCatch.js';
 
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
 const { projectStage } = workerData;
