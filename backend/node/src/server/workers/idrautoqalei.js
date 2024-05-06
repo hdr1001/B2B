@@ -48,7 +48,7 @@ const sqlReqs = `SELECT id, params, resp, http_status, addtl_info FROM project_i
 const cursor = pgClient.query( new Cursor( sqlReqs ) );
 
 //SQL update statement for persisting the API responses
-const sqlUpdate = 'UPDATE project_idr SET key = $1, quality = $2, remark = $3, tsz = CURRENT_TIMESTAMP WHERE id = $4;';
+const sqlUpdate = 'UPDATE project_idr SET key = $1, quality = $2, remark = $3, addtl_info = $4, tsz = CURRENT_TIMESTAMP WHERE id = $5;';
 
 //Use the cursor to read the 1st 100 rows
 let rows = await cursor.read(100);
@@ -66,6 +66,7 @@ while(rows.length) {
                             leiMatch.attributes?.lei,
                             JSON.stringify({ id: 100 }),
                             'LEI registration number match',
+                            JSON.stringify( { ...row.addtl_info, leiFilter: { stage: projectStage.params?.leiFilterStage, regNumIn: row.params['filter[entity.registeredAs]'] } }),
                             row.id
                         ])
                     }

@@ -47,8 +47,8 @@ const ccAutoAcceptIDs = {
             )::jsonb,
             remark = 'Confidence code auto accept'
         WHERE
-            project_id = ${projectStage.id}
-            AND stage = ${projectStage.params.idrStage}
+            project_id = ${projectStage.params.idr.project_id}
+            AND stage = ${projectStage.params.idr.stage}
             AND http_status = 200
             AND resp->>'matchDataCriteria' = 'National ID Lookup'
             AND (resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode')::int >= ${projectStage.params.ccAutoAccept};`,
@@ -67,9 +67,9 @@ const ccAutoAccept = {
             ' }')::jsonb,
             remark = 'Confidence code auto accept'
         WHERE
-            project_id = ${projectStage.id}
-            AND stage = ${projectStage.params.idrStage}
-            AND http_status = 200
+        project_id = ${projectStage.params.idr.project_id}
+        AND stage = ${projectStage.params.idr.stage}
+        AND http_status = 200
             AND resp->>'matchDataCriteria' != 'National ID Lookup'
             AND (resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode')::int >= ${projectStage.params.ccAutoAccept};`,
 
@@ -84,9 +84,9 @@ const httpErrRemark = {
             quality = NULL,
             remark = resp->'error'->>'errorMessage'
         WHERE
-            project_id = ${projectStage.id}
-            AND stage = ${projectStage.params.idrStage}
-            AND http_status != 200;`,
+        project_id = ${projectStage.params.idr.project_id}
+        AND stage = ${projectStage.params.idr.stage}
+        AND http_status != 200;`,
 
     consoleMsg: 'Number of API responses with a HTTP error status '
 };
@@ -102,8 +102,8 @@ const optionalSteps = new Map([
                     quality = NULL,
                     remark = 'Auto accepted candidate is out-of-business'
                 WHERE
-                    project_id = ${projectStage.id}
-                    AND stage = ${projectStage.params.idrStage}
+                    project_id = ${projectStage.params.idr.project_id}
+                    AND stage = ${projectStage.params.idr.stage}
                     AND http_status = 200
                     AND key IS NOT NULL
                     AND (resp->'matchCandidates'->0->'organization'->'dunsControlStatus'->'operatingStatus'->>'dnbCode')::int = 403;`,
@@ -121,13 +121,13 @@ const optionalSteps = new Map([
                     quality = NULL,
                     remark = 'Auto accepted candidate is a tie-breaker'
                 WHERE
-                    project_id = ${projectStage.id}
-                    AND stage = ${projectStage.params.idrStage}
+                    project_id = ${projectStage.params.idr.project_id}
+                    AND stage = ${projectStage.params.idr.stage}
                     AND http_status = 200
                     AND key IS NOT NULL
                     AND resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode' = resp->'matchCandidates'->1->'matchQualityInformation'->>'confidenceCode'
                     AND (resp->'matchCandidates'->1->'organization'->'dunsControlStatus'->'operatingStatus'->>'dnbCode')::int = 9074;`,
-        
+
             consoleMsg: 'Number of auto accepted candidates rejected because tie-breaker '
         }
     ]

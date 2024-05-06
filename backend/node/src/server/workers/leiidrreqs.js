@@ -66,7 +66,7 @@ const sqlInsert =
         project_id, stage, params, addtl_info
     )
     VALUES (
-        ${projectStage.id}, ${projectStage.stage}, $1, $2
+        ${projectStage.id}, ${projectStage.params.product.stage}, $1, $2
     )
     RETURNING id;`;
 /*
@@ -144,7 +144,7 @@ while(rows.length) {
         let regNum = { value: '' };
 
         if(row.reg_nums.length) {
-            if(projectStage.params.idrStage === stagePreferredRegNum) {
+            if(projectStage.params.leiFilterStage === stagePreferredRegNum) {
                 const preferredRegNum = row.reg_nums.filter(reg_num => reg_num.isPreferredRegistrationNumber);
 
                 if(preferredRegNum.length) {
