@@ -48,35 +48,40 @@ const sqlReqs = `SELECT id, params, resp, http_status, addtl_info FROM project_i
 const cursor = pgClient.query( new Cursor( sqlReqs ) );
 
 //SQL update statement for persisting the API responses
-const sqlUpdate = 'UPDATE project_idr SET key = $1, quality = $2, remark = $3, addtl_info = $4, tsz = CURRENT_TIMESTAMP WHERE id = $5;';
+const sqlUpdate = 'UPDATE project_idr SET key = $1, quality = $2, remark = $3, addtl_info = $4, tsz = CURRENT_TIMESTAMP WHERE id = $5 RETURNING id;';
+
+//Perform the quality assurance
+function performQA(rows) {
+    return Promise.allSettled(
+        rows.map(row => new Promise((resolve, reject) => {
+            if(row.http_status === 200 &&
+                row.params['filter[entity.registeredAs]'] &&
+                row.resp.data?.[0] &&
+                row.params['filter[entity.registeredAs]'] === row.resp.data[0].attributes?.entity?.registeredAs
+            ) {
+                pool.query(sqlUpdate, [ 
+                    row.resp.data[0].attributes?.lei,
+                    JSON.stringify({ id: 100 }),
+                    'LEI registration number match',
+                    JSON.stringify({ ...row.addtl_info, try: { leiFilterStage: projectStage.params?.leiFilterStage, success: true } }),
+                    row.id
+                ]).then(dbQry => {resolve(dbQry.rows[0].id)}).catch(err => reject(err.message))
+            }
+            else {
+                reject(`No match on ${row.params['filter[entity.registeredAs]']}`)
+            }
+        }))
+    )
+}
 
 //Use the cursor to read the 1st 100 rows
 let rows = await cursor.read(100);
 
 //Iterate over the available rows
 while(rows.length) {
-    rows.forEach(row => {
-        if(row.http_status === 200) {
-            if(row.params['filter[entity.registeredAs]']) {
-                if(row.resp.data?.[0]) {
-                    const leiMatch = row.resp.data[0];
+    const arrQA = await performQA(rows);
 
-                    if(row.params['filter[entity.registeredAs]'] === leiMatch.attributes?.entity?.registeredAs) {
-                        pool.query(sqlUpdate, [ 
-                            leiMatch.attributes?.lei,
-                            JSON.stringify({ id: 100 }),
-                            'LEI registration number match',
-                            JSON.stringify( { ...row.addtl_info, leiFilter: { stage: projectStage.params?.leiFilterStage, regNumIn: row.params['filter[entity.registeredAs]'] } }),
-                            row.id
-                        ])
-                    }
-                    else {
-                        console.log(`No match on registration number ${row.params['filter[entity.registeredAs]']}`)
-                    }    
-                }
-            }
-        }
-    });
+    console.log(arrQA);
 
     rows = await cursor.read(100);
 }
