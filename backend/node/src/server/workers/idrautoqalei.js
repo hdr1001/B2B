@@ -50,22 +50,30 @@ const cursor = pgClient.query( new Cursor( sqlReqs ) );
 //SQL update statement for persisting the API responses
 const sqlUpdate = 'UPDATE project_idr SET key = $1, quality = $2, remark = $3, addtl_info = $4, tsz = CURRENT_TIMESTAMP WHERE id = $5 RETURNING id;';
 
-//Perform the quality assurance
-function performQA(rows) {
+//Perform the registered as quality assurance
+function performRegAsQA(rows) {
     return Promise.allSettled(
-        rows.map(row => new Promise((resolve, reject) => {
-            if(row.http_status === 200 &&
-                row.params['filter[entity.registeredAs]'] &&
-                row.resp.data?.[0] &&
-                row.params['filter[entity.registeredAs]'] === row.resp.data[0].attributes?.entity?.registeredAs
-            ) {
-                pool.query(sqlUpdate, [ 
+        rows.map(row => new Promise((resolve, reject) => { //For all rows in the chunck...
+            //Check if the submitted registration number matches the one on the match candidate
+            if(row.params['filter[entity.registeredAs]'] === row.resp.data[0].attributes?.entity?.registeredAs) {
+                pool.query(sqlUpdate, [
+                    //The LEI is what we are looking for
                     row.resp.data[0].attributes?.lei,
+
+                    //One hundred points for the ID match
                     JSON.stringify({ id: 100 }),
+
+                    //Just for the record ⬇️
                     'LEI registration number match',
+
+                    //More information for the record ⬇️
                     JSON.stringify({ ...row.addtl_info, try: { leiFilterStage: projectStage.params?.leiFilterStage, success: true } }),
+
+                    //The primary key of table project_idr
                     row.id
-                ]).then(dbQry => {resolve(dbQry.rows[0].id)}).catch(err => reject(err.message))
+                ])
+                    .then(dbQry => resolve(`Successfully resolved project IDR record with ID ${dbQry.rows[0].id}`))
+                    .catch(err => reject(err.message))
             }
             else {
                 reject(`No match on ${row.params['filter[entity.registeredAs]']}`)
@@ -76,12 +84,25 @@ function performQA(rows) {
 
 //Use the cursor to read the 1st 100 rows
 let rows = await cursor.read(100);
+let chunk = 0;
 
 //Iterate over the available rows
 while(rows.length) {
-    const arrQA = await performQA(rows);
+    console.log(`processing chunk ${++chunk}`);
 
-    console.log(arrQA);
+    //QA only relevant if (at least) one candidate available
+    const rowsCandidateAvailable = rows.filter(row => row.http_status && row.resp?.data?.[0]);
+
+    console.log(`Number of responses with candidates ${rowsCandidateAvailable.length}`);
+
+    //Registration number validation if registeredAs parameter available
+    const rowsCandidateRegAs = rowsCandidateAvailable.filter(row => row.params['filter[entity.registeredAs]']);
+
+    console.log(`Count of candidates generated based on registration number ${rowsCandidateRegAs.length}`);
+
+    if(rowsCandidateRegAs.length) { //QA the registration number based match candidates
+        console.log(await performRegAsQA(rowsCandidateRegAs))
+    }
 
     rows = await cursor.read(100);
 }
