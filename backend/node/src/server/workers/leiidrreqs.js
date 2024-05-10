@@ -28,18 +28,12 @@ import pg from 'pg';
 import Cursor from 'pg-cursor';
 import pgConn from '../pgGlobs.js';
 
-import { dcdrUtf8 } from '../../share/utils.js';
 import { pgDbLimiter } from '../../share/limiters.js';
-import { LeiReq, DnbDplDBs, DnbDplFamTree, DnbDplBenOwner } from '../../share/apiDefs.js';
-import { HubProjectTransaction } from '../transaction.js';
-import { ApiHubErr } from '../err.js';
-import handleApiHubErr from '../errCatch.js';
 
 const stagePreferredRegNum = 1;
-const stageOptimizedRegNum = 2;
 
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
-const { hubAPI, projectStage } = workerData;
+const { projectStage } = workerData;
 
 //Setup a reusable pool of database clients
 const { Pool } = pg;
@@ -51,8 +45,11 @@ const pgClient = await pool.connect();
 //Use a cursor to read the keys included in the project in chunks
 const sqlKeys = `SELECT 
                     req_key,
-                    product->'organization'->'registrationNumbers' AS reg_nums,
-                    product->'organization'->>'countryISOAlpha2Code' AS iso_ctry
+                    product->'organization'->>'duns',
+                    product->'organization'->>'primaryName' AS name,
+                    product->'organization'->>'countryISOAlpha2Code' AS iso_ctry,
+                    product->'organization'->'primaryAddress' AS addr,
+                    product->'organization'->'registrationNumbers' AS reg_nums
                 FROM project_products
                 WHERE
                     project_id = ${projectStage.params.product.project_id}
@@ -63,114 +60,45 @@ const cursor = pgClient.query( new Cursor( sqlKeys ) );
 //SQL insert statement for persisting the API responses
 const sqlInsert = 
     `INSERT INTO project_idr (
-        project_id, stage, params, addtl_info
+        project_id, stage, addtl_info
     )
     VALUES (
-        ${projectStage.id}, ${projectStage.params.product.stage}, $1, $2
+        ${projectStage.id}, ${projectStage.params.product.stage}, $1
     )
     RETURNING id;`;
-/*
-const regNumCtry = new Map(
-    ['at', (regNums, regNum, stage) => {
-        if(stage !== 1) { return null }
 
-        const regNum1336 = regNums.filter(atRegNum => atRegNum.typeDnBCode === 1336);
-
-        if(regNum1336.length && regNum1336[0].registrationNumber.slice(0, 2) === 'FN') {
-            regNum.value = regNum1336[0].registrationNumber.slice(2);
-            regNum.typeCode = regNum1336[0].typeDnBCode;
-        }
-
-        return regNum;
-    }],
-
-    ['be', (regNums, regNum, stage) => {
-        if(stage === 1) {
-            const regNum800 = regNums.filter(beRegNum => beRegNum.typeDnBCode === 800);
-            
-            if(regNum800.length && regNum800[0].registrationNumber.length === 10) {
-                regNum.value  = regNum800[0].registrationNumber.slice(0, 4);
-                regNum.value += '.' + regNum800[0].registrationNumber.slice(4, 7);
-                regNum.value += '.' + regNum800[0].registrationNumber.slice(-3);
-
-                regNum.typeCode = regNum800[0].typeDnBCode;
-            }
-    
-            return regNum;    
-        }
-
-        if(stage === 2) {
-            const regNum800 = regNums.filter(beRegNum => beRegNum.typeDnBCode === 800);
-            
-            if(regNum800.length) {
-                regNum.value  = regNum800[0].registrationNumber;
-
-                regNum.typeCode = regNum800[0].typeDnBCode;
-            }
-    
-            return regNum;    
-        }
-
-        return null
-    }],
-);
-
-//Pre-process registration numbers
-function preProcessRegNum(regNums, regNum, stage) {
-
-}
-*/
-//Process a chunk of keys read using a database cursor
-function prepareReqs(reqs) {
+//Prepare project IDR requests based on D&B data block information
+function createProjectIdrRec(rows) {
     return Promise.allSettled(
-        reqs.map(req => new Promise((resolve, reject) => {
-            pgDbLimiter.removeTokens(1) //Throttle the number of SQL statements
-                .then(() => {
-                    return pool.query(sqlInsert, [ req.leiFilterReq, req.addtlInfo ])
-                })
-                .then(dbQry => {
-                    resolve({ ...req.leiFilterReq, duns: req.addtlInfo.duns })
-                })
+        rows.map(row => new Promise((resolve, reject) => { //For all rows in the chunck...
+            //Check if the submitted registration number matches the one on the match candidate
+            pool.query(sqlInsert, [
+                {
+                    duns: row.req_key,
+                    input: {
+                        duns: row.duns,
+                        name: row.name,
+                        isoCtry: row.iso_ctry,
+                        addr: row.addr,
+                        regNums: row.reg_nums
+                    }
+                }
+            ])
+                .then(dbQry => resolve(`Successfully created project IDR record with ID ${dbQry.rows[0].id}`))
+                .catch(err => reject(err.message))
         }))
-    )
+    ) 
 }
 
 //Use the cursor to read the 1st 100 rows
 let rows = await cursor.read(100);
+let chunk = 0;
 
 //Iterate over the available rows
 while(rows.length) {
-    const reqs = rows.map(row => {
-        let regNum = { value: '' };
+    console.log(`processing chunk ${++chunk}`);
 
-        if(row.reg_nums.length) {
-            if(projectStage.params.leiFilterStage === stagePreferredRegNum) {
-                const preferredRegNum = row.reg_nums.filter(reg_num => reg_num.isPreferredRegistrationNumber);
-
-                if(preferredRegNum.length) {
-                    regNum.value = preferredRegNum[0].registrationNumber;
-                    regNum.preferred = true;
-                }
-                else { //No preferred registration number assigned
-                    regNum.value = row.reg_nums[0].registrationNumber;
-                }    
-            }
-        }
-
-        return {
-            leiFilterReq: {
-                'filter[entity.registeredAs]': regNum.value,
-                'filter[entity.legalAddress.country]': row.iso_ctry
-            },
-            addtlInfo: {
-                duns: row.req_key
-            }
-        };
-    }).filter(req => req.leiFilterReq['filter[entity.registeredAs]']);
-
-    const arrSettled = await prepareReqs(reqs);
-
-    console.log(arrSettled);
+    console.log(await createProjectIdrRec(rows));
 
     rows = await cursor.read(100);
 }
