@@ -579,16 +579,21 @@ BEGIN
    INSERT INTO project_stages
       ( project_id, stage, api, script, params )
    VALUES
-      ( p_id, 1, 'lei', 'leiidrreqs', CONCAT('{ "product": { "project_id": ', p_id_dnbdbs, ', "stage": 1 }, "leiFilterStage": 1 }')::JSONB );
+      ( p_id, 1, 'lei', 'leiidrrecs', CONCAT('{ "product": { "project_id": ', p_id_dnbdbs, ', "stage": 1 } }')::JSONB );
 
    INSERT INTO project_stages
       ( project_id, stage, api, script, params )
    VALUES
-      ( p_id, 2, 'lei', 'idr', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 } }')::JSONB );
+      ( p_id, 2, 'lei', 'leiidrreqs', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 }, "try": 1 }')::JSONB );
 
-   INSERT INTO project_stages
-      ( project_id, stage, api, script, params )
-   VALUES
-      ( p_id, 3, 'lei', 'idrautoqalei', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 }, "leiFilterStage": 1 }')::JSONB );
+--   INSERT INTO project_stages
+--      ( project_id, stage, api, script, params )
+--   VALUES
+--      ( p_id, 2, 'lei', 'idr', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 } }')::JSONB );
+
+--   INSERT INTO project_stages
+--      ( project_id, stage, api, script, params )
+--   VALUES
+--      ( p_id, 3, 'lei', 'idrautoqalei', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 }, "leiFilterStage": 1 }')::JSONB );
 
 END $$;

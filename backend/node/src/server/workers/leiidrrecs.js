@@ -1,9 +1,11 @@
 // *********************************************************************
 //
-// Worker code to create the LEI filter requests, in multiple  
-// stages, to enable DUNS to GLEIF conversions.
+// Worker code to create database records used in the process of 
+// DUNS to GLEIF conversions. In this step the records in table 
+// project_idr will be created based on data as available in D&B
+// data blocks.
 //
-// JavaScript code file: leiidrreqs.js
+// JavaScript code file: leiidrrecs.js
 //
 // Copyright 2024 Hans de Rooij
 //
@@ -43,30 +45,57 @@ const pool = new Pool({ ...pgConn, ssl: { require: true } });
 //Acquire a database client from the pool
 const pgClient = await pool.connect();
 
-//Use a cursor to read the project stage's raw identification data
+//Use a cursor to read the D&B data blocks which are the source of match data
 const sqlDnbProduct = `SELECT 
-                    id,
-                    key,
-                    addtl_info
-                FROM project_idr
+                    req_key,
+                    product->'organization'->>'duns',
+                    product->'organization'->>'primaryName' AS name,
+                    product->'organization'->>'countryISOAlpha2Code' AS iso_ctry,
+                    product->'organization'->'primaryAddress' AS addr,
+                    product->'organization'->'registrationNumbers' AS reg_nums
+                FROM project_products
                 WHERE
-                    project_id = ${projectStage.params.idr.project_id}
-                    AND stage = ${projectStage.params.idr.stage};`;
+                    project_id = ${projectStage.params.product.project_id}
+                    AND stage = ${projectStage.params.product.stage};`;
 
 const cursor = pgClient.query( new Cursor( sqlDnbProduct ) );
 
-//SQL update statement for persisting IDR requests
-const sqlUpdate = 'UPDATE project_idr SET params = $1, addtl_info = $2 WHERE id = $3 RETURNING id;';
-
-const stagePreferredRegNum = 1; //Use the preferred registration number to try & make the match
+//SQL insert statement for persisting the API responses
+const sqlInsert = 
+    `INSERT INTO project_idr (
+        project_id, stage, addtl_info
+    )
+    VALUES (
+        ${projectStage.id}, ${projectStage.params.product.stage}, $1
+    )
+    RETURNING id;`;
 
 //Initial creation of records in table project_idr based on D&B data block information
-function createAndPersistProjectIdrReq(rows) {
+function createProjectIdrRec(rows) {
     return Promise.allSettled(
         rows.map(row => new Promise((resolve, reject) => { //For all rows in the chunck...
             pgDbLimiter.removeTokens(1)
-                .then(() => pool.query(sqlUpdate, row)) //Update columns params & addtl_info 
-                .then(dbQry => resolve(`Successfully update project IDR record with ID ${dbQry.rows[0].id}`))
+                .then(() =>
+                    //All the data needed is stored in JSONB column addtl_info
+                    pool.query(sqlInsert, [
+                        {
+                            product: {
+                                project_id: projectStage.params.product.project_id,
+                                stage: projectStage.params.product.stage,
+                                req_key: row.req_key
+                            },
+                            input: {
+                                duns: row.duns,
+                                name: row.name,
+                                isoCtry: row.iso_ctry,
+                                addr: row.addr,
+                                regNums: row.reg_nums
+                            },
+                            tries: []
+                        }
+                    ])
+                )
+                .then(dbQry => resolve(`Successfully created project IDR record with ID ${dbQry.rows[0].id}`))
                 .catch(err => reject(err.message))
         }))
     ) 
@@ -80,43 +109,7 @@ let chunk = 0;
 while(rows.length) {
     console.log(`processing chunk ${++chunk}`);
 
-    //1st try
-    if(projectStage.params.try === stagePreferredRegNum) {
-        let reqs = rows.filter(row => !row.key)
-            .filter(row => row.addtl_info?.input.regNums && row.addtl_info.input.regNums.length)
-            .map(row => {
-                const idrTry = { 
-                    try: stagePreferredRegNum,
-                    isoCtry: row.addtl_info.input.isoCtry,
-                    regNum: { value: '' }
-                };
-
-                const preferredRegNum = row.addtl_info.input.regNums.filter(regNum => regNum.isPreferredRegistrationNumber);
-
-                if(preferredRegNum.length) {
-                    idrTry.regNum.value = preferredRegNum[0].registrationNumber;
-                    idrTry.regNum.preferred = true;
-                }
-                else { //No preferred registration number assigned
-                    idrTry.regNum.value = row.addtl_info.input.regNums[0].registrationNumber
-                }
-
-                row.addtl_info.tries.push(idrTry);
-
-                return [
-                    {
-                        'filter[entity.registeredAs]': idrTry.regNum.value,
-                        'filter[entity.legalAddress.country]': idrTry.isoCtry
-                    },
-
-                    row.addtl_info,
-
-                    row.id
-                ];
-            });
-
-            console.log(await createAndPersistProjectIdrReq( reqs ));
-    }
+    console.log(await createProjectIdrRec(rows));
 
     rows = await cursor.read(100);
 }
