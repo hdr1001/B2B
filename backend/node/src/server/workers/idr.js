@@ -138,12 +138,13 @@ function process(rows) {
 
 //Use the cursor to read the 1st 100 rows
 let rows = await cursor.read(100);
+let chunk = 0;
 
 //Iterate over the available rows
 while(rows.length) {
-    const arrSettled = await process(rows);
+    console.log(`processing chunk ${++chunk}`);
 
-    console.log(arrSettled);
+    /* console.log( */ await process(rows.filter(row => row.params && !row.key)) /* ) */;
 
     rows = await cursor.read(100);
 }

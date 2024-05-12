@@ -109,7 +109,7 @@ let chunk = 0;
 while(rows.length) {
     console.log(`processing chunk ${++chunk}`);
 
-    console.log(await createProjectIdrRec(rows));
+    /* console.log( */ await createProjectIdrRec(rows) /* ) */;
 
     rows = await cursor.read(100);
 }

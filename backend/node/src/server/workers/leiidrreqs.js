@@ -115,7 +115,7 @@ while(rows.length) {
                 ];
             });
 
-            console.log(await createAndPersistProjectIdrReq( reqs ));
+            /* console.log( */ await createAndPersistProjectIdrReq( reqs ) /* ) */;
     }
 
     rows = await cursor.read(100);
