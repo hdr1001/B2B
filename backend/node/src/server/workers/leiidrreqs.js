@@ -56,7 +56,7 @@ const sqlDnbProduct = `SELECT
 const cursor = pgClient.query( new Cursor( sqlDnbProduct ) );
 
 //SQL update statement for persisting IDR requests
-const sqlUpdate = 'UPDATE project_idr SET params = $1, addtl_info = $2 WHERE id = $3 RETURNING id;';
+const sqlUpdate = 'UPDATE project_idr SET params = $1, addtl_info = $2, tsz = CURRENT_TIMESTAMP WHERE id = $3 RETURNING id;';
 
 const stagePreferredRegNum = 1; //Use the preferred registration number to try & make the match
 

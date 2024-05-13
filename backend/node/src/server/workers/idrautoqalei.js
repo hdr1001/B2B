@@ -30,6 +30,9 @@ import pg from 'pg';
 import Cursor from 'pg-cursor';
 import pgConn from '../pgGlobs.js';
 
+//Throttle the database requests
+import { pgDbLimiter } from '../../share/limiters.js';
+
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
 const { projectStage } = workerData;
 
@@ -50,36 +53,16 @@ const cursor = pgClient.query( new Cursor( sqlReqs ) );
 //SQL update statement for persisting the API responses
 const sqlUpdate = 'UPDATE project_idr SET key = $1, quality = $2, remark = $3, addtl_info = $4, tsz = CURRENT_TIMESTAMP WHERE id = $5 RETURNING id;';
 
-//Perform the registered as quality assurance
-function performRegAsQA(rows) {
+//Update the match quality information to the database
+function persistRegAsQaInfo(arrQaInfo) {
     return Promise.allSettled(
-        rows.map(row => new Promise((resolve, reject) => { //For all rows in the chunck...
-            //Check if the submitted registration number matches the one on the match candidate
-            if(row.params['filter[entity.registeredAs]'] === row.resp.data[0].attributes?.entity?.registeredAs) {
-                pool.query(sqlUpdate, [
-                    //The LEI is what we are looking for
-                    row.resp.data[0].attributes?.lei,
-
-                    //One hundred points for the ID match
-                    JSON.stringify({ id: 100 }),
-
-                    //Just for the record ⬇️
-                    'LEI registration number match',
-
-                    //More information for the record ⬇️
-                    JSON.stringify({ ...row.addtl_info, try: { leiFilterStage: projectStage.params?.leiFilterStage, success: true } }),
-
-                    //The primary key of table project_idr
-                    row.id
-                ])
-                    .then(dbQry => resolve(`Successfully resolved project IDR record with ID ${dbQry.rows[0].id}`))
-                    .catch(err => reject(err.message))
-            }
-            else {
-                reject(`No match on ${row.params['filter[entity.registeredAs]']}`)
-            }
+        arrQaInfo.map(qaInfo => new Promise((resolve, reject) => { //For all rows in the chunck...
+            pgDbLimiter.removeTokens(1)
+                .then(() => pool.query(sqlUpdate, qaInfo)) //Update columns params & addtl_info 
+                .then(dbQry => resolve(`Successfully update project IDR record with ID ${dbQry.rows[0].id}`))
+                .catch(err => reject(err.message))
         }))
-    )
+    ) 
 }
 
 //Use the cursor to read the 1st 100 rows
@@ -90,18 +73,57 @@ let chunk = 0;
 while(rows.length) {
     console.log(`processing chunk ${++chunk}`);
 
-    //QA only relevant if (at least) one candidate available
-    const rowsCandidateAvailable = rows.filter(row => row.http_status && row.resp?.data?.[0]);
+    //QA only relevant if (1) not already resolved, (2) valid HTTP response and (3) one or more candidate(s) available
+    const rowsCandidateAvailable = rows.filter(row => !row.key && row.http_status === 200 && row.resp?.data?.[0]);
 
-    console.log(`Number of responses with candidates ${rowsCandidateAvailable.length}`);
+    //Validate the submitted registration number against the one in the REST response
+    const rowsRegAsMatch = rowsCandidateAvailable.filter(
+        row => row.params['filter[entity.registeredAs]'] &&
+            row.params['filter[entity.registeredAs]'] === row.resp.data[0].attributes?.entity?.registeredAs);
 
-    //Registration number validation if registeredAs parameter available
-    const rowsCandidateRegAs = rowsCandidateAvailable.filter(row => row.params['filter[entity.registeredAs]']);
+    console.log(`Num of resp w. candidates ${rowsCandidateAvailable.length}, validated reg num matches ${rowsRegAsMatch.length}`);
 
-    console.log(`Count of candidates generated based on registration number ${rowsCandidateRegAs.length}`);
+    if(rowsRegAsMatch.length) { //QA the registration number based match candidates
+        const regAsMatches = rowsRegAsMatch.map(row => {
+            try {
+                row.addtl_info.tries
+                    .filter(o => o.try === projectStage.params.try)[0].succes = true;
+            }
+            catch(err) {
+                const oTry = {
+                    try: projectStage.params.try,
+                    isoCtry: row.addtl_info.input?.isoCtry,
+                    regNum: { value: row.params['filter[entity.registeredAs]'] },
+                    success: true
+                }
 
-    if(rowsCandidateRegAs.length) { //QA the registration number based match candidates
-        console.log(await performRegAsQA(rowsCandidateRegAs))
+                if(Array.isArray(row.addtl_info.tries)) {
+                    row.addtl_info.tries.push(oTry)
+                }
+                else {
+                    row.addtl_info.tries = [ oTry ];
+                }
+            }
+
+            return [
+                //The LEI is what we are looking for
+                row.resp.data[0].attributes?.lei,
+
+                //One hundred points for the ID match
+                { id: 100 },
+
+                //Just for the record ⬇️
+                'LEI registration number match',
+
+                //More information for the record ⬇️
+                row.addtl_info,
+
+                //The primary key of table project_idr
+                row.id
+            ];          
+        })
+
+        /* console.log( */ await persistRegAsQaInfo(regAsMatches) /* ) */;
     }
 
     rows = await cursor.read(100);
