@@ -33,6 +33,8 @@ import pgConn from '../pgGlobs.js';
 //Throttle the database requests
 import { pgDbLimiter } from '../../share/limiters.js';
 
+import { leiMatchStage, getLeiMatchTryRegNum } from './utils.js';
+
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
 const { projectStage } = workerData;
 
@@ -58,15 +60,13 @@ const cursor = pgClient.query( new Cursor( sqlDnbProduct ) );
 //SQL update statement for persisting IDR requests
 const sqlUpdate = 'UPDATE project_idr SET params = $1, addtl_info = $2, tsz = CURRENT_TIMESTAMP WHERE id = $3 RETURNING id;';
 
-const stagePreferredRegNum = 1; //Use the preferred registration number to try & make the match
-
 //Initial creation of records in table project_idr based on D&B data block information
 function createAndPersistProjectIdrReq(rows) {
     return Promise.allSettled(
         rows.map(row => new Promise((resolve, reject) => { //For all rows in the chunck...
             pgDbLimiter.removeTokens(1)
                 .then(() => pool.query(sqlUpdate, row)) //Update columns params & addtl_info 
-                .then(dbQry => resolve(`Successfully update project IDR record with ID ${dbQry.rows[0].id}`))
+                .then(dbQry => resolve(`Successfully updated IDR request data project IDR record with ID ${dbQry.rows[0].id}`))
                 .catch(err => reject(err.message))
         }))
     ) 
@@ -81,32 +81,25 @@ while(rows.length) {
     console.log(`processing chunk ${++chunk}`);
 
     //1st try
-    if(projectStage.params.try === stagePreferredRegNum) {
+    if(projectStage.params.try === leiMatchStage.prefRegNum) {
         let reqs = rows.filter(row => !row.key)
             .filter(row => row.addtl_info?.input.regNums && row.addtl_info.input.regNums.length)
             .map(row => {
-                const idrTry = { 
-                    try: stagePreferredRegNum,
-                    isoCtry: row.addtl_info.input.isoCtry,
-                    regNum: { value: '' }
-                };
-
                 const preferredRegNum = row.addtl_info.input.regNums.filter(regNum => regNum.isPreferredRegistrationNumber);
 
-                if(preferredRegNum.length) {
-                    idrTry.regNum.value = preferredRegNum[0].registrationNumber;
-                    idrTry.regNum.preferred = true;
-                }
-                else { //No preferred registration number assigned
-                    idrTry.regNum.value = row.addtl_info.input.regNums[0].registrationNumber
-                }
+                const leiMatchTry = getLeiMatchTryRegNum(
+                    leiMatchStage.prefRegNum,
+                    preferredRegNum.length ? preferredRegNum[0].registrationNumber : row.addtl_info.input.regNums[0].registrationNumber,
+                    row.addtl_info.input.isoCtry,
+                    Boolean(preferredRegNum.length)
+                );
 
-                row.addtl_info.tries.push(idrTry);
+                row.addtl_info.tries.push(leiMatchTry);
 
                 return [
                     {
-                        'filter[entity.registeredAs]': idrTry.regNum.value,
-                        'filter[entity.legalAddress.country]': idrTry.isoCtry
+                        'filter[entity.registeredAs]': leiMatchTry.in.regNum.value,
+                        'filter[entity.legalAddress.country]': leiMatchTry.in.isoCtry
                     },
 
                     row.addtl_info,

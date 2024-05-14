@@ -33,6 +33,8 @@ import pgConn from '../pgGlobs.js';
 //Throttle the database requests
 import { pgDbLimiter } from '../../share/limiters.js';
 
+import { getLeiMatchTryRegNum } from './utils.js';
+
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
 const { projectStage } = workerData;
 
@@ -59,7 +61,7 @@ function persistRegAsQaInfo(arrQaInfo) {
         arrQaInfo.map(qaInfo => new Promise((resolve, reject) => { //For all rows in the chunck...
             pgDbLimiter.removeTokens(1)
                 .then(() => pool.query(sqlUpdate, qaInfo)) //Update columns params & addtl_info 
-                .then(dbQry => resolve(`Successfully update project IDR record with ID ${dbQry.rows[0].id}`))
+                .then(dbQry => resolve(`Successfully updated QA info on project IDR record with ID ${dbQry.rows[0].id}`))
                 .catch(err => reject(err.message))
         }))
     ) 
@@ -85,25 +87,29 @@ while(rows.length) {
 
     if(rowsRegAsMatch.length) { //QA the registration number based match candidates
         const regAsMatches = rowsRegAsMatch.map(row => {
+            let leiMatchTry;
+
             try {
-                row.addtl_info.tries
-                    .filter(o => o.try === projectStage.params.try)[0].succes = true;
+                leiMatchTry = row.addtl_info.tries.filter(leiMatchTry => leiMatchTry.stage === projectStage.params.try)[0];
+
+                if(!leiMatchTry) { throw new Error('Match try object could not be located in tries array') }
             }
             catch(err) {
-                const oTry = {
-                    try: projectStage.params.try,
-                    isoCtry: row.addtl_info.input?.isoCtry,
-                    regNum: { value: row.params['filter[entity.registeredAs]'] },
-                    success: true
-                }
+                leiMatchTry = getLeiMatchTryRegNum(
+                    projectStage.params.try || 0,
+                    row.params['filter[entity.registeredAs]'],
+                    row.addtl_info.input?.isoCtry
+                );
 
                 if(Array.isArray(row.addtl_info.tries)) {
-                    row.addtl_info.tries.push(oTry)
+                    row.addtl_info.tries.push(leiMatchTry)
                 }
                 else {
-                    row.addtl_info.tries = [ oTry ];
+                    row.addtl_info.tries = [ leiMatchTry ]
                 }
             }
+
+            leiMatchTry.success = true;
 
             return [
                 //The LEI is what we are looking for
