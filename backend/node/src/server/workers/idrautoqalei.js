@@ -34,6 +34,7 @@ import pgConn from '../pgGlobs.js';
 import { pgDbLimiter } from '../../share/limiters.js';
 
 import { getLeiMatchTryRegNum } from './utils.js';
+import { jaroWrinker } from '../../share/jaroWrinker.js';
 
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
 const { projectStage } = workerData;
@@ -111,12 +112,18 @@ while(rows.length) {
 
             leiMatchTry.success = true;
 
+            const qlt = {
+                id: 100,
+                name: jaroWrinker(row.addtl_info?.input?.name, row.resp?.data?.[0]?.attributes?.entity?.legalName?.name),
+                city: jaroWrinker(row.addtl_info?.input?.addr?.addressLocality?.name, row.resp?.data?.[0]?.attributes?.entity?.legalAddress?.city),
+            };
+
             return [
                 //The LEI is what we are looking for
                 row.resp.data[0].attributes?.lei,
 
                 //One hundred points for the ID match
-                { id: 100 },
+                qlt,
 
                 //Just for the record ⬇️
                 'LEI registration number match',
