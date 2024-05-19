@@ -48,7 +48,8 @@ const pgClient = await pool.connect();
 //Use a cursor to read the project stage's raw identification data
 const sqlIdrReset = `SELECT 
                     id,
-                    resp
+                    resp,
+                    addtl_info
                 FROM project_idr
                 WHERE
                     project_id = ${projectStage.params.idr.project_id}
@@ -71,12 +72,12 @@ const sqlUpdate = `UPDATE project_idr
     RETURNING id;`;
 
 //Initial creation of records in table project_idr based on D&B data block information
-function createAndPersistProjectIdrReq(rows) {
+function resetNoMatches(rows) {
     return Promise.allSettled(
         rows.map(row => new Promise((resolve, reject) => { //For all rows in the chunck...
             pgDbLimiter.removeTokens(1)
-                .then(() => pool.query(sqlUpdate, row)) //Update columns params & addtl_info 
-                .then(dbQry => resolve(`Successfully updated IDR request data project IDR record with ID ${dbQry.rows[0].id}`))
+                .then(() => pool.query(sqlUpdate, row)) //Update columns addtl_info 
+                .then(dbQry => resolve(`Successfully updated IDR try data with ID ${dbQry.rows[0].id}`))
                 .catch(err => reject(err.message))
         }))
     ) 
@@ -90,7 +91,44 @@ let chunk = 0;
 while(rows.length) {
     console.log(`processing chunk ${++chunk}`);
 
-    console.log(rows.map(row => row.id));
+    const recsReset = rows.map(row => {
+        let leiMatchTry;
+
+        try {
+            leiMatchTry = row.addtl_info.tries.filter(leiMatchTry => leiMatchTry.stage === projectStage.params.try)[0];
+
+            if(!leiMatchTry) { throw new Error('Match try object could not be located in tries array') }
+        }
+        catch(err) {
+            leiMatchTry = getLeiMatchTryRegNum(
+                projectStage.params.try || 0,
+                row.params['filter[entity.registeredAs]'],
+                row.addtl_info.input?.isoCtry
+            );
+
+            if(Array.isArray(row.addtl_info.tries)) {
+                row.addtl_info.tries.push(leiMatchTry)
+            }
+            else {
+                row.addtl_info.tries = [ leiMatchTry ]
+            }
+        }
+
+        leiMatchTry.out = {
+            numCandidates: row.resp?.data ? row.resp.data.length : 0,
+            http_status: row.http_status,
+        };
+
+        if(row.resp?.data?.[0]) { leiMatchTry.out.candidate0 = row.resp.data[0]}
+
+        return [
+            row.addtl_info,
+
+            row.id
+        ];
+    });
+
+    /* console.log( */ await resetNoMatches(recsReset) /* ) */;
 
     rows = await cursor.read(100);
 }
