@@ -55,7 +55,7 @@ router.post('/', (req, resp) => {
     const project = { id: req.body.id }
 
     if(project.id) {
-        let sSql = "SELECT projects.id, projects.descr, ps.stage, ps.api, ps.script, ps.params, ps.finished ";
+        let sSql = "SELECT projects.id, projects.descr, ps.project_id, ps.stage, ps.api, ps.script, ps.params, ps.finished ";
         sSql    += "FROM projects, project_stages AS ps ";
         sSql    += "WHERE projects.id = $1 AND projects.id = ps.project_id ";
         sSql    += "ORDER BY ps.stage ASC;";

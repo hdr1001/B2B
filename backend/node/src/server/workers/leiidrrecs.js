@@ -32,8 +32,7 @@ import pg from 'pg';
 import Cursor from 'pg-cursor';
 import pgConn from '../pgGlobs.js';
 
-//Throttle the database requests
-import { pgDbLimiter } from '../../share/limiters.js';
+import { processDbTransactions, WorkerSignOff } from './utils.js';
 
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
 const { projectStage } = workerData;
@@ -46,84 +45,63 @@ const pool = new Pool({ ...pgConn, ssl: { require: true } });
 const pgClient = await pool.connect();
 
 //Use a cursor to read the D&B data blocks which are the source of match data
-const sqlDnbProduct = `SELECT 
-                    req_key,
-                    product->'organization'->>'duns',
-                    product->'organization'->>'primaryName' AS name,
-                    product->'organization'->>'countryISOAlpha2Code' AS iso_ctry,
-                    product->'organization'->'primaryAddress' AS addr,
-                    product->'organization'->'registrationNumbers' AS reg_nums
-                FROM project_products
-                WHERE
-                    project_id = ${projectStage.params.product.project_id}
-                    AND stage = ${projectStage.params.product.stage};`;
+const sqlSelect =
+    `SELECT 
+        req_key,
+        product->'organization' AS org
+    FROM project_products
+    WHERE
+        project_id = ${projectStage.params.product.project_id}
+        AND stage = ${projectStage.params.product.stage};`;
 
-const cursor = pgClient.query( new Cursor( sqlDnbProduct ) );
+const cursor = pgClient.query( new Cursor( sqlSelect ) );
 
 //SQL insert statement for persisting the API responses
-const sqlInsert = 
+const sqlPersist = 
     `INSERT INTO project_idr (
         project_id, stage, addtl_info
     )
     VALUES (
-        ${projectStage.id}, ${projectStage.params.product.stage}, $1
+        ${projectStage.project_id}, ${projectStage.stage}, $1
     )
     RETURNING id;`;
 
-//Initial creation of records in table project_idr based on D&B data block information
-function createProjectIdrRec(rows) {
-    return Promise.allSettled(
-        rows.map(row => new Promise((resolve, reject) => { //For all rows in the chunck...
-            pgDbLimiter.removeTokens(1)
-                .then(() =>
-                    //All the data needed is stored in JSONB column addtl_info
-                    pool.query(sqlInsert, [
-                        {
-                            product: {
-                                project_id: projectStage.params.product.project_id,
-                                stage: projectStage.params.product.stage,
-                                req_key: row.req_key
-                            },
-                            input: {
-                                duns: row.duns,
-                                name: row.name,
-                                isoCtry: row.iso_ctry,
-                                addr: row.addr,
-                                regNums: row.reg_nums
-                            },
-                            tries: []
-                        }
-                    ])
-                )
-                .then(dbQry => resolve(`Successfully created project IDR record with ID ${dbQry.rows[0].id}`))
-                .catch(err => reject(err.message))
-        }))
-    ) 
-}
+//The data read from the database is processed in chunks
+const chunkSize = 100; let chunk = 0;
 
 //Use the cursor to read the 1st 100 rows
-let rows = await cursor.read(100);
-let chunk = 0;
+let rows = await cursor.read(chunkSize);
 
 //Iterate over the available rows
 while(rows.length) {
-    console.log(`processing chunk ${++chunk}`);
+    console.log(`processing chunk ${++chunk}, number of rows ${rows.length}`);
 
-    /* console.log( */ await createProjectIdrRec(rows) /* ) */;
+    //Synchronous data processing
+    const arrSqlParams =
+        rows.map(row => [
+            {
+                product: {
+                    project_id: projectStage.params.product.project_id,
+                    stage: projectStage.params.product.stage,
+                    req_key: row.req_key
+                },
+                input: {
+                    duns: row.org.duns,
+                    name: row.org.primaryName,
+                    isoCtry: row.org.countryISOAlpha2Code,
+                    addr: row.org.primaryAddress,
+                    regNums: row.org.registrationNumbers
+                },
+                tries: []
+            }
+        ]);
 
-    rows = await cursor.read(100);
+    /* console.log( */ await processDbTransactions(pool, sqlPersist, arrSqlParams) /* ) */;
+
+    rows = await cursor.read(chunkSize);
 }
 
-pool.query(`UPDATE project_stages SET finished = TRUE WHERE project_id = ${projectStage.id} AND stage = ${projectStage.stage} RETURNING *`)
-    .then(dbQry => {
-        if(dbQry.rowCount === 1) {
-            parentPort.postMessage(`Return upon completion of script ${projectStage.script}`);
-        }
-        else {
-            throw new Error('UPDATE database table project_stages somehow failed 🤔');
-        }
-    })
-    .catch(err => console.error(err.message))
+await WorkerSignOff(pool, parentPort, projectStage);
 
 //SQL script fo parameterizing product projects
 /*
