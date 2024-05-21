@@ -1,7 +1,8 @@
 // *********************************************************************
 //
-// Worker code to create the LEI filter requests, in multiple  
-// stages, to enable DUNS to GLEIF conversions.
+// Worker code to create the LEI filter requests in order to facilitate
+// DUNS to GLEIF conversions based on data sourced from D&B Direct+ data
+// blocks.
 //
 // JavaScript code file: leiidrreqs.js
 //
@@ -30,10 +31,12 @@ import pg from 'pg';
 import Cursor from 'pg-cursor';
 import pgConn from '../pgGlobs.js';
 
-//Throttle the database requests
-import { pgDbLimiter } from '../../share/limiters.js';
-
-import { leiMatchStage, getLeiMatchTryRegNum } from './utils.js';
+import { 
+    processDbTransactions,
+    WorkerSignOff,
+    leiMatchStage,
+    getMatchTry
+} from './utils.js';
 
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
 const { projectStage } = workerData;
@@ -46,111 +49,92 @@ const pool = new Pool({ ...pgConn, ssl: { require: true } });
 const pgClient = await pool.connect();
 
 //Use a cursor to read the project stage's raw identification data
-const sqlDnbProduct = `SELECT 
-                    id,
-                    key,
-                    addtl_info
-                FROM project_idr
-                WHERE
-                    project_id = ${projectStage.params.idr.project_id}
-                    AND stage = ${projectStage.params.idr.stage};`;
+const sqlSelect =
+    `SELECT 
+        id,
+        key,
+        addtl_info
+    FROM project_idr
+    WHERE
+        project_id = ${projectStage.params.idr.project_id}
+        AND stage = ${projectStage.params.idr.stage};`;
 
-const cursor = pgClient.query( new Cursor( sqlDnbProduct ) );
+const cursor = pgClient.query( new Cursor( sqlSelect ) );
 
-//SQL update statement for persisting IDR requests
-const sqlUpdate = 'UPDATE project_idr SET params = $1, addtl_info = $2, tsz = CURRENT_TIMESTAMP WHERE id = $3 RETURNING id;';
+//SQL update statement for persisting the LEI filter requests
+const sqlPersist = 'UPDATE project_idr SET params = $1, addtl_info = $2, tsz = CURRENT_TIMESTAMP WHERE id = $3 RETURNING id;';
 
-//Initial creation of records in table project_idr based on D&B data block information
-function createAndPersistProjectIdrReq(rows) {
-    return Promise.allSettled(
-        rows.map(row => new Promise((resolve, reject) => { //For all rows in the chunck...
-            pgDbLimiter.removeTokens(1)
-                .then(() => pool.query(sqlUpdate, row)) //Update columns params & addtl_info 
-                .then(dbQry => resolve(`Successfully updated IDR request data project IDR record with ID ${dbQry.rows[0].id}`))
-                .catch(err => reject(err.message))
-        }))
-    ) 
+//The data read from the database is processed in chunks
+const chunkSize = 100; let chunk = 0;
+
+//Use a cursor to read the 1st chunk of rows
+let rows = await cursor.read(chunkSize);
+
+//Get D&B preferred registration number
+function getPrefRegNum(regNums) {
+    let prefRegNum = null;
+
+    try {
+        prefRegNum = regNums.filter(regNum => regNum.isPreferredRegistrationNumber)[0];
+
+        if(!prefRegNum) { throw new Error('Unable to locate a preferred registration number') }
+    }
+    catch(err) {
+        if(Array.isArray(regNums) && regNums.length) { prefRegNum = regNums[0] }
+    }
+
+    return prefRegNum;
 }
-
-//Use the cursor to read the 1st 100 rows
-let rows = await cursor.read(100);
-let chunk = 0;
 
 //Iterate over the available rows
 while(rows.length) {
-    console.log(`processing chunk ${++chunk}`);
+    console.log(`processing chunk ${++chunk}, number of rows ${rows.length}`);
 
-    //1st try
+    let arrSqlParams = [];
+
+    //1st try, based on the preferred registration number as available in the D&B data block
     if(projectStage.params.try === leiMatchStage.prefRegNum) {
-        let reqs = rows.filter(row => !row.key)
-            .filter(row => row.addtl_info?.input.regNums && row.addtl_info.input.regNums.length)
+        arrSqlParams = 
+            rows.map(row => {
+                const prefRegNum = getPrefRegNum(row.addtl_info?.input?.regNums);
+
+                return {
+                    id: row.id,
+                    key: row.key,
+                    addtlInfo: row.addtl_info,
+                    regNum: prefRegNum?.registrationNumber,
+                    isPrefRegNum: prefRegNum?.isPreferredRegistrationNumber,
+                    isoCtry: row.addtl_info?.input?.isoCtry
+                };
+            })
+            .filter(row => !row.key && row.regNum && row.isoCtry)
             .map(row => {
-                const preferredRegNum = row.addtl_info.input.regNums.filter(regNum => regNum.isPreferredRegistrationNumber);
-
-                const leiMatchTry = getLeiMatchTryRegNum(
-                    leiMatchStage.prefRegNum,
-                    preferredRegNum.length ? preferredRegNum[0].registrationNumber : row.addtl_info.input.regNums[0].registrationNumber,
-                    row.addtl_info.input.isoCtry,
-                    Boolean(preferredRegNum.length)
-                );
-
-                row.addtl_info.tries.push(leiMatchTry);
+                const matchTry = getMatchTry(row.addtlInfo, leiMatchStage.prefRegNum, row.regNum, row.isoCtry, row.isPrefRegNum);
 
                 return [
                     {
-                        'filter[entity.registeredAs]': leiMatchTry.in.regNum.value,
-                        'filter[entity.legalAddress.country]': leiMatchTry.in.isoCtry
+                        'filter[entity.registeredAs]': row.regNum,
+                        'filter[entity.legalAddress.country]': row.isoCtry
                     },
 
-                    row.addtl_info,
+                    row.addtlInfo,
 
                     row.id
                 ];
-            });
+            })
+    };
 
-            /* console.log( */ await createAndPersistProjectIdrReq( reqs ) /* ) */;
-    }
+    /* console.log( */ await processDbTransactions( pool, sqlPersist, arrSqlParams ) /* ) */;
 
-    rows = await cursor.read(100);
+    rows = await cursor.read(chunkSize);
 }
 
-pool.query(`UPDATE project_stages SET finished = TRUE WHERE project_id = ${projectStage.id} AND stage = ${projectStage.stage} RETURNING *`)
-    .then(dbQry => {
-        if(dbQry.rowCount === 1) {
-            parentPort.postMessage(`Return upon completion of script ${projectStage.script}`);
-        }
-        else {
-            throw new Error('UPDATE database table project_stages somehow failed 🤔');
-        }
-    })
-    .catch(err => console.error(err.message))
+await WorkerSignOff(pool, parentPort, projectStage);
 
 //SQL script fo parameterizing product projects
 /*
-➡️ Create an entry in table projects & describe the project in field descr
-➡️ A unique project identifier will be created & assigned to variable p_id
-INSERT INTO projects ( descr ) VALUES ('Test project D&B') RETURNING id INTO p_id;
-
-➡️ The product script is intended to be a stage in a sequence of stages
 INSERT INTO project_stages
-   ( project_id, stage, api, script, params )
+    ( project_id, stage, api, script, params )
 VALUES
-   (
-      p_id,      ➡️ Project identifier
-      1,         ➡️ Stage
-      'dpl',     ➡️ The API to be used (foreign key referencing table apis)
-      'product', ➡️ Parameter identifying this script
-      ➡️ Miscellaneous project parameters
-      ➡️ endpoint, for specifying dbs (data blocks, optional), benOwner (beneficial ownership) & famTree (full family tree)
-      '{ "endpoint": "benOwner", "qryParameters": { "productId": "cmpbol", "versionId": "v1", "ownershipPercentage": 2.5 } }'
-      ➡️ qryParameters, API request query parameters
-      '{ "qryParameters": { "blockIDs": "companyinfo_L2_v1,hierarchyconnections_L1_v1", "orderReason": 6332 } }'
-      ➡️ subSingleton, to add to a API REST request
-      '{ "subSingleton": "ultimate-parent-relationship" }'
-   );
-
-INSERT INTO project_keys
-   ( project_id, req_key )
-VALUES
-   ( p_id, '407809623' ), ( p_id, '372428847' ), ( p_id, '373230036' );
+    ( 8, 2, 'lei', 'leiidrreqs', '{ "idr": { "project_id": 8, "stage": 1 }, "try": 1 }'::JSONB );
 */

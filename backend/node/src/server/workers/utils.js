@@ -56,23 +56,45 @@ const leiMatchStage = {
     nameCtry: 3
 };
 
-function getLeiMatchTryRegNum(stage, regNum, isoCtry, regNumPref) {
-    const matchTry = {
-        stage,
-        in: {
+class MatchTry {
+    constructor(stage, regNum, isoCtry, isPrefRegNum) {
+        this.stage = stage;
+        this.in = {
             regNum: { value: regNum },
             isoCtry
         }
-    };
 
-    if(regNumPref) { matchTry.in.regNum.preferred = true }
+        if(isPrefRegNum) { this.in.regNum.preferred = true }
+    }
+}
+
+function getMatchTry(addtlInfo, stage, regNum, isoCtry, isPrefRegNum) {
+    let matchTry;
+
+    try {
+        matchTry = addtlInfo.tries.filter(mt => mt.stage === stage)[0];
+
+        if(!matchTry) {
+            throw new Error('Match try object could not be located in tries array')
+        }
+    }
+    catch(err) {
+        matchTry = new MatchTry( stage || 0, regNum, isoCtry, isPrefRegNum );
+
+        if(Array.isArray(addtlInfo.tries)) {
+            addtlInfo.tries.push(matchTry)
+        }
+        else {
+            addtlInfo.tries = [ matchTry ]
+        }
+    }
 
     return matchTry;
-};
+}
 
 export {
     processDbTransactions,
     WorkerSignOff,
     leiMatchStage,
-    getLeiMatchTryRegNum
+    getMatchTry
 }

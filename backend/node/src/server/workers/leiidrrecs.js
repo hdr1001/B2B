@@ -86,11 +86,11 @@ while(rows.length) {
                     req_key: row.req_key
                 },
                 input: {
-                    duns: row.org.duns,
-                    name: row.org.primaryName,
-                    isoCtry: row.org.countryISOAlpha2Code,
-                    addr: row.org.primaryAddress,
-                    regNums: row.org.registrationNumbers
+                    duns: row.org?.duns,
+                    name: row.org?.primaryName,
+                    isoCtry: row.org?.countryISOAlpha2Code,
+                    addr: row.org?.primaryAddress,
+                    regNums: row.org?.registrationNumbers
                 },
                 tries: []
             }
@@ -103,32 +103,20 @@ while(rows.length) {
 
 await WorkerSignOff(pool, parentPort, projectStage);
 
-//SQL script fo parameterizing product projects
+//SQL record in table project_stages for LEI to DUNS conversion, stage record creation
 /*
-➡️ Create an entry in table projects & describe the project in field descr
-➡️ A unique project identifier will be created & assigned to variable p_id
-INSERT INTO projects ( descr ) VALUES ('Test project D&B') RETURNING id INTO p_id;
-
-➡️ The product script is intended to be a stage in a sequence of stages
 INSERT INTO project_stages
-   ( project_id, stage, api, script, params )
+    ( project_id, stage, api, script, params )
 VALUES
-   (
-      p_id,      ➡️ Project identifier
-      1,         ➡️ Stage
-      'dpl',     ➡️ The API to be used (foreign key referencing table apis)
-      'product', ➡️ Parameter identifying this script
-      ➡️ Miscellaneous project parameters
-      ➡️ endpoint, for specifying dbs (data blocks, optional), benOwner (beneficial ownership) & famTree (full family tree)
-      '{ "endpoint": "benOwner", "qryParameters": { "productId": "cmpbol", "versionId": "v1", "ownershipPercentage": 2.5 } }'
-      ➡️ qryParameters, API request query parameters
-      '{ "qryParameters": { "blockIDs": "companyinfo_L2_v1,hierarchyconnections_L1_v1", "orderReason": 6332 } }'
-      ➡️ subSingleton, to add to a API REST request
-      '{ "subSingleton": "ultimate-parent-relationship" }'
-   );
+    ( 8, 1, 'lei', 'leiidrrecs', '{ "product": { "project_id": 1, "stage": 1 } }'::JSONB );
 
-INSERT INTO project_keys
-   ( project_id, req_key )
-VALUES
-   ( p_id, '407809623' ), ( p_id, '372428847' ), ( p_id, '373230036' );
+Example stage parameters:
+    8,                  ➡️ Project identifier (foreign key referencing table projects)
+    1,                  ➡️ The stage at which this script is going to be executed
+    'lei',              ➡️ The identification API to be used (foreign key referencing table apis)
+    'leiidrrecs'        ➡️ Reference to this script
+    params JSON object
+    "product"           ➡️ Details on where to find the D&B data blocks
+        "project_id"    ➡️ Select a specific project_id from table project_products
+        "stage"         ➡️ Select a specific stage from table project_products
 */
