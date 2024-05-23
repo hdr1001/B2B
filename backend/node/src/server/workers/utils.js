@@ -68,26 +68,28 @@ class MatchTry {
     }
 }
 
-function getMatchTry(addtlInfo, stage, regNum, isoCtry, isPrefRegNum) {
-    let matchTry;
+function getMatchTry(addtlInfo, stage) {
+    let matchTry = null;
 
-    try {
-        matchTry = addtlInfo.tries.filter(mt => mt.stage === stage)[0];
+    if(Array.isArray(addtlInfo?.tries) && addtlInfo?.tries.length) {
+        const arrMatchTryStage = addtlInfo.tries.filter(mt => mt.stage === stage);
 
-        if(!matchTry) {
-            throw new Error('Match try object could not be located in tries array')
-        }
+        if(arrMatchTryStage.length) { matchTry = arrMatchTryStage[0] }
     }
-    catch(err) {
-        matchTry = new MatchTry( stage || 0, regNum, isoCtry, isPrefRegNum );
 
-        if(Array.isArray(addtlInfo.tries)) {
-            addtlInfo.tries.push(matchTry)
-        }
-        else {
-            addtlInfo.tries = [ matchTry ]
-        }
-    }
+    return matchTry;
+}
+
+function addMatchTry(addtlInfo, stage, regNum, isoCtry, isPrefRegNum) {
+    if(!addtlInfo) { throw new Error('Function addMatchTry, parameter addtlInfo contains a falsy value') }
+
+    if(!addtlInfo.tries) { addtlInfo.tries = [] }
+
+    if(!Array.isArray(addtlInfo.tries)) { throw new Error('Function addMatchTry, addtlInfo.tries is not of type array') }
+
+    const matchTry = new MatchTry( stage || 0, regNum, isoCtry, isPrefRegNum );
+
+    addtlInfo.tries.push(matchTry);
 
     return matchTry;
 }
@@ -96,5 +98,6 @@ export {
     processDbTransactions,
     WorkerSignOff,
     leiMatchStage,
-    getMatchTry
+    getMatchTry,
+    addMatchTry
 }

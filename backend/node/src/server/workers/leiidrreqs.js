@@ -35,7 +35,8 @@ import {
     processDbTransactions,
     WorkerSignOff,
     leiMatchStage,
-    getMatchTry
+    getMatchTry,
+    addMatchTry
 } from './utils.js';
 
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
@@ -74,13 +75,15 @@ let rows = await cursor.read(chunkSize);
 function getPrefRegNum(regNums) {
     let prefRegNum = null;
 
-    try {
-        prefRegNum = regNums.filter(regNum => regNum.isPreferredRegistrationNumber)[0];
-
-        if(!prefRegNum) { throw new Error('Unable to locate a preferred registration number') }
-    }
-    catch(err) {
-        if(Array.isArray(regNums) && regNums.length) { prefRegNum = regNums[0] }
+    if(Array.isArray(regNums) && regNums.length) {
+        try {
+            prefRegNum = regNums.filter(regNum => regNum.isPreferredRegistrationNumber)[0];
+    
+            if(!prefRegNum) { throw new Error('Unable to locate a preferred registration number') }
+        }
+        catch(err) {
+            prefRegNum = regNums[0]
+        }
     }
 
     return prefRegNum;
@@ -109,7 +112,11 @@ while(rows.length) {
             })
             .filter(row => !row.key && row.regNum && row.isoCtry)
             .map(row => {
-                const matchTry = getMatchTry(row.addtlInfo, leiMatchStage.prefRegNum, row.regNum, row.isoCtry, row.isPrefRegNum);
+                let matchTry = getMatchTry(row.addtlInfo, leiMatchStage.prefRegNum);
+
+                if(!matchTry) {
+                    matchTry = addMatchTry(row.addtlInfo, leiMatchStage.prefRegNum, row.regNum, row.isoCtry, row.isPrefRegNum)
+                }
 
                 return [
                     {
@@ -131,10 +138,21 @@ while(rows.length) {
 
 await WorkerSignOff(pool, parentPort, projectStage);
 
-//SQL script fo parameterizing product projects
+//SQL record in table project_stages for LEI to DUNS conversion, stage request creation
 /*
 INSERT INTO project_stages
     ( project_id, stage, api, script, params )
 VALUES
     ( 8, 2, 'lei', 'leiidrreqs', '{ "idr": { "project_id": 8, "stage": 1 }, "try": 1 }'::JSONB );
+
+Example stage parameters:
+    8,                  ➡️ Project identifier (foreign key referencing table projects)
+    2,                  ➡️ The stage at which this script is going to be executed
+    'lei',              ➡️ The identification API to be used (foreign key referencing table apis)
+    'leiidrreqs'        ➡️ Reference to this script
+    params JSON object
+    "idr"               ➡️ Details on the initial IDentity Resolution project stage
+        "project_id"    ➡️ A project_id referencing data in table project_idr
+        "stage"         ➡️ A specific stage referencing data in table project_idr
+    "try"               ➡️ One of the predefined LEI match (aka filter) stages
 */

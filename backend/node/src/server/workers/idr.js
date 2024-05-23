@@ -30,6 +30,8 @@ import pg from 'pg';
 import Cursor from 'pg-cursor';
 import pgConn from '../pgGlobs.js';
 
+import { WorkerSignOff } from './utils.js';
+
 import { dcdrUtf8 } from '../../share/utils.js';
 import { gleifLimiter, dnbDplLimiter } from '../../share/limiters.js';
 import { LeiFilter, DnbDplIDR } from '../../share/apiDefs.js';
@@ -48,9 +50,14 @@ const pool = new Pool({ ...pgConn, ssl: { require: true } });
 const pgClient = await pool.connect();
 
 //Use a cursor to read the keys included in the project in chunks
-const sqlReqs = `SELECT id, params FROM project_idr
-    WHERE project_id = ${projectStage.params?.idr?.project_id || projectStage.id}
-    AND stage = ${projectStage.params?.idr?.stage || projectStage.stage};`;
+const sqlReqs = 
+    `SELECT
+        id,
+        params 
+    FROM project_idr
+    WHERE 
+        project_id = ${projectStage.params.idr.project_id}
+    AND stage = ${projectStage.params.idr.stage};`;
 
 const cursor = pgClient.query( new Cursor( sqlReqs ) );
 
@@ -136,26 +143,37 @@ function process(rows) {
     ))
 }
 
+//The data read from the database is processed in chunks
+const chunkSize = 100; let chunk = 0;
+
 //Use the cursor to read the 1st 100 rows
-let rows = await cursor.read(100);
-let chunk = 0;
+let rows = await cursor.read(chunkSize);
 
 //Iterate over the available rows
 while(rows.length) {
-    console.log(`processing chunk ${++chunk}`);
+    console.log(`processing chunk ${++chunk}, number of rows ${rows.length}`);
 
     /* console.log( */ await process(rows.filter(row => row.params && !row.key)) /* ) */;
 
-    rows = await cursor.read(100);
+    rows = await cursor.read(chunkSize);
 }
 
-pool.query(`UPDATE project_stages SET finished = TRUE WHERE project_id = ${projectStage.id} AND stage = ${projectStage.stage}`)
-    .then(dbQry => {
-        if(dbQry.rowCount === 1) {
-            parentPort.postMessage(`Return upon completion of script ${projectStage.script}`);
-        }
-        else {
-            throw new Error('UPDATE database table project_stages somehow failed 🤔');
-        }
-    })
-    .catch(err => console.error(err.message))
+await WorkerSignOff(pool, parentPort, projectStage);
+
+//SQL record in table project_stages for IDentity Resolution execution
+/*
+INSERT INTO project_stages
+    ( project_id, stage, api, script, params )
+VALUES
+    ( 8, 3, 'lei', 'idr', '{ "idr": { "project_id": 8, "stage": 1 } }'::JSONB );
+
+Example stage parameters:
+    8,                  ➡️ Project identifier (foreign key referencing table projects)
+    1,                  ➡️ The stage at which this script is going to be executed
+    'lei',              ➡️ The identification API to be used (foreign key referencing table apis)
+    'idr'               ➡️ Reference to this script
+    params JSON object
+    "idr"               ➡️ Details on the initial IDentity Resolution project stage
+        "project_id"    ➡️ A project_id referencing data in table project_idr
+        "stage"         ➡️ One of the predefined LEI match (aka filter) stages
+*/
