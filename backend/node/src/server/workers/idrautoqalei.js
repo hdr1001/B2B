@@ -30,10 +30,9 @@ import pg from 'pg';
 import Cursor from 'pg-cursor';
 import pgConn from '../pgGlobs.js';
 
-//Throttle the database requests
-import { pgDbLimiter } from '../../share/limiters.js';
+import { processDbTransactions, WorkerSignOff } from './utils.js';
 
-import { getLeiMatchTryRegNum } from './utils.js';
+import { leiMatchStage, getMatchTry, addMatchTry } from './utils.js';
 import { jaroWrinker } from '../../share/jaroWrinker.js';
 
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
@@ -47,73 +46,70 @@ const pool = new Pool({ ...pgConn, ssl: { require: true } });
 const pgClient = await pool.connect();
 
 //Use a cursor to read the keys included in the project in chunks
-const sqlReqs = `SELECT id, params, resp, http_status, addtl_info FROM project_idr
-    WHERE project_id = ${projectStage.params?.idr?.project_id}
-    AND stage = ${projectStage.params?.idr?.stage};`;
+const sqlSelect =
+    `SELECT
+        id,
+        params,
+        resp,
+        http_status,
+        addtl_info
+    FROM project_idr
+    WHERE
+        project_id = ${projectStage.params.idr.project_id}
+    AND stage = ${projectStage.params.idr.stage};`;
 
-const cursor = pgClient.query( new Cursor( sqlReqs ) );
+const cursor = pgClient.query( new Cursor( sqlSelect ) );
 
 //SQL update statement for persisting the API responses
-const sqlUpdate = 'UPDATE project_idr SET key = $1, quality = $2, remark = $3, addtl_info = $4, tsz = CURRENT_TIMESTAMP WHERE id = $5 RETURNING id;';
+const sqlPersist =
+    `UPDATE project_idr
+    SET
+        key = $1,
+        quality = $2,
+        remark = $3,
+        addtl_info = $4,
+        tsz = CURRENT_TIMESTAMP
+    WHERE
+        id = $5
+    RETURNING id;`;
 
-//Update the match quality information to the database
-function persistRegAsQaInfo(arrQaInfo) {
-    return Promise.allSettled(
-        arrQaInfo.map(qaInfo => new Promise((resolve, reject) => { //For all rows in the chunck...
-            pgDbLimiter.removeTokens(1)
-                .then(() => pool.query(sqlUpdate, qaInfo)) //Update columns params & addtl_info 
-                .then(dbQry => resolve(`Successfully updated QA info on project IDR record with ID ${dbQry.rows[0].id}`))
-                .catch(err => reject(err.message))
-        }))
-    ) 
-}
+//The data read from the database is processed in chunks
+const chunkSize = 100; let chunk = 0;
 
 //Use the cursor to read the 1st 100 rows
-let rows = await cursor.read(100);
-let chunk = 0;
+let rows = await cursor.read(chunkSize);
 
 //Iterate over the available rows
 while(rows.length) {
-    console.log(`processing chunk ${++chunk}`);
+    console.log(`processing chunk ${++chunk}, number of rows ${rows.length}`);
 
-    //QA only relevant if (1) not already resolved, (2) valid HTTP response and (3) one or more candidate(s) available
+    //QA only relevant if (1) not already resolved, (2) valid HTTP response and (3) at least one candidate available
     const rowsCandidateAvailable = rows.filter(row => !row.key && row.http_status === 200 && row.resp?.data?.[0]);
 
-    //Validate the submitted registration number against the one in the REST response
-    const rowsRegAsMatch = rowsCandidateAvailable.filter(
-        row => row.params['filter[entity.registeredAs]'] &&
-            row.params['filter[entity.registeredAs]'] === row.resp.data[0].attributes?.entity?.registeredAs);
+    let rowsQaApprove = [], regNumMatch = false;
 
-    console.log(`Num of resp w. candidates ${rowsCandidateAvailable.length}, validated reg num matches ${rowsRegAsMatch.length}`);
+    if(projectStage.params.try === leiMatchStage.prefRegNum || projectStage.params.try === leiMatchStage.custRegNum) {
+        //Validate the submitted registration number against the one in the REST response
+        rowsQaApprove = rowsCandidateAvailable.filter(
+            row => row.params['filter[entity.registeredAs]'] &&
+                row.params['filter[entity.registeredAs]'] === row.resp.data[0].attributes?.entity?.registeredAs);
 
-    if(rowsRegAsMatch.length) { //QA the registration number based match candidates
-        const regAsMatches = rowsRegAsMatch.map(row => {
-            let leiMatchTry;
+        regNumMatch = true
+    }
 
-            try {
-                leiMatchTry = row.addtl_info.tries.filter(leiMatchTry => leiMatchTry.stage === projectStage.params.try)[0];
+    console.log(`Num of resp w. candidates ${rowsCandidateAvailable.length}, validated reg num matches ${rowsQaApprove.length}`);
 
-                if(!leiMatchTry) { throw new Error('Match try object could not be located in tries array') }
-            }
-            catch(err) {
-                leiMatchTry = getLeiMatchTryRegNum(
-                    projectStage.params.try || 0,
-                    row.params['filter[entity.registeredAs]'],
-                    row.addtl_info.input?.isoCtry
-                );
+    if(rowsQaApprove.length) { //QA the registration number based match candidates
+        const arrSqlParams = rowsQaApprove.map(row => {
+            let matchTry = getMatchTry(row.addtl_info, leiMatchStage.prefRegNum);
 
-                if(Array.isArray(row.addtl_info.tries)) {
-                    row.addtl_info.tries.push(leiMatchTry)
-                }
-                else {
-                    row.addtl_info.tries = [ leiMatchTry ]
-                }
+            if(!matchTry) {
+                matchTry = addMatchTry(row.addtl_info, leiMatchStage.prefRegNum, row.params['filter[entity.registeredAs]'], row.params['filter[entity.legalAddress.country]'])
             }
 
-            leiMatchTry.success = true;
+            matchTry.success = true;
 
             const qlt = {
-                id: 100,
                 name: Math.floor(
                     jaroWrinker(row.addtl_info?.input?.name, row.resp?.data?.[0]?.attributes?.entity?.legalName?.name) * 100
                 ),
@@ -121,6 +117,8 @@ while(rows.length) {
                     jaroWrinker(row.addtl_info?.input?.addr?.addressLocality?.name, row.resp?.data?.[0]?.attributes?.entity?.legalAddress?.city) * 100
                 )
             };
+
+            if(regNumMatch) { qlt.regNum = 100 }
 
             return [
                 //The LEI is what we are looking for
@@ -140,19 +138,29 @@ while(rows.length) {
             ];          
         })
 
-        /* console.log( */ await persistRegAsQaInfo(regAsMatches) /* ) */;
+        /* console.log( */ processDbTransactions(pool, sqlPersist, arrSqlParams) /* ) */;
     }
 
     rows = await cursor.read(100);
 }
 
-pool.query(`UPDATE project_stages SET finished = TRUE WHERE project_id = ${projectStage.id} AND stage = ${projectStage.stage}`)
-    .then(dbQry => {
-        if(dbQry.rowCount === 1) {
-            parentPort.postMessage(`Return upon completion of script ${projectStage.script}`);
-        }
-        else {
-            throw new Error('UPDATE database table project_stages somehow failed 🤔');
-        }
-    })
-    .catch(err => console.error(err.message))
+await WorkerSignOff(pool, parentPort, projectStage);
+
+//SQL record in table project_stages for LEI to DUNS conversion, stage quality assurance
+/*
+INSERT INTO project_stages
+    ( project_id, stage, api, script, params )
+VALUES
+    ( 8, 4, 'lei', 'idrautoqalei', '{ "idr": { "project_id": 8, "stage": 1 }, "try": 1 }'::JSONB );
+
+Example stage parameters:
+    8,                  ➡️ Project identifier (foreign key referencing table projects)
+    2,                  ➡️ The stage at which this script is going to be executed
+    'lei',              ➡️ The identification API to be used (foreign key referencing table apis)
+    'leiidrreqs'        ➡️ Reference to this script
+    params JSON object
+    "idr"               ➡️ Details on the initial IDentity Resolution project stage
+        "project_id"    ➡️ A project_id referencing data in table project_idr
+        "stage"         ➡️ A specific stage referencing data in table project_idr
+    "try"               ➡️ One of the predefined LEI match (aka filter) stages
+*/

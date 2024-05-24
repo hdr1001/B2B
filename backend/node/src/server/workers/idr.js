@@ -169,7 +169,7 @@ VALUES
 
 Example stage parameters:
     8,                  ➡️ Project identifier (foreign key referencing table projects)
-    1,                  ➡️ The stage at which this script is going to be executed
+    3,                  ➡️ The stage at which this script is going to be executed
     'lei',              ➡️ The identification API to be used (foreign key referencing table apis)
     'idr'               ➡️ Reference to this script
     params JSON object
