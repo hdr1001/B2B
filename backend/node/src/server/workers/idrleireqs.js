@@ -4,7 +4,7 @@
 // DUNS to GLEIF conversions based on data sourced from D&B Direct+ data
 // blocks.
 //
-// JavaScript code file: leiidrreqs.js
+// JavaScript code file: idrleireqs.js
 //
 // Copyright 2024 Hans de Rooij
 //
@@ -143,13 +143,13 @@ await WorkerSignOff(pool, parentPort, projectStage);
 INSERT INTO project_stages
     ( project_id, stage, api, script, params )
 VALUES
-    ( 8, 2, 'lei', 'leiidrreqs', '{ "idr": { "project_id": 8, "stage": 1 }, "try": 1 }'::JSONB );
+    ( 8, 2, 'lei', 'idrleireqs', '{ "idr": { "project_id": 8, "stage": 1 }, "try": 1 }'::JSONB );
 
 Example stage parameters:
     8,                  ➡️ Project identifier (foreign key referencing table projects)
     2,                  ➡️ The stage at which this script is going to be executed
     'lei',              ➡️ The identification API to be used (foreign key referencing table apis)
-    'leiidrreqs'        ➡️ Reference to this script
+    'idrleireqs'        ➡️ Reference to this script
     params JSON object
     "idr"               ➡️ Details on the initial IDentity Resolution project stage
         "project_id"    ➡️ A project_id referencing data in table project_idr

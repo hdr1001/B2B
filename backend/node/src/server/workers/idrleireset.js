@@ -1,11 +1,9 @@
 // *********************************************************************
 //
-// Worker code to create database records used in the process of 
-// DUNS to GLEIF conversions. In this step the records in table 
-// project_idr will be created based on data as available in D&B
-// data blocks.
+// Worker code to clean-up rejected LEI filter responses after
+// performing QA on a match stage.
 //
-// JavaScript code file: leiidrrecs.js
+// JavaScript code file: idrleireset.js
 //
 // Copyright 2024 Hans de Rooij
 //
@@ -34,6 +32,8 @@ import pgConn from '../pgGlobs.js';
 
 import { processDbTransactions, WorkerSignOff } from './utils.js';
 
+import { leiMatchStage, getMatchTry, addMatchTry } from './utils.js';
+
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
 const { projectStage } = workerData;
 
@@ -44,26 +44,31 @@ const pool = new Pool({ ...pgConn, ssl: { require: true } });
 //Acquire a database client from the pool
 const pgClient = await pool.connect();
 
-//Use a cursor to read the D&B data blocks which are the source of match data
-const sqlSelect =
-    `SELECT 
-        req_key,
-        product->'organization' AS org
-    FROM project_products
-    WHERE
-        project_id = ${projectStage.params.product.project_id}
-        AND stage = ${projectStage.params.product.stage};`;
+//Use a cursor to read the project stage's raw identification data
+const sqlSelect = `SELECT 
+                    id,
+                    params,
+                    resp,
+                    addtl_info
+                FROM project_idr
+                WHERE
+                    project_id = ${projectStage.params.idr.project_id}
+                    AND stage = ${projectStage.params.idr.stage}
+                    AND key IS NULL
+                    AND params IS NOT NULL;`;
 
 const cursor = pgClient.query( new Cursor( sqlSelect ) );
 
-//SQL insert statement for persisting the API responses
-const sqlPersist = 
-    `INSERT INTO project_idr (
-        project_id, stage, addtl_info
-    )
-    VALUES (
-        ${projectStage.project_id}, ${projectStage.stage}, $1
-    )
+//SQL update statement for persisting IDR requests
+const sqlPersist = `UPDATE project_idr
+    SET params = NULL,
+        resp = NULL,
+        http_status = NULL,
+        quality = NULL,
+        remark = NULL,
+        addtl_info = $1,
+        tsz = CURRENT_TIMESTAMP
+    WHERE id = $2
     RETURNING id;`;
 
 //The data read from the database is processed in chunks
@@ -76,25 +81,26 @@ let rows = await cursor.read(chunkSize);
 while(rows.length) {
     console.log(`processing chunk ${++chunk}, number of rows ${rows.length}`);
 
-    //Synchronous data processing
-    const arrSqlParams =
-        rows.map(row => [
-            {
-                product: {
-                    project_id: projectStage.params.product.project_id,
-                    stage: projectStage.params.product.stage,
-                    req_key: row.req_key
-                },
-                input: {
-                    duns: row.org?.duns,
-                    name: row.org?.primaryName,
-                    isoCtry: row.org?.countryISOAlpha2Code,
-                    addr: row.org?.primaryAddress,
-                    regNums: row.org?.registrationNumbers
-                },
-                tries: []
-            }
-        ]);
+    const arrSqlParams = rows.map(row => {
+        let matchTry = getMatchTry(row.addtl_info, leiMatchStage.prefRegNum);
+
+        if(!matchTry) {
+            matchTry = addMatchTry(row.addtl_info, leiMatchStage.prefRegNum, row.params['filter[entity.registeredAs]'], row.params['filter[entity.legalAddress.country]'])
+        }
+
+        matchTry.out = {
+            numCandidates: row.resp?.data ? row.resp.data.length : 0,
+            http_status: row.http_status,
+        };
+
+        if(row.resp?.data?.[0]) { matchTry.out.candidate0 = row.resp.data[0]}
+
+        return [
+            row.addtl_info,
+
+            row.id
+        ];
+    });
 
     /* console.log( */ await processDbTransactions(pool, sqlPersist, arrSqlParams) /* ) */;
 
@@ -103,20 +109,21 @@ while(rows.length) {
 
 await WorkerSignOff(pool, parentPort, projectStage);
 
-//SQL record in table project_stages for LEI to DUNS conversion, stage record creation
+//SQL record in table project_stages for LEI to DUNS conversion, stage match data reset
 /*
 INSERT INTO project_stages
     ( project_id, stage, api, script, params )
 VALUES
-    ( 8, 1, 'lei', 'leiidrrecs', '{ "product": { "project_id": 1, "stage": 1 } }'::JSONB );
+    ( 8, 5, 'lei', 'idrleireset', '{ "idr": { "project_id": 8, "stage": 1 }, "try": 1 }'::JSONB );
 
 Example stage parameters:
     8,                  ➡️ Project identifier (foreign key referencing table projects)
-    1,                  ➡️ The stage at which this script is going to be executed
+    5,                  ➡️ The stage at which this script is going to be executed
     'lei',              ➡️ The identification API to be used (foreign key referencing table apis)
-    'leiidrrecs'        ➡️ Reference to this script
+    'idrleireset'       ➡️ Reference to this script
     params JSON object
-    "product"           ➡️ Details on where to find the D&B data blocks
-        "project_id"    ➡️ Select a specific project_id from table project_products
-        "stage"         ➡️ Select a specific stage from table project_products
+    "idr"               ➡️ Details on the initial IDentity Resolution project stage
+        "project_id"    ➡️ A project_id referencing data in table project_idr
+        "stage"         ➡️ A specific stage referencing data in table project_idr
+    "try"               ➡️ One of the predefined LEI match (aka filter) stages
 */

@@ -3,7 +3,7 @@
 // Worker code to automatically perform quality assurance on GLEIF
 // filter request responses generated in multi-stage projects
 //
-// JavaScript code file: idrautoqalei.js
+// JavaScript code file: idrleiautoqa.js
 //
 // Copyright 2024 Hans de Rooij
 //
@@ -138,7 +138,7 @@ while(rows.length) {
             ];          
         })
 
-        /* console.log( */ processDbTransactions(pool, sqlPersist, arrSqlParams) /* ) */;
+        /* console.log( */ await processDbTransactions(pool, sqlPersist, arrSqlParams) /* ) */;
     }
 
     rows = await cursor.read(100);
@@ -151,13 +151,13 @@ await WorkerSignOff(pool, parentPort, projectStage);
 INSERT INTO project_stages
     ( project_id, stage, api, script, params )
 VALUES
-    ( 8, 4, 'lei', 'idrautoqalei', '{ "idr": { "project_id": 8, "stage": 1 }, "try": 1 }'::JSONB );
+    ( 8, 4, 'lei', 'idrleiautoqa', '{ "idr": { "project_id": 8, "stage": 1 }, "try": 1 }'::JSONB );
 
 Example stage parameters:
     8,                  ➡️ Project identifier (foreign key referencing table projects)
-    2,                  ➡️ The stage at which this script is going to be executed
+    4,                  ➡️ The stage at which this script is going to be executed
     'lei',              ➡️ The identification API to be used (foreign key referencing table apis)
-    'leiidrreqs'        ➡️ Reference to this script
+    'idrleiautoqa'      ➡️ Reference to this script
     params JSON object
     "idr"               ➡️ Details on the initial IDentity Resolution project stage
         "project_id"    ➡️ A project_id referencing data in table project_idr
