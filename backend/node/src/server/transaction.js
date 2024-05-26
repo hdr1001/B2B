@@ -20,7 +20,8 @@
 //
 // *********************************************************************
 
-import { cleanDUNS, isValidLei } from '../share/utils.js';
+import { cleanDUNS } from '../share/utils.js';
+import { isValidLei } from '../share/utilsGleif.js';
 import { ApiHubErr } from './err.js';
 import { config } from './globs.js'
 
