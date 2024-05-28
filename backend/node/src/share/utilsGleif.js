@@ -269,9 +269,11 @@ const regNumConversion = new Map([
 
 //Convert D&B registration numbers to IDs which can be used in LEI filter requests
 function dplRegNumsToLeiFilter(regNums, isoCtry) {
-    const fRegNumConv = regNumConversion.get(isoCtry.toLowerCase());
+    if(Array.isArray(regNums) && isoCtry) {
+        const fRegNumConv = regNumConversion.get(isoCtry.toLowerCase());
 
-    if(fRegNumConv) { return fRegNumConv(regNums) }
+        if(fRegNumConv) { return fRegNumConv(regNums) }
+    }
 
     return '';
 }

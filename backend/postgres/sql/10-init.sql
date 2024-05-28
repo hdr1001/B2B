@@ -601,4 +601,14 @@ BEGIN
    VALUES
       ( p_id, 5, 'lei', 'idrleireset', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 }, "try": 1 }')::JSONB );
 
+   INSERT INTO project_stages
+      ( project_id, stage, api, script, params )
+   VALUES
+      ( p_id, 6, 'lei', 'idrleireqs', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 }, "try": 2 }')::JSONB );
+
+   INSERT INTO project_stages
+      ( project_id, stage, api, script, params )
+   VALUES
+      ( p_id, 7, 'lei', 'idr', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 } }')::JSONB );
+
 END $$;

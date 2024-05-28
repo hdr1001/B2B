@@ -38,6 +38,7 @@ import {
     getMatchTry,
     addMatchTry
 } from './utils.js';
+import { dplRegNumsToLeiFilter } from '../../share/utilsGleif.js';
 
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
 const { projectStage } = workerData;
@@ -96,35 +97,50 @@ while(rows.length) {
     let arrSqlParams = [];
 
     //1st try, based on the preferred registration number as available in the D&B data block
-    if(projectStage.params.try === leiMatchStage.prefRegNum) {
-        arrSqlParams = 
-            rows.map(row => {
-                const prefRegNum = getPrefRegNum(row.addtl_info?.input?.regNums);
+    if(projectStage.params.try === leiMatchStage.prefRegNum ||
+            projectStage.params.try === leiMatchStage.custRegNum ) {
 
-                return {
+        arrSqlParams = 
+            rows.filter(row => !row.key) //Filter the previous matches
+            .map(row => {
+                let regNum, isPrefRegNum;
+
+                //First match stage use the D&B designated preferred registration number 
+                if(projectStage.params.try === leiMatchStage.prefRegNum) {
+                    const prefRegNum = getPrefRegNum(row.addtl_info?.input?.regNums);
+
+                    regNum = prefRegNum?.registrationNumber;
+                    isPrefRegNum = prefRegNum?.isPreferredRegistrationNumber;
+                }
+
+                //Second match stage use the specific & processed registration numbers
+                if(projectStage.params.try === leiMatchStage.custRegNum) {
+                    regNum = dplRegNumsToLeiFilter(row.addtl_info?.input?.regNums, row.addtl_info?.input?.isoCtry)
+                }
+
+                return { //The raw data to prepare a Lei filter request
                     id: row.id,
-                    key: row.key,
                     addtlInfo: row.addtl_info,
-                    regNum: prefRegNum?.registrationNumber,
-                    isPrefRegNum: prefRegNum?.isPreferredRegistrationNumber,
+                    regNum,
+                    isPrefRegNum,
                     isoCtry: row.addtl_info?.input?.isoCtry
                 };
             })
-            .filter(row => !row.key && row.regNum && row.isoCtry)
+            .filter(row => row.regNum && row.isoCtry) //Minimal requirements for the next step
             .map(row => {
-                let matchTry = getMatchTry(row.addtlInfo, leiMatchStage.prefRegNum);
+                let matchTry = getMatchTry(row.addtlInfo, projectStage.params.try);
 
                 if(!matchTry) {
-                    matchTry = addMatchTry(row.addtlInfo, leiMatchStage.prefRegNum, row.regNum, row.isoCtry, row.isPrefRegNum)
+                    matchTry = addMatchTry(row.addtlInfo, projectStage.params.try, row.regNum, row.isoCtry, row.isPrefRegNum)
                 }
 
-                return [
+                return [ //The SQL parameters
                     {
                         'filter[entity.registeredAs]': row.regNum,
                         'filter[entity.legalAddress.country]': row.isoCtry
-                    },
+                    }, //update parameter params
 
-                    row.addtlInfo,
+                    row.addtlInfo, //update addtional info column with match try data
 
                     row.id
                 ];
