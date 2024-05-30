@@ -53,7 +53,8 @@ const pgClient = await pool.connect();
 const sqlReqs = 
     `SELECT
         id,
-        params 
+        params,
+        key
     FROM project_idr
     WHERE 
         project_id = ${projectStage.params.idr.project_id}
@@ -153,7 +154,17 @@ let rows = await cursor.read(chunkSize);
 while(rows.length) {
     console.log(`processing chunk ${++chunk}, number of rows ${rows.length}`);
 
-    /* console.log( */ await process(rows.filter(row => row.params && !row.key)) /* ) */;
+    const rowsForReq = rows.filter(row => row.params && !row.key);
+
+    console.log(`Number of rows ${rowsForReq.length} out for request`);
+
+    const rowsSettled = await process(rowsForReq);
+
+    const countFulfilled = rowsSettled.filter(row => row.status === 'fulfilled').length;
+    const countRejected = rowsSettled.filter(row => row.status === 'rejected').length;
+
+    console.log(`number of rows fullfilled ${countFulfilled}, rejected ${countRejected}`);
+    console.log('');
 
     rows = await cursor.read(chunkSize);
 }

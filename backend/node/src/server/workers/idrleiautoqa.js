@@ -52,6 +52,7 @@ const sqlSelect =
         params,
         resp,
         http_status,
+        key,
         addtl_info
     FROM project_idr
     WHERE
@@ -110,15 +111,18 @@ while(rows.length) {
             matchTry.success = true;
 
             const qlt = {
-                name: Math.floor(
-                    jaroWrinker(row.addtl_info?.input?.name, row.resp?.data?.[0]?.attributes?.entity?.legalName?.name) * 100
-                ),
-                city: Math.floor(
-                    jaroWrinker(row.addtl_info?.input?.addr?.addressLocality?.name, row.resp?.data?.[0]?.attributes?.entity?.legalAddress?.city) * 100
-                )
+                stage: projectStage.params.try,
+                scores: {
+                    name: Math.floor(
+                        jaroWrinker(row.addtl_info?.input?.name, row.resp?.data?.[0]?.attributes?.entity?.legalName?.name) * 100
+                    ),
+                    city: Math.floor(
+                        jaroWrinker(row.addtl_info?.input?.addr?.addressLocality?.name, row.resp?.data?.[0]?.attributes?.entity?.legalAddress?.city) * 100
+                    )
+                }
             };
 
-            if(regNumMatch) { qlt.regNum = 100 }
+            if(regNumMatch) { qlt.scores.regNum = 100 }
 
             return [
                 //The LEI is what we are looking for
