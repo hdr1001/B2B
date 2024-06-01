@@ -57,14 +57,24 @@ const leiMatchStage = {
 };
 
 class MatchTry {
-    constructor(stage, regNum, isoCtry, isPrefRegNum) {
+    constructor(stage, params) {
         this.stage = stage;
+
         this.in = {
-            regNum: { value: regNum },
-            isoCtry
+            isoCtry: params.isoCtry
         }
 
-        if(isPrefRegNum) { this.in.regNum.preferred = true }
+        if(params.name) {
+            this.in.name = params.name;
+        }
+
+        if(params.regNum) {
+            this.in.regNum = { value: params.regNum }
+
+            if(params.isPrefRegNum) {
+                this.in.regNum.preferred = true
+            }
+        }
     }
 }
 
@@ -80,14 +90,14 @@ function getMatchTry(addtlInfo, stage) {
     return matchTry;
 }
 
-function addMatchTry(addtlInfo, stage, regNum, isoCtry, isPrefRegNum) {
+function addMatchTry(addtlInfo, stage, params) {
     if(!addtlInfo) { throw new Error('Function addMatchTry, parameter addtlInfo contains a falsy value') }
 
     if(!addtlInfo.tries) { addtlInfo.tries = [] }
 
     if(!Array.isArray(addtlInfo.tries)) { throw new Error('Function addMatchTry, addtlInfo.tries is not of type array') }
 
-    const matchTry = new MatchTry( stage || 0, regNum, isoCtry, isPrefRegNum );
+    const matchTry = new MatchTry( stage || 0, params );
 
     addtlInfo.tries.push(matchTry);
 

@@ -105,7 +105,16 @@ while(rows.length) {
             let matchTry = getMatchTry(row.addtl_info, projectStage.params.try);
 
             if(!matchTry) {
-                matchTry = addMatchTry(row.addtl_info, projectStage.params.try, row.params['filter[entity.registeredAs]'], row.params['filter[entity.legalAddress.country]'])
+                const req = { isoCtry: row.params['filter[entity.legalAddress.country]'] };
+
+                if(projectStage.params.try === leiMatchStage.nameCtry) {
+                    req.name = row.params['filter[entity.legalName]']
+                }
+                else {
+                    req.regNum = { value: row.params['filter[entity.registeredAs]'] }       
+                }
+        
+                matchTry = addMatchTry(row.addtl_info, projectStage.params.try, req)
             }
 
             matchTry.success = true;
