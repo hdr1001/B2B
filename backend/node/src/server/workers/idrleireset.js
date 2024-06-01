@@ -82,10 +82,10 @@ while(rows.length) {
     console.log(`processing chunk ${++chunk}, number of rows ${rows.length}`);
 
     const arrSqlParams = rows.map(row => {
-        let matchTry = getMatchTry(row.addtl_info, leiMatchStage.prefRegNum);
+        let matchTry = getMatchTry(row.addtl_info, projectStage.params.try);
 
         if(!matchTry) {
-            matchTry = addMatchTry(row.addtl_info, leiMatchStage.prefRegNum, row.params['filter[entity.registeredAs]'], row.params['filter[entity.legalAddress.country]'])
+            matchTry = addMatchTry(row.addtl_info, projectStage.params.try, row.params['filter[entity.registeredAs]'], row.params['filter[entity.legalAddress.country]'])
         }
 
         matchTry.out = {

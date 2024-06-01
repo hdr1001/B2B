@@ -95,17 +95,17 @@ while(rows.length) {
             row => row.params['filter[entity.registeredAs]'] &&
                 row.params['filter[entity.registeredAs]'] === row.resp.data[0].attributes?.entity?.registeredAs);
 
-        regNumMatch = true
+        regNumMatch = true;
     }
 
     console.log(`Num of resp w. candidates ${rowsCandidateAvailable.length}, validated reg num matches ${rowsQaApprove.length}`);
 
     if(rowsQaApprove.length) { //QA the registration number based match candidates
         const arrSqlParams = rowsQaApprove.map(row => {
-            let matchTry = getMatchTry(row.addtl_info, leiMatchStage.prefRegNum);
+            let matchTry = getMatchTry(row.addtl_info, projectStage.params.try);
 
             if(!matchTry) {
-                matchTry = addMatchTry(row.addtl_info, leiMatchStage.prefRegNum, row.params['filter[entity.registeredAs]'], row.params['filter[entity.legalAddress.country]'])
+                matchTry = addMatchTry(row.addtl_info, projectStage.params.try, row.params['filter[entity.registeredAs]'], row.params['filter[entity.legalAddress.country]'])
             }
 
             matchTry.success = true;
@@ -145,7 +145,7 @@ while(rows.length) {
         /* console.log( */ await processDbTransactions(pool, sqlPersist, arrSqlParams) /* ) */;
     }
 
-    rows = await cursor.read(100);
+    rows = await cursor.read(chunkSize);
 }
 
 await WorkerSignOff(pool, parentPort, projectStage);
