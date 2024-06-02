@@ -621,4 +621,19 @@ BEGIN
    VALUES
       ( p_id, 9, 'lei', 'idrleireset', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 }, "try": 2 }')::JSONB );
 
+   INSERT INTO project_stages
+      ( project_id, stage, api, script, params )
+   VALUES
+      ( p_id, 10, 'lei', 'idrleireqs', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 }, "try": 3 }')::JSONB );
+
+   INSERT INTO project_stages
+      ( project_id, stage, api, script, params )
+   VALUES
+      ( p_id, 11, 'lei', 'idr', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 } }')::JSONB );
+
+   INSERT INTO project_stages
+      ( project_id, stage, api, script, params )
+   VALUES
+      ( p_id, 12, 'lei', 'idrleiautoqa', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 }, "try": 3 }')::JSONB );
+
 END $$;

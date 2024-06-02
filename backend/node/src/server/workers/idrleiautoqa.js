@@ -98,6 +98,9 @@ while(rows.length) {
         regNumMatch = true;
     }
 
+    //No name quality threshold implemented. Match quality will be scored though.
+    if(projectStage.params.try === leiMatchStage.nameCtry) { rowsQaApprove = rowsCandidateAvailable }
+
     console.log(`Num of resp w. candidates ${rowsCandidateAvailable.length}, validated reg num matches ${rowsQaApprove.length}`);
 
     if(rowsQaApprove.length) { //QA the registration number based match candidates
@@ -117,7 +120,7 @@ while(rows.length) {
                 matchTry = addMatchTry(row.addtl_info, projectStage.params.try, req)
             }
 
-            matchTry.success = true;
+            if(regNumMatch) { matchTry.success = true }
 
             const qlt = {
                 stage: projectStage.params.try,
@@ -141,7 +144,7 @@ while(rows.length) {
                 qlt,
 
                 //Just for the record ⬇️
-                'LEI registration number match',
+                `LEI ${regNumMatch ? 'registration number' : 'name'} match`,
 
                 //More information for the record ⬇️
                 row.addtl_info,

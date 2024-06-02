@@ -94,73 +94,66 @@ function getPrefRegNum(regNums) {
 while(rows.length) {
     console.log(`processing chunk ${++chunk}, number of rows ${rows.length}`);
 
-    let arrSqlParams = [];
-
-    //1st try, based on the preferred registration number as available in the D&B data block
-    if(projectStage.params.try === leiMatchStage.prefRegNum ||
-            projectStage.params.try === leiMatchStage.custRegNum ) {
-
-        arrSqlParams = 
-            rows.filter(row => !row.key) //Filter the previous matches
-            .map(row => {
-                const idr = {
-                    id: row.id,
-                    addtlInfo: row.addtl_info,
-                    req: {
-                        isoCtry: row.addtl_info?.input?.isoCtry
-                    }
-                };
-
-                //First match stage use the D&B designated preferred registration number 
-                if(projectStage.params.try === leiMatchStage.prefRegNum) {
-                    const prefRegNum = getPrefRegNum(row.addtl_info?.input?.regNums);
-
-                    idr.req.regNum = prefRegNum?.registrationNumber;
-                    idr.req.isPrefRegNum = prefRegNum?.isPreferredRegistrationNumber;
+    const arrSqlParams = 
+        rows.filter(row => !row.key) //Filter the previous matches
+        .map(row => {
+            const idr = {
+                id: row.id,
+                addtlInfo: row.addtl_info,
+                req: {
+                    isoCtry: row.addtl_info?.input?.isoCtry
                 }
+            };
 
-                //Second match stage use the specific & processed registration numbers
-                if(projectStage.params.try === leiMatchStage.custRegNum) {
-                    idr.req.regNum = dplRegNumsToLeiFilter(row.addtl_info?.input?.regNums, row.addtl_info?.input?.isoCtry)
-                }
+            //First match stage use the D&B designated preferred registration number 
+            if(projectStage.params.try === leiMatchStage.prefRegNum) {
+                const prefRegNum = getPrefRegNum(row.addtl_info?.input?.regNums);
 
-                //Third match stage prepare a name match
-                if(projectStage.params.try === leiMatchStage.nameCtry) {
-                    idr.req.name = row.addtl_info?.input?.name
-                }
+                idr.req.regNum = prefRegNum?.registrationNumber;
+                idr.req.isPrefRegNum = prefRegNum?.isPreferredRegistrationNumber;
+            }
 
-                //The raw data to prepare a Lei filter request
-                return idr;
-            })
-            //Minimal requirements for the next step
-            .filter(idr => (idr.req.name || idr.req.regNum) && idr.req.isoCtry)
-            .map(idr => {
-                let matchTry = getMatchTry(idr.addtlInfo, projectStage.params.try);
+            //Second match stage use the specific & processed registration numbers
+            if(projectStage.params.try === leiMatchStage.custRegNum) {
+                idr.req.regNum = dplRegNumsToLeiFilter(row.addtl_info?.input?.regNums, row.addtl_info?.input?.isoCtry)
+            }
 
-                if(!matchTry) {
-                    matchTry = addMatchTry(idr.addtlInfo, projectStage.params.try, idr.req)
-                }
+            //Third match stage prepare a name match
+            if(projectStage.params.try === leiMatchStage.nameCtry) {
+                idr.req.name = row.addtl_info?.input?.name
+            }
 
-                const filterReq = {
-                    'filter[entity.legalAddress.country]': idr.req.isoCtry
-                };
+            //The raw data to prepare a Lei filter request
+            return idr;
+        })
+        //Minimal requirements for the next step
+        .filter(idr => (idr.req.name || idr.req.regNum) && idr.req.isoCtry)
+        .map(idr => {
+            let matchTry = getMatchTry(idr.addtlInfo, projectStage.params.try);
 
-                if(projectStage.params.try === leiMatchStage.nameCtry) {
-                    filterReq['filter[entity.legalName]'] = idr.req.name
-                }
-                else {
-                    filterReq['filter[entity.registeredAs]'] = idr.req.regNum
-                }
+            if(!matchTry) {
+                matchTry = addMatchTry(idr.addtlInfo, projectStage.params.try, idr.req)
+            }
 
-                return [ //The SQL parameters
-                    filterReq, //update parameter params
+            const filterReq = {
+                'filter[entity.legalAddress.country]': idr.req.isoCtry
+            };
 
-                    idr.addtlInfo, //update addtional info column with match try data
+            if(projectStage.params.try === leiMatchStage.nameCtry) {
+                filterReq['filter[entity.legalName]'] = idr.req.name
+            }
+            else {
+                filterReq['filter[entity.registeredAs]'] = idr.req.regNum
+            }
 
-                    idr.id
-                ];
-            })
-    };
+            return [ //The SQL parameters
+                filterReq, //update parameter params
+
+                idr.addtlInfo, //update addtional info column with match try data
+
+                idr.id
+            ];
+        });
 
     /* console.log( */ await processDbTransactions( pool, sqlPersist, arrSqlParams ) /* ) */;
 
