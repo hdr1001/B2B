@@ -386,6 +386,7 @@ CREATE TABLE public.project_idr (
    id integer NOT NULL DEFAULT nextval('project_idr_id_seq'::regclass),
    project_id integer NOT NULL,
    stage smallint NOT NULL,
+   inp_data JSONB,
    params JSONB,
    resp JSONB,
    http_status smallint,
@@ -599,7 +600,7 @@ BEGIN
    INSERT INTO project_stages
       ( project_id, stage, api, script, params )
    VALUES
-      ( p_id, 5, 'lei', 'idrleireset', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 } }')::JSONB );
+      ( p_id, 5, 'lei', 'idrleireset', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 }, "try": 1 }')::JSONB );
 
    INSERT INTO project_stages
       ( project_id, stage, api, script, params )
