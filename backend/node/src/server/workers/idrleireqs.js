@@ -54,6 +54,7 @@ const pgClient = await pool.connect();
 const sqlSelect =
     `SELECT 
         id,
+        inp_data,
         key,
         addtl_info
     FROM project_idr
@@ -101,13 +102,13 @@ while(rows.length) {
                 id: row.id,
                 addtlInfo: row.addtl_info,
                 req: {
-                    isoCtry: row.addtl_info?.input?.isoCtry
+                    isoCtry: row.inp_data?.isoCtry
                 }
             };
 
             //First match stage use the D&B designated preferred registration number 
             if(projectStage.params.try === leiMatchStage.prefRegNum) {
-                const prefRegNum = getPrefRegNum(row.addtl_info?.input?.regNums);
+                const prefRegNum = getPrefRegNum(row.inp_data?.regNums);
 
                 idr.req.regNum = prefRegNum?.registrationNumber;
                 idr.req.isPrefRegNum = prefRegNum?.isPreferredRegistrationNumber;
@@ -115,12 +116,12 @@ while(rows.length) {
 
             //Second match stage use the specific & processed registration numbers
             if(projectStage.params.try === leiMatchStage.custRegNum) {
-                idr.req.regNum = dplRegNumsToLeiFilter(row.addtl_info?.input?.regNums, row.addtl_info?.input?.isoCtry)
+                idr.req.regNum = dplRegNumsToLeiFilter(row.inp_data?.regNums, row.inp_data?.isoCtry)
             }
 
             //Third match stage prepare a name match
             if(projectStage.params.try === leiMatchStage.nameCtry) {
-                idr.req.name = row.addtl_info?.input?.name
+                idr.req.name = row.inp_data?.name
             }
 
             //The raw data to prepare a Lei filter request

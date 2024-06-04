@@ -59,10 +59,10 @@ const cursor = pgClient.query( new Cursor( sqlSelect ) );
 //SQL insert statement for persisting the API responses
 const sqlPersist = 
     `INSERT INTO project_idr (
-        project_id, stage, addtl_info
+        project_id, stage, inp_data, addtl_info
     )
     VALUES (
-        ${projectStage.project_id}, ${projectStage.stage}, $1
+        ${projectStage.project_id}, ${projectStage.stage}, $1, $2
     )
     RETURNING id;`;
 
@@ -80,17 +80,16 @@ while(rows.length) {
     const arrSqlParams =
         rows.map(row => [
             {
+                duns: row.org?.duns,
+                name: row.org?.primaryName,
+                isoCtry: row.org?.countryISOAlpha2Code,
+                addr: row.org?.primaryAddress,
+                regNums: row.org?.registrationNumbers
+            }, {
                 product: {
                     project_id: projectStage.params.product.project_id,
                     stage: projectStage.params.product.stage,
                     req_key: row.req_key
-                },
-                input: {
-                    duns: row.org?.duns,
-                    name: row.org?.primaryName,
-                    isoCtry: row.org?.countryISOAlpha2Code,
-                    addr: row.org?.primaryAddress,
-                    regNums: row.org?.registrationNumbers
                 },
                 tries: []
             }

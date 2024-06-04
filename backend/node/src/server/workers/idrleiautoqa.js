@@ -49,6 +49,7 @@ const pgClient = await pool.connect();
 const sqlSelect =
     `SELECT
         id,
+        inp_data,
         params,
         resp,
         http_status,
@@ -126,10 +127,10 @@ while(rows.length) {
                 stage: projectStage.params.try,
                 scores: {
                     name: Math.floor(
-                        jaroWrinker(row.addtl_info?.input?.name, row.resp?.data?.[0]?.attributes?.entity?.legalName?.name) * 100
+                        jaroWrinker(row.inp_data?.name, row.resp?.data?.[0]?.attributes?.entity?.legalName?.name) * 100
                     ),
                     city: Math.floor(
-                        jaroWrinker(row.addtl_info?.input?.addr?.addressLocality?.name, row.resp?.data?.[0]?.attributes?.entity?.legalAddress?.city) * 100
+                        jaroWrinker(row.inp_data?.addr?.addressLocality?.name, row.resp?.data?.[0]?.attributes?.entity?.legalAddress?.city) * 100
                     )
                 }
             };
