@@ -638,3 +638,28 @@ BEGIN
       ( p_id, 12, 'lei', 'idrleiautoqa', CONCAT('{ "idr": { "project_id": ', p_id, ', "stage": 1 }, "try": 3 }')::JSONB );
 
 END $$;
+
+/*
+SELECT
+	
+	addtl_info->'product'->>'req_key' AS "d&b duns",
+	inp_data->>'name' AS "d&b bus nme",
+	inp_data->'addr'->'streetAddress'->>'line1' AS "d&b line 1",
+	inp_data->'addr'->'streetAddress'->>'line2' AS "d&b line 2",
+	inp_data->'addr'->>'postalCode' AS "d&b post cd",
+	inp_data->'addr'->'addressLocality'->>'name' AS "d&b city nme",
+	inp_data->'addr'->'addressRegion'->>'abbreviatedName' AS "d&b state prov abbr",
+	inp_data->'addr'->'addressCountry'->>'isoAlpha2Code' AS "d&b ctry ISO",
+	
+	key AS "LEI",
+   resp->'data'->0->'attributes'->'entity'->'legalName'->>'name' AS "lei bus nme",
+   resp->'data'->0->'attributes'->'entity'->'legalAddress'->'addressLines'->>0 AS "lei line 1",
+   resp->'data'->0->'attributes'->'entity'->'legalAddress'->'addressLines'->>1 AS "lei line 2",
+   resp->'data'->0->'attributes'->'entity'->'legalAddress'->>'postalCode' AS "post cd",
+   resp->'data'->0->'attributes'->'entity'->'legalAddress'->>'city' AS "lei city nme",
+   resp->'data'->0->'attributes'->'entity'->'legalAddress'->>'region' AS "lei state prov abbr",
+   resp->'data'->0->'attributes'->'entity'->'legalAddress'->>'country' AS "lei ctry ISO",
+   resp->'data'->0->'attributes'->'entity'->>'registeredAs' AS "lei reg num",
+
+FROM public.project_idr WHERE project_id = 8 AND (quality->'stage')::int = 3 ORDER BY id ASC;
+*/
