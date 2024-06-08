@@ -640,40 +640,31 @@ BEGIN
 END $$;
 
 /*
+
 SELECT
 	
-   addtl_info->'product'->>'req_key' AS "d&b duns",
-   inp_data->>'name' AS "d&b bus nme",
-   inp_data->'addr'->'streetAddress'->>'line1' AS "d&b line 1",
-   inp_data->'addr'->'streetAddress'->>'line2' AS "d&b line 2",
-   inp_data->'addr'->>'postalCode' AS "d&b post cd",
-   inp_data->'addr'->'addressLocality'->>'name' AS "d&b city nme",
-   inp_data->'addr'->'addressRegion'->>'abbreviatedName' AS "d&b state prov",
-   inp_data->'addr'->'addressCountry'->>'isoAlpha2Code' AS "d&b ctry ISO",
+   params->>'registrationNumber' AS "reg num in",
+   params->>'countryISOAlpha2Code' AS "iso ctry in",
 
-   key AS "LEI",
-   resp->'data'->0->'attributes'->'entity'->'legalName'->>'name' AS "lei bus nme",
-   resp->'data'->0->'attributes'->'entity'->'legalAddress'->'addressLines'->>0 AS "lei line 1",
-   resp->'data'->0->'attributes'->'entity'->'legalAddress'->'addressLines'->>1 AS "lei line 2",
-   resp->'data'->0->'attributes'->'entity'->'legalAddress'->>'postalCode' AS "lei post cd",
-   resp->'data'->0->'attributes'->'entity'->'legalAddress'->>'city' AS "lei city nme",
-   resp->'data'->0->'attributes'->'entity'->'legalAddress'->>'region' AS "lei state prov",
-   resp->'data'->0->'attributes'->'entity'->'legalAddress'->>'country' AS "lei ctry ISO",
-   resp->'data'->0->'attributes'->'entity'->>'registeredAs' AS "lei reg num",
+   http_status,
 
-   jsonb_path_query(addtl_info->'tries', '$[*] ? (@.stage == 1)')->'in'->'regNum'->>'value' AS "try 1 reg num",
-   jsonb_path_query(addtl_info->'tries', '$[*] ? (@.stage == 1)')->>'success' AS "try 1 success",
-   jsonb_path_query(addtl_info->'tries', '$[*] ? (@.stage == 2)')->'in'->'regNum'->>'value' AS "try 2 reg num",
-   jsonb_path_query(addtl_info->'tries', '$[*] ? (@.stage == 2)')->>'success' AS "try 2 success",
-   jsonb_path_query(addtl_info->'tries', '$[*] ? (@.stage == 3)')->'in'->>'name' AS "try 3 name",
-
-   quality->>'stage' AS "success try",
-   quality->'scores'->>'regNum' AS "qlty reg num match",
-   quality->'scores'->>'name' AS "qlty name match",
-   quality->'scores'->>'city' AS "qlty city match"
+   resp->'matchCandidates'->0->'organization'->>'duns' AS "dnb duns",
+   resp->'matchCandidates'->0->'organization'->>'primaryName' AS "dnb bus nme",
+   resp->'matchCandidates'->0->'organization'->'primaryAddress'->'streetAddress'->>'line1' AS "dnb addr1",
+   resp->'matchCandidates'->0->'organization'->'primaryAddress'->'streetAddress'->>'line2' AS "dnb addr2",
+   resp->'matchCandidates'->0->'organization'->'primaryAddress'->>'postalCode' AS "dnb post cd",
+   resp->'matchCandidates'->0->'organization'->'primaryAddress'->'addressLocality'->>'name' AS "dnb city",
+   resp->'matchCandidates'->0->'organization'->'primaryAddress'->'addressRegion'->>'abbreviatedName' AS "dnb region",
+   resp->'matchCandidates'->0->'organization'->'primaryAddress'->'addressCountry'->>'isoAlpha2Code' AS "dnb ctry",
+   resp->'matchCandidates'->0->'organization'->'registrationNumbers'->0->>'registrationNumber' AS "dnb reg num",
+   resp->'matchCandidates'->0->'organization'->'dunsControlStatus'->'operatingStatus'->>'description' AS "dnb status",
+   resp->'matchCandidates'->0->'matchQualityInformation'->>'confidenceCode' AS "dnb cc",
+   resp->'matchCandidates'->0->'matchQualityInformation'->>'matchGrade' AS "dnb mg"
 
 FROM public.project_idr
-WHERE project_id = 8
-	AND stage = 1
+
+WHERE project_id = 6 AND stage = 1
+
 ORDER BY id ASC;
+
 */

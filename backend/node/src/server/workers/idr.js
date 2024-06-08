@@ -49,6 +49,9 @@ const pool = new Pool({ ...pgConn, ssl: { require: true } });
 //Acquire a database client from the pool
 const pgClient = await pool.connect();
 
+const project_id = projectStage.params?.idr?.project_id || projectStage.project_id;
+const project_stage = projectStage.params?.idr?.stage || projectStage.stage;
+
 //Use a cursor to read the keys included in the project in chunks
 const sqlReqs = 
     `SELECT
@@ -57,8 +60,8 @@ const sqlReqs =
         key
     FROM project_idr
     WHERE 
-        project_id = ${projectStage.params.idr.project_id}
-    AND stage = ${projectStage.params.idr.stage};`;
+        project_id = ${project_id}
+    AND stage = ${project_stage};`;
 
 const cursor = pgClient.query( new Cursor( sqlReqs ) );
 
