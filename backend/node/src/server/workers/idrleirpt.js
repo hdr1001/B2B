@@ -29,7 +29,10 @@ import pg from 'pg';
 import Cursor from 'pg-cursor';
 import pgConn from '../pgGlobs.js';
 
-import { processDbTransactions, WorkerSignOff } from './utils.js';
+import { createWriteStream } from 'fs';
+import { stringify } from 'csv-stringify';
+
+import { WorkerSignOff } from './utils.js';
 
 //The stage parameters are passed into the new Worker (i.e. this thread) as part of its instantiation
 const { projectStage } = workerData;
@@ -41,38 +44,48 @@ const pool = new Pool({ ...pgConn, ssl: { require: true } });
 //Acquire a database client from the pool
 const pgClient = await pool.connect();
 
+const cols = [
+    'dnb duns', 'dnb bus nme', 'dnb line 1', 'dnb line 2', 'dnb post cd', 'dnb city nme', 'dnb state prov', 'dnb ctry ISO',
+
+    'LEI', 'lei bus nme', 'lei line 1', 'lei line 2', 'lei post cd', 'lei city nme', 'lei state prov', 'lei ctry ISO', 'lei reg num',
+
+    'try 1 reg num', 'try 1 success', 'try 2 reg num', 'try 2 success', 'try 3 name',
+
+    'success try', 'qlty reg num match', 'qlty name match', 'qlty city match'
+];
+
 //SQL for requesting the data to process
 const sqlSelect = `SELECT
 	
-   addtl_info->'product'->>'req_key' AS "dnb duns",
-   inp_data->>'name' AS "dnb bus nme",
-   inp_data->'addr'->'streetAddress'->>'line1' AS "dnb line 1",
-   inp_data->'addr'->'streetAddress'->>'line2' AS "dnb line 2",
-   inp_data->'addr'->>'postalCode' AS "dnb post cd",
-   inp_data->'addr'->'addressLocality'->>'name' AS "dnb city nme",
-   inp_data->'addr'->'addressRegion'->>'abbreviatedName' AS "dnb state prov",
-   inp_data->'addr'->'addressCountry'->>'isoAlpha2Code' AS "dnb ctry ISO",
+   addtl_info->'product'->>'req_key' AS "${cols[0]}",
+   inp_data->>'name' AS "${cols[1]}",
+   inp_data->'addr'->'streetAddress'->>'line1' AS "${cols[2]}",
+   inp_data->'addr'->'streetAddress'->>'line2' AS "${cols[3]}",
+   inp_data->'addr'->>'postalCode' AS "${cols[4]}",
+   inp_data->'addr'->'addressLocality'->>'name' AS "${cols[5]}",
+   inp_data->'addr'->'addressRegion'->>'abbreviatedName' AS "${cols[6]}",
+   inp_data->'addr'->'addressCountry'->>'isoAlpha2Code' AS "${cols[7]}",
 
-   key AS "LEI",
-   resp->'data'->0->'attributes'->'entity'->'legalName'->>'name' AS "lei bus nme",
-   resp->'data'->0->'attributes'->'entity'->'legalAddress'->'addressLines'->>0 AS "lei line 1",
-   resp->'data'->0->'attributes'->'entity'->'legalAddress'->'addressLines'->>1 AS "lei line 2",
-   resp->'data'->0->'attributes'->'entity'->'legalAddress'->>'postalCode' AS "lei post cd",
-   resp->'data'->0->'attributes'->'entity'->'legalAddress'->>'city' AS "lei city nme",
-   resp->'data'->0->'attributes'->'entity'->'legalAddress'->>'region' AS "lei state prov",
-   resp->'data'->0->'attributes'->'entity'->'legalAddress'->>'country' AS "lei ctry ISO",
-   resp->'data'->0->'attributes'->'entity'->>'registeredAs' AS "lei reg num",
+   key AS "${cols[8]}",
+   resp->'data'->0->'attributes'->'entity'->'legalName'->>'name' AS "${cols[9]}",
+   resp->'data'->0->'attributes'->'entity'->'legalAddress'->'addressLines'->>0 AS "${cols[10]}",
+   resp->'data'->0->'attributes'->'entity'->'legalAddress'->'addressLines'->>1 AS "${cols[11]}",
+   resp->'data'->0->'attributes'->'entity'->'legalAddress'->>'postalCode' AS "${cols[12]}",
+   resp->'data'->0->'attributes'->'entity'->'legalAddress'->>'city' AS "${cols[13]}",
+   resp->'data'->0->'attributes'->'entity'->'legalAddress'->>'region' AS "${cols[14]}",
+   resp->'data'->0->'attributes'->'entity'->'legalAddress'->>'country' AS "${cols[15]}",
+   resp->'data'->0->'attributes'->'entity'->>'registeredAs' AS "${cols[16]}",
 
-   jsonb_path_query(addtl_info->'tries', '$[*] ? (@.stage == 1)')->'in'->'regNum'->>'value' AS "try 1 reg num",
-   jsonb_path_query(addtl_info->'tries', '$[*] ? (@.stage == 1)')->>'success' AS "try 1 success",
-   jsonb_path_query(addtl_info->'tries', '$[*] ? (@.stage == 2)')->'in'->'regNum'->>'value' AS "try 2 reg num",
-   jsonb_path_query(addtl_info->'tries', '$[*] ? (@.stage == 2)')->>'success' AS "try 2 success",
-   jsonb_path_query(addtl_info->'tries', '$[*] ? (@.stage == 3)')->'in'->>'name' AS "try 3 name",
+   jsonb_path_query(addtl_info->'tries', '$[*] ? (@.stage == 1)')->'in'->'regNum'->>'value' AS "${cols[17]}",
+   (jsonb_path_query(addtl_info->'tries', '$[*] ? (@.stage == 1)')->>'success')::boolean AS "${cols[18]}",
+   jsonb_path_query(addtl_info->'tries', '$[*] ? (@.stage == 2)')->'in'->'regNum'->>'value' AS "${cols[19]}",
+   (jsonb_path_query(addtl_info->'tries', '$[*] ? (@.stage == 2)')->>'success')::boolean AS "${cols[20]}",
+   jsonb_path_query(addtl_info->'tries', '$[*] ? (@.stage == 3)')->'in'->>'name' AS "${cols[21]}",
 
-   quality->>'stage' AS "success try",
-   quality->'scores'->>'regNum' AS "qlty reg num match",
-   quality->'scores'->>'name' AS "qlty name match",
-   quality->'scores'->>'city' AS "qlty city match"
+   (quality->>'stage')::int AS "${cols[22]}",
+   (quality->'scores'->>'regNum')::int AS "${cols[23]}",
+   (quality->'scores'->>'name')::int AS "${cols[24]}",
+   (quality->'scores'->>'city')::int AS "${cols[25]}"
 
 FROM project_idr
 
@@ -83,8 +96,10 @@ ORDER BY id ASC;`;
 //Instantiate a database cursor
 const cursor = pgClient.query( new Cursor( sqlSelect ) );
 
-//SQL for updating/inserting the processed data
-const sqlPersist = 'UPDATE INSERT ...';
+//Write the data from the database query to a csv delimited file
+const filename = projectStage.params.rptFilename || 'idrleirpt';
+const stringifier = stringify({ header: true, columns: cols, quoted_string: true });
+stringifier.pipe(createWriteStream(`../io/out/${filename}.csv`));
 
 //The data read from the database is processed in chunks
 const chunkSize = 100; let chunk = 0;
@@ -95,15 +110,8 @@ let rows = await cursor.read(chunkSize);
 //Iterate over the rows in discrete chunks
 while(rows.length) {
     console.log(`processing chunk ${++chunk}, number of rows ${rows.length}`);
-/*
-    //Synchronous data processing
-    const arrSqlParams =
-        rows.filter(row => row.attr === row.otherAttr)
-            .map(row => [ row.rad * 3.14, row.id]);
 
-    await processDbTransactions(pool, sqlPersist, arrSqlParams);
-*/
-    rows.forEach( row => console.log(row['dnb duns']) )
+    rows.forEach( row => stringifier.write(row) )
 
     rows = await cursor.read(chunkSize);
 }
