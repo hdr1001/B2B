@@ -125,11 +125,11 @@ const monthDay = sDateIsoToYYYYMMDD(new Date().toISOString(), 4);
 // ➡️ Main application configuration settings
 
 // First specify the API to call
-const api = 'gleif';       //Available options are gleif & dnbDpl
+const api = 'dnbDpl';       //Available options are gleif & dnbDpl
 
 // Choose an endpoint in case the API selected is D&B Direct+
 // If Data Blocks (i.e. dbs) configure object dnbDplDBs above
-const endpoint = 'dbs';    //dnbDpl options: dbs, famTree, benOwner
+const endpoint = 'product';    //dnbDpl options: dbs, product, famTree, benOwner
 
 // Configure a product if endpoint is beneficial owner (i.e. benOwner)
 const boProduct = 'cmpbol'; //Possible values 'cmpbol', 'cmpbos', 'cmpcol' or 'cmpcos'
@@ -175,6 +175,19 @@ if(api === 'dnbDpl') { //Enrich DUNS numbers
         persistence.file.name += dnbDplDBs.getFileName();
     }
 
+    if(endpoint === 'product') {
+        const dplProduct = 'cmpcvf';
+
+        qryParams = {
+            productId: dplProduct,
+            versionId: 'v1',
+            tradeUp: 'hq',  	    //Possible values '', 'hq' or 'domhq'
+            orderReason: '6332'
+        }
+
+        persistence.file.name += dplProduct;
+    }
+
     if(endpoint === 'famTree') {
         qryParams = {
             //exclusionCriteria: 'Branches', //Do not include branches in the tree
@@ -210,7 +223,7 @@ async function process(arr) {
 
         //Instantiate a new D&B Direct+ API request
         if(api === 'dnbDpl') {
-            if(endpoint === 'dbs') {
+            if(endpoint === 'dbs' || endpoint == 'product') {
                 apiReq = new DnbDplDBs(key, qryParams)
             }
 
