@@ -5,19 +5,16 @@ on:
     branches:
       - main
 
-defaults:
-  run:
-    working-directory: frontend
-
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: ./frontend
+
     steps:
-      - name: Change dir
-        run: cd ./frontend
-        
       - name: Checkout repo
         uses: actions/checkout@v3
 
