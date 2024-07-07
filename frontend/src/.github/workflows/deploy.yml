@@ -19,7 +19,7 @@ jobs:
 
       - name: Install dependencies
         uses: bahmutov/npm-install@v1
-        inputs:
+        with:
           working-directory: frontend
 
       - name: Build project
