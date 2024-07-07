@@ -10,10 +10,6 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: ./frontend
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -23,9 +19,12 @@ jobs:
 
       - name: Install dependencies
         uses: bahmutov/npm-install@v1
+        inputs:
+          working-directory: frontend
 
       - name: Build project
         run: npm run build
+        working-directory: frontend
 
       - name: Upload production-ready build files
         uses: actions/upload-artifact@v3
