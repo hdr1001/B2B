@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy UI
 
 on:
   push:
@@ -21,6 +21,7 @@ jobs:
         uses: bahmutov/npm-install@v1
 
       - name: Build project
+        working-directory: frontend
         run: npm run build
 
       - name: Upload production-ready build files
